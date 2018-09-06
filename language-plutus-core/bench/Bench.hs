@@ -2,6 +2,7 @@ module Main (main) where
 
 import           Criterion.Main
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Text            as T
 import           Language.PlutusCore
 
 -- TODO: benchmark the typechecker!
@@ -9,7 +10,7 @@ main :: IO ()
 main =
     defaultMain [ env envFile $ \ f ->
                   bgroup "format"
-                      [ bench "format" $ nf (format defaultCfg) f ]
+                      [ bench "format" $ nf (format defaultCfg :: BSL.ByteString -> Either (Error AlexPosn) T.Text) f ]
                 , env files $ \ ~(f, g) ->
                   bgroup "parse"
                       [ bench "parse (addInteger)" $ nf parse f
@@ -17,8 +18,8 @@ main =
                       ]
                 , env typeFiles $ \ ~(f, g) ->
                    bgroup "type-check"
-                      [ bench "printType" $ nf printType f
-                      , bench "printType" $ nf printType g
+                      [ bench "printType" $ nf (printType :: BSL.ByteString -> Either (Error AlexPosn) T.Text)  f
+                      , bench "printType" $ nf (printType :: BSL.ByteString -> Either (Error AlexPosn) T.Text) g
                       ]
                 , env largeTypeFile $ \ g ->
                    bgroup "normal-form check"
