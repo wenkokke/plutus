@@ -49,6 +49,10 @@
           console.log(d);
           updateKnownOwners(d.data);
           break;
+        case "flow_diagram":
+          console.log("updating known owners");
+          drawSankey(d.data);
+          break;
         default:
           console.log("Unknown tag");
           console.log(d);
@@ -60,7 +64,7 @@
 
   <style>
     .legend {
-      font-size: 12px;
+      font-size: 20px;
     }
 
     rect {
@@ -94,42 +98,54 @@
       height: 600
     }
 
-    var knownOwners = ["script", "other"];
+    var knownOwners = ["script", "other", "pubkey-1"];
 
     var flowData = {
       nodes: [
-        { node: 0, name: "node0" },
-        { node: 1, name: "node1" },
-        { node: 2, name: "node2" },
-        { node: 3, name: "node3" },
-        { node: 4, name: "node4" }
-        ],
+        { name: "node0" },
+        { name: "node1" },
+        { name: "node2" },
+        { name: "node3" },
+        { name: "node4" }
+      ],
       links: [
-        { source: 0, target: 1, value: 10 },
-        { source: 0, target: 2, value: 20 },
-        { source: 1, target: 3, value: 5 },
-        { source: 1, target: 4, value: 5 },
-        { source: 2, target: 3, value: 10 },
-        { source: 2, target: 4, value: 10 }
+        { source: "node0", target: "node1", value: 10, owner: "script" },
+        { source: "node0", target: "node2", value: 20, owner: "script" },
+        { source: "node1", target: "node3", value: 5, owner: "other" },
+        { source: "node1", target: "node4", value: 5, owner: "other" },
+        { source: "node2", target: "node3", value: 10, owner: "script" },
+        { source: "node2", target: "node4", value: 10, owner: "pubkey-1" }
       ]
     }
 
-    var color = d3.scaleOrdinal(d3.schemeCategory20b);
+    var color = d3.scaleOrdinal(d3.schemeSet1);
+
+    var sankey = d3.sankey()
+      .nodeWidth(15)
+      .nodePadding(50)
+      .nodeAlign(d3.sankeyLeft)
+      .size([chartDims.width, chartDims.height])
+      .nodeId(function (d) { return d.name; });
 
     var legendSVG = d3.select('#legend')
       .append('svg')
-      .attr('width', legendDims.labelWidth * 5)
+      .attr('width', legendDims.labelWidth * 6)
       .attr('height', legendDims.height)
       .append('g')
-      .attr('transform', 'translate(' + (legendDims.labelWidth * 5 / 2) + ',' + (legendDims.height / 2) + ')');
+      .attr('transform', 'translate(0,' + (legendDims.height / 2) + ')');
 
     var flowSVG = d3.select('#diagram')
       .append('svg')
       .attr('width', chartDims.width)
       .attr('height', chartDims.height)
+      .attr("stroke", "#fff");
+
+    var flowSVGLinks = flowSVG
       .attr("fill", "none")
-      .attr("stroke", "#000")
-      .attr("stroke-opacity", 0.2)
+      .attr("stroke-opacity", 0.5)
+      .append('g');
+
+    var flowSVGNodes = flowSVG
       .append('g');
 
     function updateKnownOwners(owners) { // owners :: [String]
@@ -165,21 +181,42 @@
 
     }
 
-    function drawSankey() {
-      var sankey = d3.sankey()
-        .nodeWidth(15)
-        .nodePadding(10)
-        .size([chartDims.width, chartDims.height]);
+    function drawSankey(data) {
 
-      var graph = sankey(flowData);
+      var graph = sankey(data);
 
-      flowSVG
+      var lnks = flowSVGLinks
         .selectAll("path")
-        .data(graph.links)
-        .enter()
+        .data(graph.links);
+      lnks
+        .attr("d", d3.sankeyLinkHorizontal());
+
+      lnks.enter()
         .append("path")
         .attr("d", d3.sankeyLinkHorizontal())
-        .attr("stroke-width", function (d) { return d.width; });
+        .attr("stroke-width", function (d) { return d.width; })
+        .attr("stroke", function (d) { return color(d.owner); })
+        .attr("title", function (d) { return (d.value.toString() + " from " + d.source.name + " to " + d.target.name); });
+
+      lnks.exit().remove();
+
+      var nds = flowSVGNodes
+        .selectAll("rect")
+        .data(graph.nodes);
+      nds
+        .attr("x", function(d) { return d.x0; })
+        .attr("y", function(d) { return d.y0; })
+        .attr("width", function (d) { return d.x1 - d.x0; })
+        .attr("height", function (d) { return d.y1 - d.y0; })
+
+      nds.enter()
+        .append("rect")
+        .attr("x", function(d) { return d.x0; })
+        .attr("y", function(d) { return d.y0; })
+        .attr("width", function (d) { return d.x1 - d.x0; })
+        .attr("height", function (d) { return d.y1 - d.y0; })
+        .style("fill", "#aaa")
+      nds.exit().remove();
 
     }
 

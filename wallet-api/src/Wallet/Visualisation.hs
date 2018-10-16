@@ -7,12 +7,16 @@ module Wallet.Visualisation(
     startVis,
     sendOwners,
     sendFlowDiagram,
-    sendTimeSeries
+    sendTimeSeries,
+    initialChain,
+    commitFunds,
+    collectFunds
     ) where
 
 import           Data.Aeson             hiding (Value)
 import           Data.Aeson.Types       (toJSONKeyText)
 import           Data.Foldable          (fold, traverse_)
+import           Data.List              (nub)
 import qualified Data.Map               as Map
 import           Data.Semigroup         (Semigroup (..))
 import qualified Data.Set               as Set
@@ -20,9 +24,9 @@ import qualified Data.Text              as Text
 import           Lens.Micro.Extras
 import           Wallet.UTXO
 
-import           Control.Concurrent     (MVar, ThreadId, forkIO, modifyMVar_, newMVar, readMVar)
+import           Control.Concurrent     (MVar, forkIO, modifyMVar_, newMVar, readMVar)
 import           Control.Exception.Base (catch)
-import           Network.WebSockets     (ConnectionOptions (..), defaultConnectionOptions)
+import           Network.WebSockets     (defaultConnectionOptions)
 import qualified Network.WebSockets     as WS
 
 -- | Owner of unspent funds
@@ -37,7 +41,7 @@ data UtxOwner =
 
 utxOwnerText :: UtxOwner -> Text.Text
 utxOwnerText = \case
-    PubKeyOwner (PubKey i) -> Text.pack ("pubkey-" <> show i)
+    PubKeyOwner (PubKey i) -> Text.pack ("wallet-" <> show i)
     ScriptOwner -> "script"
     OtherOwner -> "other"
 
@@ -76,12 +80,14 @@ owner keys TxOut{..} = case txOutType of
 
 -- | Wrapper around the first 8 digits of a `TxId'`
 newtype TxRef = TxRef Text.Text
+    deriving (Eq, Ord, Show)
 
 instance ToJSON TxRef where
     toJSON (TxRef t) = toJSON t
 
 mkRef :: TxId' -> TxRef
 mkRef = TxRef . Text.pack . take 8 . show . getTxId
+
 
 data FlowLink = FlowLink
     { flowLinkSource :: TxRef
@@ -90,6 +96,7 @@ data FlowLink = FlowLink
     , flowLinkOwner  :: UtxOwner
     }
 
+-- TODO: Node with objects
 instance ToJSON FlowLink where
     -- | Generates JSON that is easy to use with D3.js on the client
     toJSON FlowLink{..} = object [
@@ -97,6 +104,23 @@ instance ToJSON FlowLink where
         "target" .= toJSON flowLinkTarget,
         "value"  .= toJSON flowLinkValue,
         "owner"  .= toJSON flowLinkOwner]
+
+data FlowGraph = FlowGraph
+    { flowGraphLinks :: [FlowLink]
+    , flowGraphNodes :: [TxRef]
+    }
+
+instance ToJSON FlowGraph where
+    toJSON FlowGraph{..} = object [
+        "nodes" .= toJSON (mkNode <$> flowGraphNodes),
+        "links" .= toJSON flowGraphLinks
+        ] where
+            mkNode t = object ["name" .= toJSON t]
+
+graph :: [FlowLink] -> FlowGraph
+graph lnks = FlowGraph{..} where
+    flowGraphLinks = lnks
+    flowGraphNodes = nub $ fmap flowLinkSource lnks ++ fmap flowLinkTarget lnks
 
 -- | The flows of value from t
 txnFlows :: [PubKey] -> Blockchain -> [FlowLink]
@@ -116,7 +140,7 @@ data Message =
     KnownOwners [UtxOwner]
     -- ^ Inform the visualisation of the owners of funds we expect to deal with
     --   (this is to allow the initialisation of a colour scale)
-    | FlowDiagram [FlowLink]
+    | FlowDiagram FlowGraph
     -- ^ Show a diagram of the money flows
     | TimeSeries (Map.Map UtxOwner [Integer])
     -- ^ Show a diagram of the total funds available to each wallet
@@ -152,25 +176,19 @@ removeClient :: Int -> VisState -> VisState
 removeClient i (VisState m o) = VisState (Map.delete i m) o
 
 -- | Start the visualisation server on 127.0.0.1:9161
-startVis :: IO (ThreadId, MVar VisState)
+startVis :: IO (MVar VisState)
 startVis = do
-    let opts = defaultConnectionOptions { 
-          connectionOnPong = putStrLn "Pong"
-        , connectionCompressionOptions  = WS.PermessageDeflateCompression WS.defaultPermessageDeflate 
-        }
+    let opts = defaultConnectionOptions 
     st <- newMVar emptyVisState
-    i <- forkIO $ WS.runServerWith  "127.0.0.1" 9161 opts $ \pending -> do
-        let rq  = WS.pendingRequest pending
+    _ <- forkIO $ WS.runServerWith  "127.0.0.1" 9161 opts $ \pending -> do
         conn <- WS.acceptRequest pending
-        -- WS.forkPingThread conn 30
-        putStrLn "Connection accepted"
-        putStrLn $ "Requested subprotocols: " ++ show (WS.getRequestSubprotocols rq)
-        putStrLn $ "Request headers:        " ++ show (WS.requestHeaders rq)
         modifyMVar_ st (pure . addClient conn)
         readMVar st >>= sendOwners st . visStateOwners
+
+        -- Blocks forever; the connection is closed when this thread ends
         _ :: Text.Text <- WS.receiveData conn
         return ()
-    return (i, st)
+    return st
 
 sendMsg :: MVar VisState -> Message -> IO ()
 sendMsg mv msg = readMVar mv >>= sendAll where
@@ -186,10 +204,10 @@ sendMsg mv msg = readMVar mv >>= sendAll where
         putStrLn "Unexpected connection closed exception"
         disconnect i
     handleClose i (WS.ParseException e) = do
-        putStrLn $ "Recevied parse exception: " ++ show e
+        putStrLn $ "Received parse exception: " ++ show e
         disconnect i
     handleClose i (WS.UnicodeException e) = do
-        putStrLn $ "Recevied unicode exception: " ++ show e
+        putStrLn $ "Received unicode exception: " ++ show e
         disconnect i
 
 -- | Inform clients about the list of known owners of funds
@@ -202,10 +220,51 @@ sendOwners mv os = do
 sendFlowDiagram :: MVar VisState -> Blockchain -> IO ()
 sendFlowDiagram mv bc = do
     VisState{..} <- readMVar mv
-    sendMsg mv (FlowDiagram $ txnFlows visStateOwners bc)
+    sendMsg mv (FlowDiagram $ graph $ txnFlows visStateOwners bc)
 
 -- | Send the data needed for a time series of funds
 sendTimeSeries :: MVar VisState -> Blockchain -> IO ()
 sendTimeSeries mv bc = do
     VisState{..} <- readMVar mv
     sendMsg mv (TimeSeries $ utxoByPk visStateOwners bc)
+
+mkLink :: Text.Text -> Text.Text -> Integer -> Int -> FlowLink
+mkLink a b v o = FlowLink (TxRef a) (TxRef b) v (PubKeyOwner (PubKey o))
+
+mkScriptLink :: Text.Text -> Text.Text -> Integer -> FlowLink
+mkScriptLink a b v = FlowLink (TxRef a) (TxRef b) v ScriptOwner
+
+flows1 :: [FlowLink]
+flows1 = [
+    mkLink "a" "b" 100 1,
+    mkLink "a" "c" 100 2,
+    mkLink "a" "d" 100 3,
+    mkLink "a" "e" 100 4
+    ]
+
+initialChain :: MVar VisState -> IO ()
+initialChain mv = do
+    sendOwners mv (PubKey <$> [1, 2, 3, 4])
+    sendMsg mv (FlowDiagram $ graph flows1)
+
+flows2 :: [FlowLink]
+flows2 = flows1 ++ [
+    mkScriptLink "e" "f" 80,
+    mkLink "e" "g" 20 4,
+    mkScriptLink "d" "f" 70,
+    mkLink "d" "h" 30 3]
+
+commitFunds :: MVar VisState -> IO ()
+commitFunds mv = do
+    sendOwners mv (PubKey <$> [1, 2, 3, 4])
+    sendMsg mv (FlowDiagram $ graph flows2)
+
+flows3 :: [FlowLink]
+flows3 = flows2 ++ [
+    mkLink "f" "i" 150 2
+    ]
+
+collectFunds :: MVar VisState -> IO ()
+collectFunds mv = do
+    sendOwners mv (PubKey <$> [1, 2, 3, 4])
+    sendMsg mv (FlowDiagram $ graph flows3)
