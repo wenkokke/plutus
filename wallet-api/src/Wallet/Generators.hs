@@ -72,7 +72,7 @@ emptyChain :: Mockchain
 emptyChain = Mockchain [] Map.empty
 
 -- | Generate a mockchain
---
+--  
 --   TODO: Generate more than 1 txn
 genMockchain' :: MonadGen m
     => GeneratorModel

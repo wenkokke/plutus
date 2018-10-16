@@ -1,0 +1,191 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en">
+
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <title>Visualisation</title>
+  <script src="https://unpkg.com/d3-array@1"></script>
+  <script src="https://unpkg.com/d3-collection@1"></script>
+  <script src="https://unpkg.com/d3-color@1"></script>
+  <script src="https://unpkg.com/d3-format@1"></script>
+  <script src="https://unpkg.com/d3-interpolate@1"></script>
+  <script src="https://unpkg.com/d3-path@1"></script>
+  <script src="https://unpkg.com/d3-sankey@0"></script>
+  <script src="https://unpkg.com/d3-selection@1"></script>
+  <script src="https://unpkg.com/d3-shape@1"></script>
+  <script src="https://unpkg.com/d3-scale@1"></script>
+  <script src="https://unpkg.com/d3-scale-chromatic@1"></script>
+  <script type="text/javascript">
+    // Connect to server via websocket
+    var Socket = "MozWebSocket" in window ? MozWebSocket : WebSocket;
+    // Create WebSocket connection.
+    const socket = new Socket('ws://localhost:9161');
+
+
+    // Connection opened
+    socket.addEventListener('open', function (event) {
+      console.log('connection established');
+      console.log(event);
+    });
+
+    // Listen for messages
+    socket.addEventListener('close', function (event) {
+      console.log('connection closed');
+      console.log(event);
+    });
+
+    // Listen for messages
+    socket.addEventListener('error', function (event) {
+      console.log('WS Error');
+      console.log(event);
+    });
+
+    // Listen for messages
+    socket.addEventListener('message', function (event) {
+      var d = JSON.parse(event.data);
+      switch (d.tag) {
+        case "known_owners":
+          console.log("updating known owners");
+          console.log(d);
+          updateKnownOwners(d.data);
+          break;
+        default:
+          console.log("Unknown tag");
+          console.log(d);
+
+      }
+    });
+
+  </script>
+
+  <style>
+    .legend {
+      font-size: 12px;
+    }
+
+    rect {
+      stroke-width: 2;
+    }
+  </style>
+</head>
+
+<body>
+  <div style="display: grid; grid-template-columns: 1fr auto 1fr; grid-template-rows: auto 1fr auto; position: absolute; top: 0; left: 0; bottom: 0; right: 0;">
+    <div style="grid-column: 2; grid-row: 1;">
+      <p>Mockchain visualisation</p>
+    </div>
+    <div style="grid-column-start: 1; grid-column-end: 4; grid-row: 2;" id="diagram"></div>
+    <div style="grid-column: 2; grid-row: 3;" id="legend">
+    </div>
+  </div>
+
+  <script>
+    // Set up d3 stuff
+
+    const legendDims = {
+      labelWidth: 120,
+      height: 200,
+      spacing: 4,
+      rectSize: 18
+    }
+
+    const chartDims = {
+      width: 800,
+      height: 600
+    }
+
+    var knownOwners = ["script", "other"];
+
+    var flowData = {
+      nodes: [
+        { node: 0, name: "node0" },
+        { node: 1, name: "node1" },
+        { node: 2, name: "node2" },
+        { node: 3, name: "node3" },
+        { node: 4, name: "node4" }
+        ],
+      links: [
+        { source: 0, target: 1, value: 10 },
+        { source: 0, target: 2, value: 20 },
+        { source: 1, target: 3, value: 5 },
+        { source: 1, target: 4, value: 5 },
+        { source: 2, target: 3, value: 10 },
+        { source: 2, target: 4, value: 10 }
+      ]
+    }
+
+    var color = d3.scaleOrdinal(d3.schemeCategory20b);
+
+    var legendSVG = d3.select('#legend')
+      .append('svg')
+      .attr('width', legendDims.labelWidth * 5)
+      .attr('height', legendDims.height)
+      .append('g')
+      .attr('transform', 'translate(' + (legendDims.labelWidth * 5 / 2) + ',' + (legendDims.height / 2) + ')');
+
+    var flowSVG = d3.select('#diagram')
+      .append('svg')
+      .attr('width', chartDims.width)
+      .attr('height', chartDims.height)
+      .attr("fill", "none")
+      .attr("stroke", "#000")
+      .attr("stroke-opacity", 0.2)
+      .append('g');
+
+    function updateKnownOwners(owners) { // owners :: [String]
+      knownOwners = owners;
+      drawLegend();
+    }
+
+    // Draw the legend using the `knownOwners` field
+    function drawLegend() {
+      // console.log("drawing legend");
+
+      var legend = legendSVG.selectAll('.legend')
+        .data(knownOwners)
+        .enter()
+        .append('g')
+        .attr('class', 'legend')
+        .attr('transform', function (d, i) {
+          var offset = legendDims.labelWidth;
+          var horz = i * offset;
+          return 'translate(' + horz + ',0)';
+        });
+
+      legend.append('rect')
+        .attr('width', legendDims.rectSize)
+        .attr('height', legendDims.rectSize)
+        .style('fill', color)
+        .style('stroke', color);
+
+      legend.append('text')
+        .attr('x', legendDims.rectSize + legendDims.spacing)
+        .attr('y', legendDims.rectSize - legendDims.spacing)
+        .text(function (d) { return d; });
+
+    }
+
+    function drawSankey() {
+      var sankey = d3.sankey()
+        .nodeWidth(15)
+        .nodePadding(10)
+        .size([chartDims.width, chartDims.height]);
+
+      var graph = sankey(flowData);
+
+      flowSVG
+        .selectAll("path")
+        .data(graph.links)
+        .enter()
+        .append("path")
+        .attr("d", d3.sankeyLinkHorizontal())
+        .attr("stroke-width", function (d) { return d.width; });
+
+    }
+
+
+  </script>
+
+</body>
+
+</html>
