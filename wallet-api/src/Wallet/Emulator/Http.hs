@@ -6,9 +6,9 @@
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE TypeOperators              #-}
 
-module Wallet.Emulator.Http where
+module Wallet.Emulator.Http (app, initialState) where
 
-import           Control.Concurrent.STM     (STM, TVar, atomically, modifyTVar, readTVar, readTVarIO)
+import           Control.Concurrent.STM     (STM, TVar, atomically, modifyTVar, readTVar, readTVarIO, newTVar)
 import           Control.Monad.Error.Class  (MonadError)
 import           Control.Monad.Except       (ExceptT, liftEither, runExceptT)
 import           Control.Monad.IO.Class     (MonadIO, liftIO)
@@ -17,8 +17,6 @@ import           Control.Monad.State        (runStateT)
 import           Control.Monad.Writer       (runWriter)
 import           Control.Natural            (type (~>))
 import qualified Data.ByteString.Lazy.Char8 as BSL
-import           Data.HashMap.Strict        (HashMap)
-import qualified Data.HashMap.Strict        as HM
 import           Data.Proxy                 (Proxy (Proxy))
 import           Data.Set                   (Set)
 import qualified Data.Set                   as Set
@@ -27,9 +25,11 @@ import           Servant                    (Application, Handler, ServantErr (e
 import           Servant.API                ((:<|>) ((:<|>)), (:>), Capture, Get, JSON, NoContent (NoContent), Post,
                                              ReqBody)
 import qualified Wallet.API                 as WAPI
-import           Wallet.Emulator.Types      (EmulatedWalletApi, Wallet, WalletState, emptyWalletState,
-                                             runEmulatedWalletApi)
+import           Wallet.Emulator.Types      (EmulatorState, EmulatedWalletApi, Wallet, WalletState, emptyWalletState,
+                                             runEmulatedWalletApi, walletStates, emptyEmulatorState)
+import Lens.Micro ((^.), (&), (%~), to)
 import           Wallet.UTXO                (Tx, TxIn', TxOut', Value)
+import qualified Data.Map                  as Map
 
 type WalletAPI
    = "wallets" :> Get '[ JSON] [Wallet]
@@ -42,7 +42,7 @@ type WalletAPI
      :<|> "wallets" :> "transactions" :> Get '[ JSON] [Tx]
 
 newtype State = State
-  { getWallets :: TVar (HashMap Wallet WalletState)
+  { getState :: TVar EmulatorState
   }
 
 data AppError
@@ -52,26 +52,26 @@ data AppError
 wallets ::
      (MonadError ServantErr m, MonadReader State m, MonadIO m) => m [Wallet]
 wallets = do
-  var <- asks getWallets
+  var <- asks getState
   ws <- liftIO $ readTVarIO var
-  pure $ HM.keys ws
+  pure $ ws ^. walletStates . to Map.keys
 
 fetchWallet ::
      (MonadError ServantErr m, MonadReader State m, MonadIO m)
   => Wallet
   -> m Wallet
 fetchWallet wallet = do
-  var <- asks getWallets
+  var <- asks getState
   ws <- liftIO $ readTVarIO var
-  if HM.member wallet ws
+  if ws ^. walletStates . to (Map.member wallet)
     then pure wallet
     else throwError err404
 
 createWallet :: (MonadReader State m, MonadIO m) => Wallet -> m NoContent
 createWallet wallet = do
-  var <- asks getWallets
+  var <- asks getState
   let walletState = emptyWalletState wallet
-  liftIO . atomically $ modifyTVar var (HM.insert wallet walletState)
+  liftIO . atomically $ modifyTVar var (insertWallet wallet walletState)
   pure NoContent
 
 createPaymentWithChange ::
@@ -102,7 +102,7 @@ runWalletApiAction ::
   -> a
   -> m b
 runWalletApiAction action wallet a = do
-  var <- asks getWallets
+  var <- asks getState
   result <- liftIO . atomically $ runWalletApiActionSTM var wallet action a
   case result of
     Left (HttpError e) -> throwError e
@@ -111,14 +111,14 @@ runWalletApiAction action wallet a = do
     Right res -> pure res
 
 runWalletApiActionSTM ::
-     TVar (HashMap Wallet WalletState)
+     TVar EmulatorState
   -> Wallet
   -> (a -> EmulatedWalletApi b)
   -> a
   -> STM (Either AppError b)
 runWalletApiActionSTM var wallet action a = do
   states <- readTVar var
-  let mState = HM.lookup wallet states
+  let mState = states ^. walletStates . to (Map.lookup wallet)
   case mState of
     Nothing -> pure . Left . HttpError $ err404
     Just oldState -> do
@@ -129,8 +129,11 @@ runWalletApiActionSTM var wallet action a = do
       case res of
         (Left e, _) -> pure . Left . WalletAPIError $ e
         (Right v, newState) -> do
-          modifyTVar var (HM.insert wallet newState)
+          modifyTVar var (insertWallet wallet newState)
           pure $ Right v
+
+insertWallet :: Wallet -> WalletState -> EmulatorState -> EmulatorState
+insertWallet w ws es = es & walletStates %~ Map.insert w ws
 
 -- TODO: This will be part of the transactions API
 getTransactions :: (MonadError ServantErr m) => m [Tx]
@@ -165,3 +168,6 @@ walletApi = Proxy
 
 app :: State -> Application
 app state = serve walletApi $ walletHandlers state
+
+initialState :: IO State
+initialState = atomically $ State <$> newTVar emptyEmulatorState
