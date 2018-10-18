@@ -17,15 +17,16 @@ import           Control.Monad.State        (runStateT)
 import           Control.Monad.Writer       (runWriter)
 import           Control.Natural            (type (~>))
 import qualified Data.ByteString.Lazy.Char8 as BSL
+import Data.Monoid ((<>))
 import           Data.Proxy                 (Proxy (Proxy))
 import           Data.Set                   (Set)
 import qualified Data.Set                   as Set
-import           Servant                    (Application, Handler, ServantErr (errBody), Server, err404, err500, err501,
+import           Servant                    (Application, Handler, ServantErr (errBody), Server, err404, err500,
                                              hoistServer, serve, throwError)
 import           Servant.API                ((:<|>) ((:<|>)), (:>), Capture, Get, JSON, NoContent (NoContent), Post,
                                              ReqBody)
 import qualified Wallet.API                 as WAPI
-import           Wallet.Emulator.Types      (EmulatorState, EmulatedWalletApi, Wallet, WalletState, emptyWalletState,
+import           Wallet.Emulator.Types      (txPool, EmulatorState, EmulatedWalletApi, Wallet, WalletState, emptyWalletState,
                                              runEmulatedWalletApi, walletStates, emptyEmulatorState)
 import Lens.Micro ((^.), (&), (%~), to)
 import           Wallet.UTXO                (Tx, TxIn', TxOut', Value)
@@ -40,6 +41,10 @@ type WalletAPI
      :<|> "wallets" :> Capture "walletid" Wallet :> "pay-to-public-key" :> ReqBody '[ JSON] Value :> Post '[ JSON] TxOut'
      :<|> "wallets" :> Capture "walletid" Wallet :> "transactions" :> ReqBody '[ JSON] Tx :> Post '[ JSON] ()
      :<|> "wallets" :> "transactions" :> Get '[ JSON] [Tx]
+
+type ControlAPI = "blockchain" :> "actions" :> Get '[JSON] [Tx]
+
+type API = WalletAPI :<|> ControlAPI
 
 newtype State = State
   { getState :: TVar EmulatorState
@@ -122,10 +127,11 @@ runWalletApiActionSTM var wallet action a = do
   case mState of
     Nothing -> pure . Left . HttpError $ err404
     Just oldState -> do
-      let (res, _) =
+      let (res, txs) =
             runWriter .
             flip runStateT oldState . runExceptT . runEmulatedWalletApi $
             action a
+      modifyTVar var (addTransactions txs)
       case res of
         (Left e, _) -> pure . Left . WalletAPIError $ e
         (Right v, newState) -> do
@@ -135,9 +141,14 @@ runWalletApiActionSTM var wallet action a = do
 insertWallet :: Wallet -> WalletState -> EmulatorState -> EmulatorState
 insertWallet w ws es = es & walletStates %~ Map.insert w ws
 
--- TODO: This will be part of the transactions API
-getTransactions :: (MonadError ServantErr m) => m [Tx]
-getTransactions = throwError err501
+addTransactions :: [Tx] -> EmulatorState -> EmulatorState
+addTransactions txs es = es & txPool %~ (<> txs)
+
+getTransactions :: (MonadReader State m, MonadIO m) => m [Tx]
+getTransactions = do
+  var <- asks getState
+  states <- liftIO $ readTVarIO var
+  states ^. txPool . to pure
 
 -- | Concrete monad stack for server server
 newtype AppM a = AppM
@@ -155,19 +166,25 @@ runM state r = do
   res <- liftIO . runExceptT . flip runReaderT state . unM $ r
   liftEither res
 
-walletHandlers :: State -> Server WalletAPI
+walletHandlers :: State -> Server API
 walletHandlers state =
-  hoistServer walletApi (runM state) $
+  hoistServer api (runM state) $
   wallets :<|> fetchWallet :<|> createWallet :<|> createPaymentWithChange :<|>
   payToPublicKey :<|>
   submitTxn :<|>
-  getTransactions
+  getTransactions :<|>
+  blockchainActions
 
-walletApi :: Proxy WalletAPI
-walletApi = Proxy
+blockchainActions ::
+     (MonadReader State m, MonadIO m, MonadError ServantErr m)
+  => m [Tx]
+blockchainActions = undefined
+
+api :: Proxy API
+api = Proxy
 
 app :: State -> Application
-app state = serve walletApi $ walletHandlers state
+app state = serve api $ walletHandlers state
 
 initialState :: IO State
 initialState = atomically $ State <$> newTVar emptyEmulatorState
