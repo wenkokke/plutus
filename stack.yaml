@@ -9,6 +9,7 @@ packages:
 - plutus-th
 - plutus-use-cases
 - wallet-api
+- plutus-playground/plutus-playground-server
 
 # Add custom stylish-haskell while waiting for PR upstream: https://github.com/jaspervdj/stylish-haskell/pull/214
 - location:
@@ -19,6 +20,7 @@ packages:
 extra-deps:
 - serialise-0.2.1.0
 - monad-stm-0.1.0.2
+- servant-options-0.1.0.0
 flags:
   language-plutus-core:
     development: true
