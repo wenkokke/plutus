@@ -87,6 +87,8 @@ library plutus-tx-compiler
         bytestring -any,
         containers -any,
         ghc <8.5,
+        bazel-runfiles -any,
+        filepath -any,
         language-plutus-core -any,
         lens -any,
         mtl -any,

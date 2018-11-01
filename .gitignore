@@ -39,3 +39,5 @@ result*
 *.tfvars
 
 gh-pages
+/bazel-*
+BUILD
