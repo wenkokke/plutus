@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE RecordWildCards      #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 -- | Simple visualisation of a mockchain
 module Wallet.Visualisation(
     startVis,
@@ -35,8 +36,6 @@ import           Control.Concurrent     (MVar, forkIO, modifyMVar_, newMVar, rea
 import           Control.Exception.Base (catch)
 import           Network.WebSockets     (defaultConnectionOptions)
 import qualified Network.WebSockets     as WS
-
-import qualified Debug.Trace            as Trace
 
 -- | Owner of unspent funds
 data UtxOwner =
@@ -133,20 +132,28 @@ graph lnks = FlowGraph{..} where
 
 -- | The flows of value from t
 txnFlows :: [PubKey] -> Blockchain -> [FlowLink]
-txnFlows keys bc = foldMap extract $ fold bc where
+txnFlows keys bc = utxoLinks ++ (foldMap extract $ fold bc) where
     knownKeys = Set.fromList keys
     getOut rf = let Just o = out bc rf in o
+    utxos = fmap fst $ Map.toList $ unspentOutputs bc
+    utxoLinks = uncurry flow <$> zip (utxoTargets <$> utxos) utxos
+    utxoTargets (TxOutRef rf idx) = 
+        TxRef $ Text.unwords [
+            "utxo", 
+            Text.pack $ take 8 $ show $getTxId rf, 
+            Text.pack $ show idx]
 
-    extract tx = fmap flow (Set.toList $ txInputs tx) where
-        tgt = mkRef $ hashTx tx
-        flow (TxIn rf _) = 
-            let src = getOut rf in
-                FlowLink
-                    { flowLinkSource = mkRef $ txOutRefId rf -- source :: TxRe
-                    , flowLinkTarget = tgt -- target :: TxRef
-                    , flowLinkValue  = fromIntegral $ txOutValue src
-                    , flowLinkOwner  = owner knownKeys src
-                    }
+    extract tx = fmap (flow (mkRef $ hashTx tx) . txInRef) (Set.toList $ txInputs tx) 
+
+    -- make a flow for a TxOutRef
+    flow tgt rf = 
+        let src = getOut rf in
+            FlowLink
+                { flowLinkSource = mkRef $ txOutRefId rf -- source :: TxRe
+                , flowLinkTarget = tgt -- target :: TxRef
+                , flowLinkValue  = fromIntegral $ txOutValue src
+                , flowLinkOwner  = owner knownKeys src
+                }
 
 data Message =
     KnownOwners [UtxOwner]
@@ -291,11 +298,12 @@ runTraceClient mv tr = do
             txFee = 0,
             txSignatures = []
             }
-        initialBalance = 10000
+        initialBalance = 50000
         keys = PubKey <$> [1, 2, 3, 4]
-        (e, st) = Emulator.runTraceTxPool [initialTX] (updateAll >> tr):
+        (e, st) = Emulator.runTraceTxPool [initialTX] (updateAll >> tr)
         ch = Emulator.emChain st
     _ <- either print pure e
+    sendOwners mv (PubKey <$> [1, 2, 3, 4])
     sendFlowDiagram mv ch
 
 -- | Update all known wallets in the visualisation

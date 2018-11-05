@@ -43,6 +43,7 @@ library
     Language.Plutus.Coordination.Contracts.Future
     Language.Plutus.Coordination.Contracts.Vesting
     Language.Plutus.Coordination.Contracts.Swap
+    Language.Plutus.Coordination.Visualisation
     Language.Plutus.Runtime
     Language.Plutus.Runtime.TH
   ghc-options:

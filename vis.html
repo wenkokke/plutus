@@ -52,6 +52,7 @@
         case "flow_diagram":
           console.log("updating flow diagram");
           console.log(d);
+          drawSankey(flowData);
           drawSankey(d.data);
           break;
         default:
@@ -103,19 +104,8 @@
 
     var flowData = {
       nodes: [
-        { name: "node0" },
-        { name: "node1" },
-        { name: "node2" },
-        { name: "node3" },
-        { name: "node4" }
       ],
       links: [
-        { source: "node0", target: "node1", value: 10, owner: "script" },
-        { source: "node0", target: "node2", value: 20, owner: "script" },
-        { source: "node1", target: "node3", value: 5, owner: "other" },
-        { source: "node1", target: "node4", value: 5, owner: "other" },
-        { source: "node2", target: "node3", value: 10, owner: "script" },
-        { source: "node2", target: "node4", value: 10, owner: "pubkey-1" }
       ]
     }
 
