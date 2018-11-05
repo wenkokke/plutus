@@ -12,6 +12,7 @@ module Wallet.API(
     signature,
     createPayment,
     signAndSubmit,
+    pubKeyTxn,
     -- * Error handling
     WalletAPIError(..),
     insufficientFundsError,
@@ -23,7 +24,7 @@ import           Data.Aeson                (FromJSON, ToJSON)
 import qualified Data.Set                  as Set
 import           Data.Text                 (Text)
 import           Wallet.UTXO               (Address', Height, PubKey (..), Signature (..), Tx (..), TxIn', TxOut',
-                                            Value)
+                                            Value, pubKeyTxOut)
 
 newtype PrivateKey = PrivateKey { getPrivateKey :: Int }
     deriving (Eq, Ord, Show)
@@ -79,6 +80,13 @@ class WalletAPI m where
 
 insufficientFundsError :: MonadError WalletAPIError m => Text -> m a
 insufficientFundsError = throwError . InsufficientFunds
+
+-- | Pay a value to a public key address
+pubKeyTxn :: (MonadError WalletAPIError m, WalletAPI m) => Value -> PubKey -> m ()
+pubKeyTxn v pk = do
+    (ins, out) <- createPaymentWithChange v
+    let ott = pubKeyTxOut v pk
+    signAndSubmit ins [ott, out]
 
 otherError :: MonadError WalletAPIError m => Text -> m a
 otherError = throwError . OtherError

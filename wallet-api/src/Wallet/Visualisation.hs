@@ -10,9 +10,15 @@ module Wallet.Visualisation(
     sendTimeSeries,
     initialChain,
     commitFunds,
-    collectFunds
+    collectFunds,
+    -- * Running traces
+    runTraceClient,
+    updateAll,
+    -- *
+    module Wallet.UTXO
     ) where
 
+import           Control.Monad          (void)
 import           Data.Aeson             hiding (Value)
 import           Data.Aeson.Types       (toJSONKeyText)
 import           Data.Foldable          (fold, traverse_)
@@ -22,12 +28,15 @@ import           Data.Semigroup         (Semigroup (..))
 import qualified Data.Set               as Set
 import qualified Data.Text              as Text
 import           Lens.Micro.Extras
+import qualified Wallet.Emulator.Types  as Emulator
 import           Wallet.UTXO
 
 import           Control.Concurrent     (MVar, forkIO, modifyMVar_, newMVar, readMVar)
 import           Control.Exception.Base (catch)
 import           Network.WebSockets     (defaultConnectionOptions)
 import qualified Network.WebSockets     as WS
+
+import qualified Debug.Trace            as Trace
 
 -- | Owner of unspent funds
 data UtxOwner =
@@ -94,7 +103,7 @@ data FlowLink = FlowLink
     , flowLinkTarget :: TxRef
     , flowLinkValue  :: Integer
     , flowLinkOwner  :: UtxOwner
-    }
+    } deriving Show
 
 -- TODO: Node with objects
 instance ToJSON FlowLink where
@@ -124,17 +133,20 @@ graph lnks = FlowGraph{..} where
 
 -- | The flows of value from t
 txnFlows :: [PubKey] -> Blockchain -> [FlowLink]
-txnFlows keys = foldMap extract . fold where
+txnFlows keys bc = foldMap extract $ fold bc where
     knownKeys = Set.fromList keys
+    getOut rf = let Just o = out bc rf in o
 
-    extract tx = fmap flow (txOutRefs tx) where
+    extract tx = fmap flow (Set.toList $ txInputs tx) where
         tgt = mkRef $ hashTx tx
-        flow (txo, txor) = FlowLink
-                            { flowLinkSource = mkRef $ txOutRefId txor
-                            , flowLinkTarget = tgt
-                            , flowLinkValue  = fromIntegral $ txOutValue txo
-                            , flowLinkOwner  = owner knownKeys txo
-                            }
+        flow (TxIn rf _) = 
+            let src = getOut rf in
+                FlowLink
+                    { flowLinkSource = mkRef $ txOutRefId rf -- source :: TxRe
+                    , flowLinkTarget = tgt -- target :: TxRef
+                    , flowLinkValue  = fromIntegral $ txOutValue src
+                    , flowLinkOwner  = owner knownKeys src
+                    }
 
 data Message =
     KnownOwners [UtxOwner]
@@ -178,7 +190,7 @@ removeClient i (VisState m o) = VisState (Map.delete i m) o
 -- | Start the visualisation server on 127.0.0.1:9161
 startVis :: IO (MVar VisState)
 startVis = do
-    let opts = defaultConnectionOptions 
+    let opts = defaultConnectionOptions
     st <- newMVar emptyVisState
     _ <- forkIO $ WS.runServerWith  "127.0.0.1" 9161 opts $ \pending -> do
         conn <- WS.acceptRequest pending
@@ -268,3 +280,25 @@ collectFunds :: MVar VisState -> IO ()
 collectFunds mv = do
     sendOwners mv (PubKey <$> [1, 2, 3, 4])
     sendMsg mv (FlowDiagram $ graph flows3)
+
+-- | Run a trace and send the resulting mockchain down the socket
+runTraceClient :: MVar VisState -> Emulator.Trace Emulator.EmulatedWalletApi () -> IO ()
+runTraceClient mv tr = do
+    let initialTX = Tx {
+            txInputs = Set.empty,
+            txOutputs = pubKeyTxOut initialBalance <$> keys,
+            txForge = initialBalance * fromIntegral (length keys),
+            txFee = 0,
+            txSignatures = []
+            }
+        initialBalance = 10000
+        keys = PubKey <$> [1, 2, 3, 4]
+        (e, st) = Emulator.runTraceTxPool [initialTX] (updateAll >> tr):
+        ch = Emulator.emChain st
+    _ <- either print pure e
+    sendFlowDiagram mv ch
+
+-- | Update all known wallets in the visualisation
+updateAll :: Emulator.Trace Emulator.EmulatedWalletApi ()
+updateAll = Emulator.blockchainActions >>= void . Emulator.walletsNotifyBlock wlts where
+    wlts = Emulator.Wallet <$> [1..4]

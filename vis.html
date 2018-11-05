@@ -50,7 +50,8 @@
           updateKnownOwners(d.data);
           break;
         case "flow_diagram":
-          console.log("updating known owners");
+          console.log("updating flow diagram");
+          console.log(d);
           drawSankey(d.data);
           break;
         default:
