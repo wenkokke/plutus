@@ -45,6 +45,7 @@ data Query a
   = HandleAceMessage AceMessage a
   | HandleEChartsMessage EChartsMessage a
   | CompileProgram a
+  | ScrollToRow Int a
   | SendAction Action a
   | KillAction Int a
   | AddWallet a
