@@ -8,7 +8,7 @@ import Data.Newtype (class Newtype)
 import Data.Symbol (SProxy(..))
 import Halogen.ECharts (EChartsMessage)
 import Network.RemoteData (RemoteData)
-import Playground.API (FunctionsSchema)
+import Playground.API (FunctionSchema)
 import Playground.Interpreter (CompilationError)
 import Servant.PureScript.Affjax (AjaxError)
 
@@ -53,7 +53,7 @@ data Query a
 -----------------------------------------------------------
 
 type CompilationResult =
-  Either (Array CompilationError) FunctionsSchema
+  Either (Array CompilationError) (Array FunctionSchema)
 
 type State =
   { wallets :: Array Wallet

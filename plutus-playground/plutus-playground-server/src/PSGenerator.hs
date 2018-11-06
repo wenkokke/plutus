@@ -85,7 +85,7 @@ import Wallet.UTXO.Types (Blockchain)
 myBridge :: BridgePart
 myBridge =
   defaultBridge <|> integerBridge <|> scientificBridge <|> insOrdHashMapBridge <|>
-  aesonBridge
+  aesonBridge <|> schemaBridge
 
 integerBridge :: BridgePart
 integerBridge = do
@@ -115,6 +115,15 @@ aesonBridge = do
 psJson :: PSType
 psJson = TypeInfo "purescript-argonaut-core" "Data.Argonaut.Core" "Json" []
 
+schemaBridge :: BridgePart
+schemaBridge = do
+  typeName ^== "Schema"
+  typeModule ^== "Data.Swagger" <|> typeModule ^== "Data.Swagger.Internal"
+  pure psSchema
+
+psSchema :: PSType
+psSchema = TypeInfo "" "Data.JsonSchema" "Schema" []
+
 data MyBridge
 
 myBridgeProxy :: Proxy MyBridge
@@ -123,185 +132,12 @@ myBridgeProxy = Proxy
 instance HasBridge MyBridge where
   languageBridge _ = buildBridge myBridge
 
-referencedType :: SumType 'Haskell
-referencedType =
-  SumType
-    info
-    [ DataConstructor "Ref" (Left [referenceTypeInfo])
-    , DataConstructor "Inline" (Left [mkTypeInfo (Proxy @A)])
-    ]
-    [SumType.Generic]
-  where
-    info :: HaskellType
-    info = TypeInfo "swagger2" "Data.Swagger.Internal" "Referenced" [mkTypeInfo (Proxy @A)]
-
-referenceType :: SumType 'Haskell
-referenceType =
-  SumType
-    referenceTypeInfo
-    [ DataConstructor
-        "Reference"
-        (Right [RecordEntry "getReference" (mkTypeInfo (Proxy @Text))])
-    ]
-    [SumType.Newtype, SumType.Generic]
-
-uRLType :: SumType 'Haskell
-uRLType =
-  SumType
-    info
-    [ DataConstructor
-        "URL"
-        (Right [RecordEntry "getUrl" (mkTypeInfo (Proxy @Text))])
-    ]
-    [SumType.Generic, SumType.Newtype]
-  where
-    info :: HaskellType
-    info = TypeInfo "swagger2" "Data.Swagger.Internal" "URL" []
-
-swaggerKindType :: SumType 'Haskell
-swaggerKindType =
-  SumType
-    info
-    [ DataConstructor "SwaggerKindNormal" (Left [mkTypeInfo (Proxy @A)])
-    , DataConstructor "SwaggerKindParamOtherSchema" (Left [])
-    -- , DataConstructor "SwaggerKindSchema" (Left [])
-    ]
-    [SumType.Generic]
-  where
-    info :: HaskellType
-    info = TypeInfo "swagger2" "Data.Swagger.Internal" "SwaggerKind" [mkTypeInfo (Proxy @A)]
-
-swaggerKindSchemaType :: SumType 'Haskell
-swaggerKindSchemaType =
-  SumType
-    info
-    [ DataConstructor "SwaggerKindSchema" (Left [])
-    ]
-    [SumType.Generic]
-  where
-    info :: HaskellType
-    info = TypeInfo "swagger2" "Data.Swagger.Internal" "SwaggerKindSchema" []
-
-referenceTypeInfo :: TypeInfo 'Haskell
-referenceTypeInfo = mkTypeInfo (Proxy @Reference)
-
-schemaType :: SumType 'Haskell
-schemaType =
-  SumType
-    info
-    [ DataConstructor
-        "Schema"
-        (Right
-           [ RecordEntry "_schemaTitle" (mkTypeInfo (Proxy @(Maybe Text)))
-           , RecordEntry "_schemaDescription" (mkTypeInfo (Proxy @(Maybe Text)))
-           , RecordEntry "_schemaRequired" (mkTypeInfo (Proxy @([ParamName])))
-           , RecordEntry
-               "_schemaAllOf"
-               (mkTypeInfo (Proxy @(Maybe [Referenced Schema])))
-           , RecordEntry
-               "_schemaProperties"
-               (mkTypeInfo (Proxy @(InsOrdHashMap Text (Referenced Schema))))
-           , RecordEntry
-               "_schemaAdditionalProperties"
-               (mkTypeInfo (Proxy @(Maybe (Referenced Schema))))
-           , RecordEntry
-               "_schemaDiscriminator"
-               (mkTypeInfo (Proxy @(Maybe Text)))
-           , RecordEntry "_schemaReadOnly" (mkTypeInfo (Proxy @(Maybe Bool)))
-           , RecordEntry "_schemaXml" (mkTypeInfo (Proxy @(Maybe Xml)))
-           , RecordEntry
-               "_schemaExternalDocs"
-               (mkTypeInfo (Proxy @(Maybe ExternalDocs)))
-           , RecordEntry "_schemaExample" (mkTypeInfo (Proxy @(Maybe Value)))
-           , RecordEntry
-               "_schemaMaxProperties"
-               (mkTypeInfo (Proxy @(Maybe Integer)))
-           , RecordEntry
-               "_schemaMinProperties"
-               (mkTypeInfo (Proxy @(Maybe Integer)))
-           , RecordEntry
-               "_schemaParamSchema"
-               (mkTypeInfo (Proxy @(ParamSchema SwaggerKindSchema)))
-           ])
-    ]
-    [SumType.Newtype, SumType.Generic]
-  where
-    info :: HaskellType
-    info = TypeInfo "swagger2" "Data.Swagger.Internal" "Schema" []
-
-paramSchemaType :: SumType 'Haskell
-paramSchemaType =
-  SumType
-    info
-    [ DataConstructor
-        "ParamSchema"
-        (Right
-           [ RecordEntry
-               "_paramSchemaDefault"
-               (mkTypeInfo (Proxy @(Maybe Value)))
-           , RecordEntry "_paramSchemaType" (mkTypeInfo (Proxy @A))
-           , RecordEntry
-               "_paramSchemaFormat"
-               (mkTypeInfo (Proxy @(Maybe Format)))
-           , RecordEntry "_paramSchemaItems" (mkTypeInfo (Proxy @(Maybe A)))
-           , RecordEntry
-               "_paramSchemaMaximum"
-               (mkTypeInfo (Proxy @(Maybe Scientific)))
-           , RecordEntry
-               "_paramSchemaExclusiveMaximum"
-               (mkTypeInfo (Proxy @(Maybe Bool)))
-           , RecordEntry
-               "_paramSchemaMinimum"
-               (mkTypeInfo (Proxy @(Maybe Scientific)))
-           , RecordEntry
-               "_paramSchemaExclusiveMinimum"
-               (mkTypeInfo (Proxy @(Maybe Bool)))
-           , RecordEntry
-               "_paramSchemaMaxLength"
-               (mkTypeInfo (Proxy @(Maybe Integer)))
-           , RecordEntry
-               "_paramSchemaMinLength"
-               (mkTypeInfo (Proxy @(Maybe Integer)))
-           , RecordEntry
-               "_paramSchemaPattern"
-               (mkTypeInfo (Proxy @(Maybe Pattern)))
-           , RecordEntry
-               "_paramSchemaMaxItems"
-               (mkTypeInfo (Proxy @(Maybe Integer)))
-           , RecordEntry
-               "_paramSchemaMinItems"
-               (mkTypeInfo (Proxy @(Maybe Integer)))
-           , RecordEntry
-               "_paramSchemaUniqueItems"
-               (mkTypeInfo (Proxy @(Maybe Bool)))
-           , RecordEntry
-               "_paramSchemaEnum"
-               (mkTypeInfo (Proxy @(Maybe [Value])))
-           , RecordEntry
-               "_paramSchemaMultipleOf"
-               (mkTypeInfo (Proxy @(Maybe Scientific)))
-           ])
-    ]
-    [SumType.Newtype, SumType.Generic]
-  where
-    info :: HaskellType
-    info = TypeInfo "swagger2" "Data.Swagger.Internal" "ParamSchema" [mkTypeInfo (Proxy @A)]
-
 myTypes :: [SumType 'Haskell]
 myTypes =
   [ mkSumType (Proxy @FunctionSchema)
   , mkSumType (Proxy @Fn)
   , mkSumType (Proxy @SourceCode)
-  , mkSumType (Proxy @Xml)
-  , mkSumType (Proxy @ExternalDocs)
   , mkSumType (Proxy @CompilationError)
-  , swaggerKindType
-  , swaggerKindSchemaType
-  , uRLType
-  , referenceType
-  , referencedType
-  , schemaType
-  , paramSchemaType
   ]
 
 mySettings :: Settings
