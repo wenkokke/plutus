@@ -8,7 +8,7 @@ module Language.Plutus.CoreToPLC.Compiler.Names where
 import           Language.Plutus.CoreToPLC.Compiler.Kind
 import {-# SOURCE #-} Language.Plutus.CoreToPLC.Compiler.Type
 import           Language.Plutus.CoreToPLC.Compiler.Types
-import           Language.Plutus.CoreToPLC.PLCTypes
+import           Language.Plutus.CoreToPLC.PIRTypes
 import           Language.Plutus.CoreToPLC.Utils
 
 import qualified GhcPlugins                               as GHC

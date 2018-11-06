@@ -6,7 +6,7 @@ module Language.Plutus.CoreToPLC.Compiler.Types where
 
 import           Language.Plutus.CoreToPLC.Compiler.Definitions
 import           Language.Plutus.CoreToPLC.Error
-import           Language.Plutus.CoreToPLC.PLCTypes
+import           Language.Plutus.CoreToPLC.PIRTypes
 
 import           Language.PlutusCore.Quote
 

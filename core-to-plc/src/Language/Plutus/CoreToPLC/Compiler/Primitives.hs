@@ -9,7 +9,7 @@ module Language.Plutus.CoreToPLC.Compiler.Primitives where
 import           Language.Plutus.CoreToPLC.Compiler.Types
 import           Language.Plutus.CoreToPLC.Compiler.Utils
 import           Language.Plutus.CoreToPLC.Error
-import           Language.Plutus.CoreToPLC.PLCTypes
+import           Language.Plutus.CoreToPLC.PIRTypes
 import           Language.Plutus.CoreToPLC.Utils
 
 import qualified Language.PlutusCore                      as PLC

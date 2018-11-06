@@ -3,7 +3,7 @@
 module Language.Plutus.CoreToPLC.Compiler.Expr (convExpr, convExprWithDefs) where
 
 import           Language.Plutus.CoreToPLC.Compiler.Types
-import           Language.Plutus.CoreToPLC.PLCTypes
+import           Language.Plutus.CoreToPLC.PIRTypes
 
 import qualified GhcPlugins                               as GHC
 

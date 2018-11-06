@@ -6,10 +6,12 @@
 module Language.Plutus.CoreToPLC.Compiler.Definitions where
 
 import           Language.Plutus.CoreToPLC.Error
-import           Language.Plutus.CoreToPLC.PLCTypes
+import           Language.Plutus.CoreToPLC.PIRTypes
 
 import qualified Language.PlutusCore                as PLC
 import qualified Language.PlutusCore.MkPlc          as PLC
+
+import qualified Language.PlutusIR                  as PIR
 
 import qualified GhcPlugins                         as GHC
 
@@ -38,10 +40,10 @@ trTy = \case
     PlainType t -> t
     DataType t _ _ -> t
 
-type TypeDef = Def PLCTyVar TypeRep
+type TypeDef = Def PIRTyVar TypeRep
 
-instance Show (Def PLCTyVar TypeRep) where
-    show Def{dVar=v} = show (PLC.tyVarDeclName v)
+instance Show (Def PIRTyVar TypeRep) where
+    show Def{dVar=v} = show (PIR.tyVarDeclName v)
 
 tydTy :: TypeDef -> PLCType
 tydTy = \case
@@ -88,25 +90,25 @@ wrapWithDefs
     => DefMap GHC.Name TypeDef
     -> DefMap GHC.Name TermDef
     -> PLC.Term PLC.TyName PLC.Name ()
-    -> m (PLC.Term PLC.TyName PLC.Name ())
+    -> m (PIR.Term PIR.TyName PIR.Name ())
 wrapWithDefs typeDefs termDefs body = do
     let sccs = defSccs typeDefs termDefs
     -- process from the inside out
-    foldM wrapDefScc body (reverse sccs)
+    foldM wrapDefScc (PIR.embedIntoIR body) (reverse sccs)
 
 wrapDefScc
     :: (MonadError ConvError m)
-    => PLC.Term PLC.TyName PLC.Name ()
+    => PIR.Term PIR.TyName PIR.Name ()
     -> Graph.SCC TermOrTypeDef
-    -> m (PLC.Term PLC.TyName PLC.Name ())
+    -> m (PIR.Term PIR.TyName PIR.Name ())
 wrapDefScc acc scc = case scc of
-    Graph.AcyclicSCC def            -> pure $ wrapDef acc def
+    Graph.AcyclicSCC def            -> pure $ wrapDef (unsafeCompileTerm acc) def
     -- self-recursive types are okay, but we don't handle recursive groups of definitions in general at the moment
-    Graph.CyclicSCC [def@TypeDef{}] -> pure $ wrapDef acc def
+    Graph.CyclicSCC [def@TypeDef{}] -> pure $ wrapDef (unsafeCompileTerm acc) def
     Graph.CyclicSCC _               -> throwPlain $ UnsupportedError "Mutually recursive definitions not currently supported"
 
 -- | Wrap a term with a single definition.
-wrapDef :: PLC.Term PLC.TyName PLC.Name () -> TermOrTypeDef -> PLC.Term PLC.TyName PLC.Name ()
+wrapDef :: PLC.Term PLC.TyName PLC.Name () -> TermOrTypeDef -> PIR.Term PIR.TyName PIR.Name ()
 wrapDef term def = case def of
     TypeDef d ->
         -- See Note [Abstract data types]
@@ -122,5 +124,7 @@ wrapDef term def = case def of
             vars = fmap dVar abstractTerms
             vals = fmap dVal abstractTerms
         in
-            PLC.mkIterApp () (PLC.mkIterInst () (PLC.mkIterTyAbs () tyVars (PLC.mkIterLamAbs () vars term)) tys) vals
-    TermDef (Def _ d rhs) -> PLC.mkTermLet () (PLC.Def d rhs) term
+        PIR.embedIntoIR $ PLC.mkIterApp () (PLC.mkIterInst () (PLC.mkIterTyAbs () tyVars (PLC.mkIterLamAbs () vars term)) tys) vals
+--                    PLC.mkIterApp () (PLC.mkIterInst () (PLC.mkIterTyAbs () tyVars (PLC.mkIterLamAbs () vars term)) tys) vals
+
+    TermDef (Def _ d rhs) -> PIR.embedIntoIR $ PLC.mkTermLet () (PLC.Def d rhs) term

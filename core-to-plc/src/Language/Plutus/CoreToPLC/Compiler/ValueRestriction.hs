@@ -9,7 +9,7 @@ module Language.Plutus.CoreToPLC.Compiler.ValueRestriction where
 import           Language.Plutus.CoreToPLC.Compiler.Types
 import           Language.Plutus.CoreToPLC.Error
 import           Language.Plutus.CoreToPLC.Laziness
-import           Language.Plutus.CoreToPLC.PLCTypes
+import           Language.Plutus.CoreToPLC.PIRTypes
 
 import qualified Language.PlutusCore                      as PLC
 import           Language.PlutusCore.Quote

@@ -7,7 +7,7 @@ module Language.Plutus.CoreToPLC.Compiler.Binders where
 import           Language.Plutus.CoreToPLC.Compiler.Names
 import           Language.Plutus.CoreToPLC.Compiler.Types
 import           Language.Plutus.CoreToPLC.Compiler.ValueRestriction
-import           Language.Plutus.CoreToPLC.PLCTypes
+import           Language.Plutus.CoreToPLC.PIRTypes
 
 import qualified GhcPlugins                                          as GHC
 
