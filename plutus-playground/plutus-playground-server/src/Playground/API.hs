@@ -36,10 +36,6 @@ newtype SourceCode = SourceCode Text
   deriving newtype (ToJSON, FromJSON)
   deriving anyclass (Newtype)
 
-newtype FunctionsSchema = FunctionsSchema [(Fn, Text)]
-  deriving stock (Generic)
-  deriving newtype (ToJSON, FromJSON)
-
 newtype Fn = Fn Text
   deriving stock (Show, Generic, TH.Lift)
   deriving newtype (ToJSON, FromJSON)

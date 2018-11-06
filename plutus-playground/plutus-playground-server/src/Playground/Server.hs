@@ -5,8 +5,7 @@ module Playground.Server
 import           Control.Monad.IO.Class       (liftIO)
 import qualified Data.ByteString.Lazy.Char8   as BSL
 import           Language.Haskell.Interpreter (runInterpreter)
-import           Playground.API               (API, Evaluation, FunctionSchema, FunctionsSchema (FunctionsSchema),
-                                               SourceCode)
+import           Playground.API               (API, Evaluation, FunctionSchema, SourceCode)
 import qualified Playground.Interpreter       as Interpreter
 import           Servant                      (err400, errBody, throwError)
 import           Servant.API                  ((:<|>) ((:<|>)), NoContent (NoContent))
