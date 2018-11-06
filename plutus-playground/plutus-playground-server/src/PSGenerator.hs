@@ -13,74 +13,27 @@ module PSGenerator
   ( generate
   ) where
 
-import Control.Applicative ((<|>))
-import Control.Lens ((&), set)
-import Control.Monad.Reader.Class (MonadReader)
-import Data.Aeson (FromJSON, ToJSON, Value)
-import Data.HashMap.Strict.InsOrd (InsOrdHashMap)
-import Data.Monoid ()
-import Data.Proxy (Proxy(Proxy))
-import Data.Scientific (Scientific)
-import qualified Data.Set as Set ()
-import Data.Swagger
-  ( ExternalDocs
-  , Format
-  , ParamName
-  , ParamSchema
-  , Pattern
-  , Reference
-  , Referenced
-  , Schema
-  , SwaggerItems
-  , SwaggerType
-  , URL
-  , Xml
-  )
-import Data.Swagger.Internal (SwaggerKind(SwaggerKindSchema))
-import Data.Text (Text)
-import qualified Data.Text as T ()
-import qualified Data.Text.Encoding as T ()
-import qualified Data.Text.IO as T ()
-import GHC.Generics (Generic)
-import Language.PureScript.Bridge
-  ( BridgeData
-  , BridgePart
-  , DataConstructor(DataConstructor)
-  , HaskellType
-  , Language(Haskell)
-  , PSType
-  , RecordEntry(RecordEntry)
-  , SumType(SumType)
-  , TypeInfo(TypeInfo)
-  , (^==)
-  , buildBridge
-  , mkSumType
-  , mkTypeInfo
-  , psTypeParameters
-  , stringBridge
-  , typeModule
-  , typeName
-  , typeParameters
-  , writePSTypes
-  )
-import qualified Language.PureScript.Bridge.SumType as SumType
-import Language.PureScript.Bridge.PSTypes (psInt)
-import Language.PureScript.Bridge.TypeParameters (A)
-import Playground.API (API, Evaluation, Fn, FunctionSchema, SourceCode)
-import qualified Playground.API as API
-import Playground.Interpreter (CompilationError)
-import Servant.API ((:>), Capture, Get, JSON, PlainText, Post, ReqBody)
-import Servant.PureScript
-  ( HasBridge
-  , Settings
-  , _generateSubscriberAPI
-  , apiModuleName
-  , defaultBridge
-  , defaultSettings
-  , languageBridge
-  , writeAPIModuleWithSettings
-  )
-import Wallet.UTXO.Types (Blockchain)
+import           Control.Applicative                ((<|>))
+import           Control.Lens                       (set, (&))
+import           Data.Aeson                         (FromJSON, ToJSON)
+import           Data.Monoid                        ()
+import           Data.Proxy                         (Proxy (Proxy))
+import qualified Data.Set                           as Set ()
+import           Data.Text                          (Text)
+import qualified Data.Text                          as T ()
+import qualified Data.Text.Encoding                 as T ()
+import qualified Data.Text.IO                       as T ()
+import           GHC.Generics                       (Generic)
+import           Language.PureScript.Bridge         (BridgePart, Language (Haskell), SumType, buildBridge, mkSumType,
+                                                     stringBridge, writePSTypes)
+import           Language.PureScript.Bridge.PSTypes ()
+import           Playground.API                     (API, CompilationError, Evaluation, Fn, FunctionSchema,
+                                                     FunctionsSchema, SourceCode)
+import qualified Playground.API                     as API
+import           Servant.API                        ((:>), Capture, Get, JSON, PlainText, Post, ReqBody)
+import           Servant.PureScript                 (HasBridge, Settings, apiModuleName, defaultBridge, defaultSettings,
+                                                     languageBridge, writeAPIModuleWithSettings, _generateSubscriberAPI)
+import           Wallet.UTXO.Types                  (Blockchain)
 
 myBridge :: BridgePart
 myBridge =
@@ -147,9 +100,5 @@ mySettings =
 
 generate :: FilePath -> IO ()
 generate outputDir = do
-  writeAPIModuleWithSettings
-    mySettings
-    outputDir
-    myBridgeProxy
-    (Proxy :: Proxy ("contract" :> ReqBody '[ JSON] SourceCode :> Post '[ JSON] [FunctionSchema]))
+  writeAPIModuleWithSettings mySettings outputDir myBridgeProxy (Proxy @API)
   writePSTypes outputDir (buildBridge myBridge) myTypes
