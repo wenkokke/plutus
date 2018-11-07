@@ -1,39 +1,58 @@
-{-# LANGUAGE AutoDeriveTypeable #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE AutoDeriveTypeable    #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeOperators         #-}
 
 module PSGenerator
   ( generate
   ) where
 
-import           Control.Applicative                ((<|>))
-import           Control.Lens                       (set, (&))
-import           Data.Aeson                         (FromJSON, ToJSON)
-import           Data.Monoid                        ()
-import           Data.Proxy                         (Proxy (Proxy))
-import qualified Data.Set                           as Set ()
-import           Data.Text                          (Text)
-import qualified Data.Text                          as T ()
-import qualified Data.Text.Encoding                 as T ()
-import qualified Data.Text.IO                       as T ()
-import           GHC.Generics                       (Generic)
-import           Language.PureScript.Bridge         (BridgePart, Language (Haskell), SumType, buildBridge, mkSumType,
-                                                     stringBridge, writePSTypes)
-import           Language.PureScript.Bridge.PSTypes ()
-import           Playground.API                     (API, CompilationError, Evaluation, Fn, FunctionSchema,
-                                                     FunctionsSchema, SourceCode)
-import qualified Playground.API                     as API
-import           Servant.API                        ((:>), Capture, Get, JSON, PlainText, Post, ReqBody)
-import           Servant.PureScript                 (HasBridge, Settings, apiModuleName, defaultBridge, defaultSettings,
-                                                     languageBridge, writeAPIModuleWithSettings, _generateSubscriberAPI)
-import           Wallet.UTXO.Types                  (Blockchain)
+import           Control.Applicative                       ((<|>))
+import           Control.Lens                              (set, (&))
+import           Control.Monad.Reader.Class                (MonadReader)
+import           Crypto.Hash                               (Digest, SHA256)
+import           Data.Aeson                                (FromJSON, ToJSON)
+import           Data.HashMap.Strict.InsOrd                (InsOrdHashMap)
+import           Data.Monoid                               ()
+import           Data.Proxy                                (Proxy (Proxy))
+import           Data.Scientific                           (Scientific)
+import qualified Data.Set                                  as Set ()
+import           Data.Set.Internal                         (Set)
+import           Data.Swagger                              (ExternalDocs, Format, ParamName, ParamSchema, Pattern,
+                                                            Reference, Referenced, Schema, SwaggerItems, SwaggerType,
+                                                            URL, Xml)
+import           Data.Swagger.Internal                     (SwaggerKind (SwaggerKindSchema))
+import           Data.Text                                 (Text)
+import qualified Data.Text                                 as T ()
+import qualified Data.Text.Encoding                        as T ()
+import qualified Data.Text.IO                              as T ()
+import           GHC.Generics                              (Generic)
+import           Language.PureScript.Bridge                (BridgeData, BridgePart, DataConstructor (DataConstructor),
+                                                            HaskellType, Language (Haskell), PSType,
+                                                            RecordEntry (RecordEntry), SumType (SumType),
+                                                            TypeInfo (TypeInfo), buildBridge, mkSumType, mkTypeInfo,
+                                                            psTypeParameters, stringBridge, typeModule, typeName,
+                                                            typeParameters, writePSTypes, (^==))
+import           Language.PureScript.Bridge.PSTypes        (psArray, psInt, psString)
+import qualified Language.PureScript.Bridge.SumType        as SumType
+import           Language.PureScript.Bridge.TypeParameters (A)
+import           Playground.API                            (API, Evaluation, Expression, Fn, FunctionSchema, SourceCode)
+import qualified Playground.API                            as API
+import           Playground.Interpreter                    (CompilationError)
+import           Servant.API                               ((:>), Capture, Get, JSON, PlainText, Post, ReqBody)
+import           Servant.PureScript                        (HasBridge, Settings, apiModuleName, defaultBridge,
+                                                            defaultSettings, languageBridge, writeAPIModuleWithSettings,
+                                                            _generateSubscriberAPI)
+import           Wallet.Emulator.Types                     (Wallet)
+import           Wallet.UTXO.Types                         (Address, PubKey, Redeemer, Signature, Tx, TxId, TxIn,
+                                                            TxInType, TxOut, TxOutRef, TxOutType, Validator, Value)
+import           Wallet.UTXO.Types                         (Blockchain)
 
 integerBridge :: BridgePart
 integerBridge = do
@@ -61,7 +80,7 @@ aesonBridge = do
   pure psJson
 
 psJson :: PSType
-psJson = TypeInfo "purescript-argonaut-core" "Data.Argonaut.Core" "Json" []
+psJson = TypeInfo "" "Data.RawJson" "RawJson" []
 
 schemaBridge :: BridgePart
 schemaBridge = do
@@ -134,16 +153,6 @@ myBridgeProxy = Proxy
 instance HasBridge MyBridge where
   languageBridge _ = buildBridge myBridge
 
-expressionType :: SumType 'Haskell
-expressionType =
-  let (SumType t d i) = mkSumType (Proxy @Expression)
-   in SumType t d [SumType.Newtype]
-
-evaluationType :: SumType 'Haskell
-evaluationType =
-  let (SumType t d i) = mkSumType (Proxy @Evaluation)
-   in SumType t d [SumType.Newtype]
-
 myTypes :: [SumType 'Haskell]
 myTypes =
   [ mkSumType (Proxy @FunctionSchema)
@@ -151,8 +160,8 @@ myTypes =
   , mkSumType (Proxy @SourceCode)
   , mkSumType (Proxy @Wallet)
   , mkSumType (Proxy @CompilationError)
-  , evaluationType
-  , expressionType
+  , mkSumType (Proxy @Expression)
+  , mkSumType (Proxy @Evaluation)
   , mkSumType (Proxy @Tx)
   , mkSumType (Proxy @(TxIn A))
   , mkSumType (Proxy @(TxOutRef A))
@@ -165,10 +174,6 @@ myTypes =
   , mkSumType (Proxy @PubKey)
   , mkSumType (Proxy @(Address A))
   ]
-
-k =
-  generate
-    "/Users/davidsmith/tweag/plutus/plutus-playground/plutus-playground-client/src"
 
 mySettings :: Settings
 mySettings =
