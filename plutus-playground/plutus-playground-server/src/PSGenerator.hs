@@ -35,11 +35,6 @@ import           Servant.PureScript                 (HasBridge, Settings, apiMod
                                                      languageBridge, writeAPIModuleWithSettings, _generateSubscriberAPI)
 import           Wallet.UTXO.Types                  (Blockchain)
 
-myBridge :: BridgePart
-myBridge =
-  defaultBridge <|> integerBridge <|> scientificBridge <|> insOrdHashMapBridge <|>
-  aesonBridge <|> schemaBridge
-
 integerBridge :: BridgePart
 integerBridge = do
   typeName ^== "Integer"
@@ -77,6 +72,60 @@ schemaBridge = do
 psSchema :: PSType
 psSchema = TypeInfo "" "Data.JsonSchema" "Schema" []
 
+setBridge :: BridgePart
+setBridge = do
+  typeName ^== "Set"
+  typeModule ^== "Data.Set" <|> typeModule ^== "Data.Set.Internal"
+  psArray
+
+psSet :: MonadReader BridgeData m => m PSType
+psSet =
+  TypeInfo "purescript-ordered-collections" "Data.Set" "Set" <$>
+  psTypeParameters
+
+digestBridge :: BridgePart
+digestBridge = do
+  typeName ^== "Digest"
+  typeModule ^== "Crypto.Hash.Types"
+  pure psString
+
+sha256Bridge :: BridgePart
+sha256Bridge = do
+  typeName ^== "SHA256"
+  typeModule ^== "Crypto.Hash.Types" <|> typeModule ^== "Crypto.Hash" <|>
+    typeModule ^== "Crypto.Hash.SHA256"
+  pure psString
+
+redeemerBridge :: BridgePart
+redeemerBridge = do
+  typeName ^== "Redeemer"
+  typeModule ^== "Wallet.UTXO.Types"
+  pure psString
+
+validatorBridge :: BridgePart
+validatorBridge = do
+  typeName ^== "Validator"
+  typeModule ^== "Wallet.UTXO.Types"
+  pure psString
+
+dataScriptBridge :: BridgePart
+dataScriptBridge = do
+  typeName ^== "DataScript"
+  typeModule ^== "Wallet.UTXO.Types"
+  pure psString
+
+myBridge :: BridgePart
+myBridge =
+  defaultBridge <|> integerBridge <|> scientificBridge <|> insOrdHashMapBridge <|>
+  aesonBridge <|>
+  schemaBridge <|>
+  setBridge <|>
+  digestBridge <|>
+  sha256Bridge <|>
+  redeemerBridge <|>
+  validatorBridge <|>
+  dataScriptBridge
+
 data MyBridge
 
 myBridgeProxy :: Proxy MyBridge
@@ -85,13 +134,41 @@ myBridgeProxy = Proxy
 instance HasBridge MyBridge where
   languageBridge _ = buildBridge myBridge
 
+expressionType :: SumType 'Haskell
+expressionType =
+  let (SumType t d i) = mkSumType (Proxy @Expression)
+   in SumType t d [SumType.Newtype]
+
+evaluationType :: SumType 'Haskell
+evaluationType =
+  let (SumType t d i) = mkSumType (Proxy @Evaluation)
+   in SumType t d [SumType.Newtype]
+
 myTypes :: [SumType 'Haskell]
 myTypes =
   [ mkSumType (Proxy @FunctionSchema)
   , mkSumType (Proxy @Fn)
   , mkSumType (Proxy @SourceCode)
+  , mkSumType (Proxy @Wallet)
   , mkSumType (Proxy @CompilationError)
+  , evaluationType
+  , expressionType
+  , mkSumType (Proxy @Tx)
+  , mkSumType (Proxy @(TxIn A))
+  , mkSumType (Proxy @(TxOutRef A))
+  , mkSumType (Proxy @TxOutType)
+  , mkSumType (Proxy @(TxOut A))
+  , mkSumType (Proxy @(TxId A))
+  , mkSumType (Proxy @TxInType)
+  , mkSumType (Proxy @Signature)
+  , mkSumType (Proxy @Value)
+  , mkSumType (Proxy @PubKey)
+  , mkSumType (Proxy @(Address A))
   ]
+
+k =
+  generate
+    "/Users/davidsmith/tweag/plutus/plutus-playground/plutus-playground-client/src"
 
 mySettings :: Settings
 mySettings =
@@ -100,5 +177,5 @@ mySettings =
 
 generate :: FilePath -> IO ()
 generate outputDir = do
-  writeAPIModuleWithSettings mySettings outputDir myBridgeProxy (Proxy @API)
+  writeAPIModuleWithSettings mySettings outputDir myBridgeProxy (Proxy @API.API)
   writePSTypes outputDir (buildBridge myBridge) myTypes
