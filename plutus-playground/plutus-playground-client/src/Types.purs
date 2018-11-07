@@ -74,3 +74,16 @@ _editorContents = prop (SProxy :: SProxy "editorContents")
 
 _compilationResult :: forall s a. Lens' {compilationResult :: a | s} a
 _compilationResult = prop (SProxy :: SProxy "compilationResult")
+
+------------------------------------------------------------
+
+type Balance =
+  { name :: String
+  , value :: Number
+  }
+
+type Transfer =
+  { source :: String
+  , target :: String
+  , value :: Number
+  }
