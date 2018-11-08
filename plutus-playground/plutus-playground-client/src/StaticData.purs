@@ -49,13 +49,14 @@ import           Prelude                    hiding ((&&))
 import           Wallet.API                 (WalletAPI (..), WalletAPIError, otherError, signAndSubmit)
 import           Wallet.UTXO                (DataScript (..), TxOutRef', Validator (..), scriptTxIn, scriptTxOut)
 import qualified Wallet.UTXO                as UTXO
-import Data.Aeson (ToJSON, FromJSON)
+import           Data.Aeson                 (ToJSON, FromJSON)
+import           Playground.Contract
 
 -- | Tranche of a vesting scheme.
 data VestingTranche = VestingTranche {
     vestingTrancheDate   :: Height,
     vestingTrancheAmount :: Value
-    } deriving (Generic, ToJSON, FromJSON)
+    } deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 instance LiftPlc VestingTranche
 instance TypeablePlc VestingTranche
@@ -66,7 +67,7 @@ data Vesting = Vesting {
     vestingTranche1 :: VestingTranche,
     vestingTranche2 :: VestingTranche,
     vestingOwner    :: PubKey
-    } deriving (Generic, ToJSON, FromJSON)
+    } deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 instance LiftPlc Vesting
 instance TypeablePlc Vesting
@@ -175,6 +176,8 @@ validatorScript v = Validator val where
             isValid = amountsValid && txnOutputsValid
         in
         if isValid then () else Builtins.error () |])
+
+$(mkFunction 'vestFunds)
 """
 
 evaluation :: Evaluation
