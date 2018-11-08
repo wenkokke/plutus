@@ -26,15 +26,7 @@ editorContents = """-- | Vesting scheme as a PLC contract
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# OPTIONS -fplugin=Language.Plutus.CoreToPLC.Plugin -fplugin-opt Language.Plutus.CoreToPLC.Plugin:dont-typecheck #-}
-module Contract (
-    Vesting(..),
-    VestingTranche(..),
-    VestingData(..),
-    vestFunds,
-    retrieveFunds,
-    validatorScript,
-    totalAmount
-    ) where
+module Contract  where
 
 import           Control.Monad.Error.Class  (MonadError (..))
 import qualified Data.Set                   as Set
