@@ -12,7 +12,7 @@ import           Language.Haskell.Interpreter        (InterpreterError (WontComp
 import qualified Language.Haskell.Interpreter        as Interpreter
 import           Language.Haskell.Interpreter.Unsafe (unsafeRunInterpreterWithArgsLibdir)
 import           Playground.API                      (API, CompilationError, Evaluation, FunctionSchema,
-                                                      FunctionsSchema (FunctionsSchema), SourceCode, parseErrorText)
+                                                      FunctionSchema (FunctionSchema), SourceCode, parseErrorText)
 import qualified Playground.Interpreter              as PI
 import           Servant                             (err400, errBody, throwError)
 import           Servant.API                         ((:<|>) ((:<|>)), NoContent (NoContent))
