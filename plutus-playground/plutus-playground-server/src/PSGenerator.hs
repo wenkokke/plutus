@@ -42,9 +42,8 @@ import           Language.PureScript.Bridge                (BridgeData, BridgePa
 import           Language.PureScript.Bridge.PSTypes        (psArray, psInt, psString)
 import qualified Language.PureScript.Bridge.SumType        as SumType
 import           Language.PureScript.Bridge.TypeParameters (A)
-import           Playground.API                            (API, Evaluation, Expression, Fn, FunctionSchema, SourceCode)
+import           Playground.API                            (API, Evaluation, Expression, Fn, FunctionSchema, SourceCode, CompilationError)
 import qualified Playground.API                            as API
-import           Playground.Interpreter                    (CompilationError)
 import           Servant.API                               ((:>), Capture, Get, JSON, PlainText, Post, ReqBody)
 import           Servant.PureScript                        (HasBridge, Settings, apiModuleName, defaultBridge,
                                                             defaultSettings, languageBridge, writeAPIModuleWithSettings,

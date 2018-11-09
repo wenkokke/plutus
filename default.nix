@@ -65,18 +65,22 @@ with pkgs.lib;
 
 let
   src = localLib.cleanSourceHaskell ./.;
+  # This is the stackage LTS plus overrides, plus the plutus
+  # packages.
+  haskellPackages = pkgs.callPackage localLib.iohkNix.haskellPackages {
+    inherit forceDontCheck enableProfiling enablePhaseMetrics enableHaddockHydra
+      enableBenchmarks fasterBuild enableDebugging enableSplitCheck;
+      pkgsGenerated = ./pkgs;
+      filter = localLib.isPlutus;
+      requiredOverlay = ./nix/overlays/required.nix;
+  };
+  playgroundGhc = pkgs.haskell.packages.ghc822.ghcWithPackages (ps: [
+    haskellPackages.plutus-playground-server
+    haskellPackages.plutus-use-cases
+  ]);
   packages = self: ({
     inherit pkgs;
-
-    # This is the stackage LTS plus overrides, plus the plutus
-    # packages.
-    haskellPackages = self.callPackage localLib.iohkNix.haskellPackages {
-      inherit forceDontCheck enableProfiling enablePhaseMetrics enableHaddockHydra
-        enableBenchmarks fasterBuild enableDebugging enableSplitCheck;
-        pkgsGenerated = ./pkgs;
-        filter = localLib.isPlutus;
-        requiredOverlay = ./nix/overlays/required.nix;
-    };
+    inherit haskellPackages;
 
     localPackages = localLib.getPackages {
       inherit (self) haskellPackages; filter = localLib.isPlutus;
@@ -93,18 +97,14 @@ let
           inherit src;
       };
     };
-    playgroundGhc = pkgs.haskell.packages.ghc822.ghcWithPackages (ps: [
-      plutusPkgs.plutus-playground-server
-      plutusPkgs.plutus-use-cases
-    ]);
     plutus-server-invoker = pkgs.stdenv.mkDerivation {
                           name = "plutus-server-invoker";
                           unpackPhase = "true";
-                          buildInputs = [ playgroundGhc plutusPkgs.plutus-playground-server pkgs.makeWrapper ];
+                          buildInputs = [ playgroundGhc haskellPackages.plutus-playground-server pkgs.makeWrapper ];
                           buildPhase = ''
                                      # We need to provide the ghc interpreter (hint) with the location of the ghc lib dir and the package db
                                      mkdir $out
-                                     ln -s ${plutusPkgs.plutus-playground-server}/bin/plutus-playground-server $out/plutus-playground-server
+                                     ln -s ${haskellPackages.plutus-playground-server}/bin/plutus-playground-server $out/plutus-playground-server
                                      wrapProgram $out/plutus-playground-server --set GHC_LIB_DIR "${playgroundGhc}/lib/ghc-8.2.2" --set GHC_PACKAGE_PATH "${playgroundGhc}/lib/ghc-8.2.2/package.conf.d"
                           '';
                           installPhase = "echo nothing to install";
