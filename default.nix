@@ -75,7 +75,7 @@ let
       requiredOverlay = ./nix/overlays/required.nix;
       ghc = pkgs.haskell.compiler.ghc843;
   };
-  playgroundGhc = pkgs.haskell.packages.ghc822.ghcWithPackages (ps: [
+  playgroundGhc = pkgs.haskell.packages.ghc843.ghcWithPackages (ps: [
     haskellPackages.plutus-playground-server
     haskellPackages.plutus-use-cases
   ]);
