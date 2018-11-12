@@ -106,7 +106,7 @@ let
                                      # We need to provide the ghc interpreter (hint) with the location of the ghc lib dir and the package db
                                      mkdir $out
                                      ln -s ${haskellPackages.plutus-playground-server}/bin/plutus-playground-server $out/plutus-playground-server
-                                     wrapProgram $out/plutus-playground-server --set GHC_LIB_DIR "${playgroundGhc}/lib/ghc-8.4.3" --set GHC_PACKAGE_PATH "${playgroundGhc}/lib/ghc-8.2.2/package.conf.d"
+                                     wrapProgram $out/plutus-playground-server --set GHC_LIB_DIR "${playgroundGhc}/lib/ghc-8.4.3" --set GHC_PACKAGE_PATH "${playgroundGhc}/lib/ghc-8.4.3/package.conf.d"
                           '';
                           installPhase = "echo nothing to install";
         };
