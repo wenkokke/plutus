@@ -11,8 +11,7 @@ import qualified Data.ByteString.Lazy.Char8   as BSL
 import           Data.List                    (intercalate)
 import           Data.Maybe                   (catMaybes, fromJust, fromMaybe)
 import           Data.Monoid                  ((<>))
-import           Data.Swagger                 (Schema)
-import           Data.Swagger.Schema          (ToSchema, declareNamedSchema, toSchema)
+import           Data.Swagger                 (Schema (Schema), ToSchema, declareNamedSchema, toSchema)
 import           Data.Text                    (Text)
 import qualified Data.Text                    as Text
 import           Data.Typeable                (TypeRep, Typeable, typeRepArgs)
@@ -58,7 +57,7 @@ loadSource fileName action =
     setTopLevelModules [m]
     action m
 
-compile :: (MonadInterpreter m) => SourceCode -> m [FunctionSchema]
+compile :: (MonadInterpreter m) => SourceCode -> m [FunctionSchema Schema]
 compile s = do
   fileName <-
     liftIO $ writeTempFile "." "Contract.hs" (Text.unpack . Newtype.unpack $ s)
@@ -69,8 +68,8 @@ compile s = do
 
 {-# ANN getSchema ("HLint: ignore" :: String) #-}
 
-getSchema :: (MonadInterpreter m) => ModuleElem -> m FunctionSchema
-getSchema (Fun m) = interpret m (as :: FunctionSchema)
+getSchema :: (MonadInterpreter m) => ModuleElem -> m (FunctionSchema Schema)
+getSchema (Fun m) = interpret m (as :: FunctionSchema Schema)
 getSchema _ =
   error "Trying to get a schema by calling something other than a function"
 
@@ -202,7 +201,7 @@ isWalletFunction :: (MonadInterpreter m) => ModuleElem -> m (Maybe ModuleElem)
 isWalletFunction f@(Fun s) = do
   t <- typeOf s
   pure $
-    if t == "FunctionSchema"
+    if t == "FunctionSchema Schema"
       then Just f
       else Nothing
 isWalletFunction _ = pure Nothing

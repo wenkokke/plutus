@@ -45,21 +45,22 @@ import Icons (Icon(..), icon)
 import Network.HTTP.Affjax (AJAX)
 import Network.RemoteData (RemoteData(..), isLoading)
 import Network.RemoteData as RemoteData
-import Playground.API (CompilationError(..), SourceCode(..))
+import Playground.API (CompilationError(CompilationError, RawError), FunctionSchema, SourceCode(SourceCode))
 import Playground.Server (SPParams_, postContract)
 import Prelude (class Eq, class Monad, class Ord, type (~>), Unit, Void, bind, const, discard, flip, pure, unit, void, ($), (+), (<$>), (<*>), (<<<), (<>), (>>=))
+import Servant.PureScript.Affjax (AjaxError)
 import Servant.PureScript.Settings (SPSettings_)
 import StaticData as StaticData
-import Types (Balance, Query(..), State, Transfer, WalletId(..), Evaluation, _actions, _compilationResult, _editorContents, _evaluation, _wallets)
+import Types (Balance, Evaluation, Query(..), State, Transfer, Wallet, WalletId(..), Action, _actions, _compilationResult, _editorContents, _evaluation, _wallets)
 import Wallet (walletsPane)
 
 initialState :: State
 initialState =
-  { actions: []
+  { editorContents: StaticData.editorContents
+  , compilationResult: NotAsked
   , wallets: StaticData.wallets
-  , editorContents: StaticData.editorContents
-  , evaluation: Success StaticData.evaluation
-  , compilationResult: Success (Right [])
+  , actions: []
+  , evaluation: NotAsked
   }
 
 type ChildQuery = Coproduct2 AceQuery EChartsQuery
@@ -225,7 +226,7 @@ render state =
       , editorPane state
       , br_
       , case state.compilationResult of
-          Success (Right _) -> mockChainPane state
+          Success (Right functionSchemas) -> mockChainPane functionSchemas state.wallets state.actions state.evaluation
           _ -> empty
       ]
     ]
@@ -311,15 +312,19 @@ compilationErrorPane (CompilationError error) =
 mockChainPane ::
   forall m aff.
   MonadAff (EChartsEffects (AceEffects aff)) m
-  => State -> ParentHTML Query ChildQuery ChildSlot m
-mockChainPane state =
+  => Array FunctionSchema
+  -> Array Wallet
+  -> Array Action
+  -> RemoteData AjaxError Evaluation
+  -> ParentHTML Query ChildQuery ChildSlot m
+mockChainPane schemas wallets actions evaluation =
   div_
     [ row_
-        [ col7_ [ walletsPane state.wallets ]
-        , col_ [ actionsPane state.actions  ]
+        [ col7_ [ walletsPane schemas wallets ]
+        , col_ [ actionsPane actions ]
         ]
     , div_
-        case state.evaluation of
+        case evaluation of
           Success evaluation ->
             [ h3_ [ text "Chain" ]
             , slot' cpECharts EChartsSlot

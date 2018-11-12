@@ -8,7 +8,7 @@ import Data.Newtype (class Newtype)
 import Data.Symbol (SProxy(..))
 import Halogen.ECharts (EChartsMessage)
 import Network.RemoteData (RemoteData)
-import Playground.API (FunctionSchema, CompilationError)
+import Playground.API (CompilationError, FunctionSchema, SimpleArgumentSchema)
 import Servant.PureScript.Affjax (AjaxError)
 
 newtype WalletId = WalletId String
@@ -27,15 +27,9 @@ _balance = prop (SProxy :: SProxy "balance")
 
 ------------------------------------------------------------
 
-newtype ActionId = ActionId String
-derive instance newtypeActionId :: Newtype ActionId _
-
-_actionId :: forall s a. Lens' {actionId :: a | s} a
-_actionId = prop (SProxy :: SProxy "actionId")
-
 type Action =
-  { actionId :: ActionId
-  , walletId :: WalletId
+  { walletId :: WalletId
+  , functionSchema :: FunctionSchema SimpleArgumentSchema
   }
 
 ------------------------------------------------------------
@@ -54,14 +48,14 @@ data Query a
 -----------------------------------------------------------
 
 type CompilationResult =
-  Either (Array CompilationError) (Array FunctionSchema)
+  Either (Array CompilationError) (Array (FunctionSchema SimpleArgumentSchema))
 
 type State =
-  { wallets :: Array Wallet
+  { editorContents :: String
+  , compilationResult :: RemoteData AjaxError CompilationResult
+  , wallets :: Array Wallet
   , actions :: Array Action
   , evaluation :: RemoteData AjaxError Evaluation
-  , editorContents :: String
-  , compilationResult :: RemoteData AjaxError CompilationResult
   }
 
 _actions :: forall s a. Lens' {actions :: a | s} a

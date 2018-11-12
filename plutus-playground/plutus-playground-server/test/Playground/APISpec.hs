@@ -4,14 +4,18 @@ module Playground.APISpec
   ( spec
   ) where
 
-import           Control.Exception (evaluate)
-import           Data.Text         ()
-import           Playground.API    (CompilationError (CompilationError, RawError), column, filename, parseErrorText,
-                                    row, text)
-import           Test.Hspec        (Spec, describe, it, shouldBe)
+import           Control.Exception          (evaluate)
+import           Data.HashMap.Strict.InsOrd (fromList)
+import           Data.Swagger
+import           Data.Text                  ()
+import           Playground.API             (CompilationError (CompilationError, RawError), SimpleArgumentSchema (SimpleIntArgument, SimpleObjectArgument, SimpleStringArgument),
+                                             column, filename, parseErrorText, row, text, toSimpleArgumentSchema)
+import           Test.Hspec                 (Spec, describe, it, shouldBe)
 
 spec :: Spec
-spec = parseErrorTextSpec
+spec = do
+  parseErrorTextSpec
+  toSimpleArgumentSchemaSpec
 
 parseErrorTextSpec :: Spec
 parseErrorTextSpec =
@@ -51,3 +55,446 @@ parseErrorTextSpec =
              , "                     Vesting -> Value -> IO ()"
              ]
          })
+
+toSimpleArgumentSchemaSpec :: Spec
+toSimpleArgumentSchemaSpec =
+  describe "toSimpleArgumentSchema" $ do
+    it "should convert a simple integer argument" $
+      toSimpleArgumentSchema integerSchema `shouldBe` SimpleIntArgument
+    it "should convert a simple string argument" $
+      toSimpleArgumentSchema stringSchema `shouldBe` SimpleStringArgument
+    it "should convert an object argument" $
+      toSimpleArgumentSchema objectSchema `shouldBe`
+      SimpleObjectArgument
+        [ ( "vestingTranche1"
+          , SimpleObjectArgument
+              [ ("vestingTrancheDate", SimpleIntArgument)
+              , ("vestingTrancheAmount", SimpleIntArgument)
+              ])
+        , ( "vestingTranche2"
+          , SimpleObjectArgument
+              [ ("vestingTrancheDate", SimpleIntArgument)
+              , ("vestingTrancheAmount", SimpleIntArgument)
+              ])
+        , ( "vestingOwner"
+          , SimpleObjectArgument [("getPubKey", SimpleIntArgument)])
+        ]
+
+integerSchema :: Schema
+integerSchema =
+  Schema
+    { _schemaTitle = Nothing
+    , _schemaDescription = Nothing
+    , _schemaRequired = []
+    , _schemaAllOf = Nothing
+    , _schemaProperties = fromList []
+    , _schemaAdditionalProperties = Nothing
+    , _schemaDiscriminator = Nothing
+    , _schemaReadOnly = Nothing
+    , _schemaXml = Nothing
+    , _schemaExternalDocs = Nothing
+    , _schemaExample = Nothing
+    , _schemaMaxProperties = Nothing
+    , _schemaMinProperties = Nothing
+    , _schemaParamSchema =
+        ParamSchema
+          { _paramSchemaDefault = Nothing
+          , _paramSchemaType = SwaggerInteger
+          , _paramSchemaFormat = Nothing
+          , _paramSchemaItems = Nothing
+          , _paramSchemaMaximum = Just 9.223372036854775807e18
+          , _paramSchemaExclusiveMaximum = Nothing
+          , _paramSchemaMinimum = Just (-9.223372036854775808e18)
+          , _paramSchemaExclusiveMinimum = Nothing
+          , _paramSchemaMaxLength = Nothing
+          , _paramSchemaMinLength = Nothing
+          , _paramSchemaPattern = Nothing
+          , _paramSchemaMaxItems = Nothing
+          , _paramSchemaMinItems = Nothing
+          , _paramSchemaUniqueItems = Nothing
+          , _paramSchemaEnum = Nothing
+          , _paramSchemaMultipleOf = Nothing
+          }
+    }
+
+stringSchema :: Schema
+stringSchema =
+  Schema
+    { _schemaTitle = Nothing
+    , _schemaDescription = Nothing
+    , _schemaRequired = []
+    , _schemaAllOf = Nothing
+    , _schemaProperties = fromList []
+    , _schemaAdditionalProperties = Nothing
+    , _schemaDiscriminator = Nothing
+    , _schemaReadOnly = Nothing
+    , _schemaXml = Nothing
+    , _schemaExternalDocs = Nothing
+    , _schemaExample = Nothing
+    , _schemaMaxProperties = Nothing
+    , _schemaMinProperties = Nothing
+    , _schemaParamSchema =
+        ParamSchema
+          { _paramSchemaDefault = Nothing
+          , _paramSchemaType = SwaggerString
+          , _paramSchemaFormat = Nothing
+          , _paramSchemaItems = Nothing
+          , _paramSchemaMaximum = Nothing
+          , _paramSchemaExclusiveMaximum = Nothing
+          , _paramSchemaMinimum = Nothing
+          , _paramSchemaExclusiveMinimum = Nothing
+          , _paramSchemaMaxLength = Nothing
+          , _paramSchemaMinLength = Nothing
+          , _paramSchemaPattern = Nothing
+          , _paramSchemaMaxItems = Nothing
+          , _paramSchemaMinItems = Nothing
+          , _paramSchemaUniqueItems = Nothing
+          , _paramSchemaEnum = Nothing
+          , _paramSchemaMultipleOf = Nothing
+          }
+    }
+
+objectSchema :: Schema
+objectSchema =
+  Schema
+    { _schemaTitle = Nothing
+    , _schemaDescription = Nothing
+    , _schemaRequired = ["vestingTranche1", "vestingTranche2", "vestingOwner"]
+    , _schemaAllOf = Nothing
+    , _schemaProperties =
+        fromList
+          [ ( "vestingTranche1"
+            , Inline
+                (Schema
+                   { _schemaTitle = Nothing
+                   , _schemaDescription = Nothing
+                   , _schemaRequired =
+                       ["vestingTrancheDate", "vestingTrancheAmount"]
+                   , _schemaAllOf = Nothing
+                   , _schemaProperties =
+                       fromList
+                         [ ( "vestingTrancheDate"
+                           , Inline
+                               (Schema
+                                  { _schemaTitle = Nothing
+                                  , _schemaDescription = Nothing
+                                  , _schemaRequired = []
+                                  , _schemaAllOf = Nothing
+                                  , _schemaProperties = fromList []
+                                  , _schemaAdditionalProperties = Nothing
+                                  , _schemaDiscriminator = Nothing
+                                  , _schemaReadOnly = Nothing
+                                  , _schemaXml = Nothing
+                                  , _schemaExternalDocs = Nothing
+                                  , _schemaExample = Nothing
+                                  , _schemaMaxProperties = Nothing
+                                  , _schemaMinProperties = Nothing
+                                  , _schemaParamSchema =
+                                      ParamSchema
+                                        { _paramSchemaDefault = Nothing
+                                        , _paramSchemaType = SwaggerInteger
+                                        , _paramSchemaFormat = Nothing
+                                        , _paramSchemaItems = Nothing
+                                        , _paramSchemaMaximum =
+                                            Just 9.223372036854775807e18
+                                        , _paramSchemaExclusiveMaximum = Nothing
+                                        , _paramSchemaMinimum =
+                                            Just (-9.223372036854775808e18)
+                                        , _paramSchemaExclusiveMinimum = Nothing
+                                        , _paramSchemaMaxLength = Nothing
+                                        , _paramSchemaMinLength = Nothing
+                                        , _paramSchemaPattern = Nothing
+                                        , _paramSchemaMaxItems = Nothing
+                                        , _paramSchemaMinItems = Nothing
+                                        , _paramSchemaUniqueItems = Nothing
+                                        , _paramSchemaEnum = Nothing
+                                        , _paramSchemaMultipleOf = Nothing
+                                        }
+                                  }))
+                         , ( "vestingTrancheAmount"
+                           , Inline
+                               (Schema
+                                  { _schemaTitle = Nothing
+                                  , _schemaDescription = Nothing
+                                  , _schemaRequired = []
+                                  , _schemaAllOf = Nothing
+                                  , _schemaProperties = fromList []
+                                  , _schemaAdditionalProperties = Nothing
+                                  , _schemaDiscriminator = Nothing
+                                  , _schemaReadOnly = Nothing
+                                  , _schemaXml = Nothing
+                                  , _schemaExternalDocs = Nothing
+                                  , _schemaExample = Nothing
+                                  , _schemaMaxProperties = Nothing
+                                  , _schemaMinProperties = Nothing
+                                  , _schemaParamSchema =
+                                      ParamSchema
+                                        { _paramSchemaDefault = Nothing
+                                        , _paramSchemaType = SwaggerInteger
+                                        , _paramSchemaFormat = Nothing
+                                        , _paramSchemaItems = Nothing
+                                        , _paramSchemaMaximum =
+                                            Just 9.223372036854775807e18
+                                        , _paramSchemaExclusiveMaximum = Nothing
+                                        , _paramSchemaMinimum =
+                                            Just (-9.223372036854775808e18)
+                                        , _paramSchemaExclusiveMinimum = Nothing
+                                        , _paramSchemaMaxLength = Nothing
+                                        , _paramSchemaMinLength = Nothing
+                                        , _paramSchemaPattern = Nothing
+                                        , _paramSchemaMaxItems = Nothing
+                                        , _paramSchemaMinItems = Nothing
+                                        , _paramSchemaUniqueItems = Nothing
+                                        , _paramSchemaEnum = Nothing
+                                        , _paramSchemaMultipleOf = Nothing
+                                        }
+                                  }))
+                         ]
+                   , _schemaAdditionalProperties = Nothing
+                   , _schemaDiscriminator = Nothing
+                   , _schemaReadOnly = Nothing
+                   , _schemaXml = Nothing
+                   , _schemaExternalDocs = Nothing
+                   , _schemaExample = Nothing
+                   , _schemaMaxProperties = Nothing
+                   , _schemaMinProperties = Nothing
+                   , _schemaParamSchema =
+                       ParamSchema
+                         { _paramSchemaDefault = Nothing
+                         , _paramSchemaType = SwaggerObject
+                         , _paramSchemaFormat = Nothing
+                         , _paramSchemaItems = Nothing
+                         , _paramSchemaMaximum = Nothing
+                         , _paramSchemaExclusiveMaximum = Nothing
+                         , _paramSchemaMinimum = Nothing
+                         , _paramSchemaExclusiveMinimum = Nothing
+                         , _paramSchemaMaxLength = Nothing
+                         , _paramSchemaMinLength = Nothing
+                         , _paramSchemaPattern = Nothing
+                         , _paramSchemaMaxItems = Nothing
+                         , _paramSchemaMinItems = Nothing
+                         , _paramSchemaUniqueItems = Nothing
+                         , _paramSchemaEnum = Nothing
+                         , _paramSchemaMultipleOf = Nothing
+                         }
+                   }))
+          , ( "vestingTranche2"
+            , Inline
+                (Schema
+                   { _schemaTitle = Nothing
+                   , _schemaDescription = Nothing
+                   , _schemaRequired =
+                       ["vestingTrancheDate", "vestingTrancheAmount"]
+                   , _schemaAllOf = Nothing
+                   , _schemaProperties =
+                       fromList
+                         [ ( "vestingTrancheDate"
+                           , Inline
+                               (Schema
+                                  { _schemaTitle = Nothing
+                                  , _schemaDescription = Nothing
+                                  , _schemaRequired = []
+                                  , _schemaAllOf = Nothing
+                                  , _schemaProperties = fromList []
+                                  , _schemaAdditionalProperties = Nothing
+                                  , _schemaDiscriminator = Nothing
+                                  , _schemaReadOnly = Nothing
+                                  , _schemaXml = Nothing
+                                  , _schemaExternalDocs = Nothing
+                                  , _schemaExample = Nothing
+                                  , _schemaMaxProperties = Nothing
+                                  , _schemaMinProperties = Nothing
+                                  , _schemaParamSchema =
+                                      ParamSchema
+                                        { _paramSchemaDefault = Nothing
+                                        , _paramSchemaType = SwaggerInteger
+                                        , _paramSchemaFormat = Nothing
+                                        , _paramSchemaItems = Nothing
+                                        , _paramSchemaMaximum =
+                                            Just 9.223372036854775807e18
+                                        , _paramSchemaExclusiveMaximum = Nothing
+                                        , _paramSchemaMinimum =
+                                            Just (-9.223372036854775808e18)
+                                        , _paramSchemaExclusiveMinimum = Nothing
+                                        , _paramSchemaMaxLength = Nothing
+                                        , _paramSchemaMinLength = Nothing
+                                        , _paramSchemaPattern = Nothing
+                                        , _paramSchemaMaxItems = Nothing
+                                        , _paramSchemaMinItems = Nothing
+                                        , _paramSchemaUniqueItems = Nothing
+                                        , _paramSchemaEnum = Nothing
+                                        , _paramSchemaMultipleOf = Nothing
+                                        }
+                                  }))
+                         , ( "vestingTrancheAmount"
+                           , Inline
+                               (Schema
+                                  { _schemaTitle = Nothing
+                                  , _schemaDescription = Nothing
+                                  , _schemaRequired = []
+                                  , _schemaAllOf = Nothing
+                                  , _schemaProperties = fromList []
+                                  , _schemaAdditionalProperties = Nothing
+                                  , _schemaDiscriminator = Nothing
+                                  , _schemaReadOnly = Nothing
+                                  , _schemaXml = Nothing
+                                  , _schemaExternalDocs = Nothing
+                                  , _schemaExample = Nothing
+                                  , _schemaMaxProperties = Nothing
+                                  , _schemaMinProperties = Nothing
+                                  , _schemaParamSchema =
+                                      ParamSchema
+                                        { _paramSchemaDefault = Nothing
+                                        , _paramSchemaType = SwaggerInteger
+                                        , _paramSchemaFormat = Nothing
+                                        , _paramSchemaItems = Nothing
+                                        , _paramSchemaMaximum =
+                                            Just 9.223372036854775807e18
+                                        , _paramSchemaExclusiveMaximum = Nothing
+                                        , _paramSchemaMinimum =
+                                            Just (-9.223372036854775808e18)
+                                        , _paramSchemaExclusiveMinimum = Nothing
+                                        , _paramSchemaMaxLength = Nothing
+                                        , _paramSchemaMinLength = Nothing
+                                        , _paramSchemaPattern = Nothing
+                                        , _paramSchemaMaxItems = Nothing
+                                        , _paramSchemaMinItems = Nothing
+                                        , _paramSchemaUniqueItems = Nothing
+                                        , _paramSchemaEnum = Nothing
+                                        , _paramSchemaMultipleOf = Nothing
+                                        }
+                                  }))
+                         ]
+                   , _schemaAdditionalProperties = Nothing
+                   , _schemaDiscriminator = Nothing
+                   , _schemaReadOnly = Nothing
+                   , _schemaXml = Nothing
+                   , _schemaExternalDocs = Nothing
+                   , _schemaExample = Nothing
+                   , _schemaMaxProperties = Nothing
+                   , _schemaMinProperties = Nothing
+                   , _schemaParamSchema =
+                       ParamSchema
+                         { _paramSchemaDefault = Nothing
+                         , _paramSchemaType = SwaggerObject
+                         , _paramSchemaFormat = Nothing
+                         , _paramSchemaItems = Nothing
+                         , _paramSchemaMaximum = Nothing
+                         , _paramSchemaExclusiveMaximum = Nothing
+                         , _paramSchemaMinimum = Nothing
+                         , _paramSchemaExclusiveMinimum = Nothing
+                         , _paramSchemaMaxLength = Nothing
+                         , _paramSchemaMinLength = Nothing
+                         , _paramSchemaPattern = Nothing
+                         , _paramSchemaMaxItems = Nothing
+                         , _paramSchemaMinItems = Nothing
+                         , _paramSchemaUniqueItems = Nothing
+                         , _paramSchemaEnum = Nothing
+                         , _paramSchemaMultipleOf = Nothing
+                         }
+                   }))
+          , ( "vestingOwner"
+            , Inline
+                (Schema
+                   { _schemaTitle = Nothing
+                   , _schemaDescription = Nothing
+                   , _schemaRequired = ["getPubKey"]
+                   , _schemaAllOf = Nothing
+                   , _schemaProperties =
+                       fromList
+                         [ ( "getPubKey"
+                           , Inline
+                               (Schema
+                                  { _schemaTitle = Nothing
+                                  , _schemaDescription = Nothing
+                                  , _schemaRequired = []
+                                  , _schemaAllOf = Nothing
+                                  , _schemaProperties = fromList []
+                                  , _schemaAdditionalProperties = Nothing
+                                  , _schemaDiscriminator = Nothing
+                                  , _schemaReadOnly = Nothing
+                                  , _schemaXml = Nothing
+                                  , _schemaExternalDocs = Nothing
+                                  , _schemaExample = Nothing
+                                  , _schemaMaxProperties = Nothing
+                                  , _schemaMinProperties = Nothing
+                                  , _schemaParamSchema =
+                                      ParamSchema
+                                        { _paramSchemaDefault = Nothing
+                                        , _paramSchemaType = SwaggerInteger
+                                        , _paramSchemaFormat = Nothing
+                                        , _paramSchemaItems = Nothing
+                                        , _paramSchemaMaximum =
+                                            Just 9.223372036854775807e18
+                                        , _paramSchemaExclusiveMaximum = Nothing
+                                        , _paramSchemaMinimum =
+                                            Just (-9.223372036854775808e18)
+                                        , _paramSchemaExclusiveMinimum = Nothing
+                                        , _paramSchemaMaxLength = Nothing
+                                        , _paramSchemaMinLength = Nothing
+                                        , _paramSchemaPattern = Nothing
+                                        , _paramSchemaMaxItems = Nothing
+                                        , _paramSchemaMinItems = Nothing
+                                        , _paramSchemaUniqueItems = Nothing
+                                        , _paramSchemaEnum = Nothing
+                                        , _paramSchemaMultipleOf = Nothing
+                                        }
+                                  }))
+                         ]
+                   , _schemaAdditionalProperties = Nothing
+                   , _schemaDiscriminator = Nothing
+                   , _schemaReadOnly = Nothing
+                   , _schemaXml = Nothing
+                   , _schemaExternalDocs = Nothing
+                   , _schemaExample = Nothing
+                   , _schemaMaxProperties = Nothing
+                   , _schemaMinProperties = Nothing
+                   , _schemaParamSchema =
+                       ParamSchema
+                         { _paramSchemaDefault = Nothing
+                         , _paramSchemaType = SwaggerObject
+                         , _paramSchemaFormat = Nothing
+                         , _paramSchemaItems = Nothing
+                         , _paramSchemaMaximum = Nothing
+                         , _paramSchemaExclusiveMaximum = Nothing
+                         , _paramSchemaMinimum = Nothing
+                         , _paramSchemaExclusiveMinimum = Nothing
+                         , _paramSchemaMaxLength = Nothing
+                         , _paramSchemaMinLength = Nothing
+                         , _paramSchemaPattern = Nothing
+                         , _paramSchemaMaxItems = Nothing
+                         , _paramSchemaMinItems = Nothing
+                         , _paramSchemaUniqueItems = Nothing
+                         , _paramSchemaEnum = Nothing
+                         , _paramSchemaMultipleOf = Nothing
+                         }
+                   }))
+          ]
+    , _schemaAdditionalProperties = Nothing
+    , _schemaDiscriminator = Nothing
+    , _schemaReadOnly = Nothing
+    , _schemaXml = Nothing
+    , _schemaExternalDocs = Nothing
+    , _schemaExample = Nothing
+    , _schemaMaxProperties = Nothing
+    , _schemaMinProperties = Nothing
+    , _schemaParamSchema =
+        ParamSchema
+          { _paramSchemaDefault = Nothing
+          , _paramSchemaType = SwaggerObject
+          , _paramSchemaFormat = Nothing
+          , _paramSchemaItems = Nothing
+          , _paramSchemaMaximum = Nothing
+          , _paramSchemaExclusiveMaximum = Nothing
+          , _paramSchemaMinimum = Nothing
+          , _paramSchemaExclusiveMinimum = Nothing
+          , _paramSchemaMaxLength = Nothing
+          , _paramSchemaMinLength = Nothing
+          , _paramSchemaPattern = Nothing
+          , _paramSchemaMaxItems = Nothing
+          , _paramSchemaMinItems = Nothing
+          , _paramSchemaUniqueItems = Nothing
+          , _paramSchemaEnum = Nothing
+          , _paramSchemaMultipleOf = Nothing
+          }
+    }

@@ -1,9 +1,12 @@
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveAnyClass             #-}
+{-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DeriveLift                 #-}
 {-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
@@ -12,6 +15,7 @@
 module Playground.API where
 
 import           Control.Arrow              (left)
+import           Control.Lens               (over, _2)
 import           Control.Monad.Trans.Class  (lift)
 import           Control.Monad.Trans.State  (StateT, evalStateT, get, put)
 import           Control.Newtype.Generics   (Newtype)
@@ -20,9 +24,13 @@ import qualified Data.Aeson                 as JSON
 import           Data.Bifunctor             (second)
 import qualified Data.ByteString.Base64     as Base64
 import           Data.ByteString.Lazy       (fromStrict, toStrict)
+import qualified Data.HashMap.Strict.InsOrd as HM
 import           Data.Map                   (Map)
 import           Data.Maybe                 (catMaybes, fromJust, fromMaybe)
-import           Data.Swagger               (Schema, ToSchema)
+import           Data.Monoid                ((<>))
+import           Data.Swagger               (ParamSchema (ParamSchema), Referenced (Inline, Ref), Schema (Schema),
+                                             SwaggerType (SwaggerInteger, SwaggerObject, SwaggerString))
+import qualified Data.Swagger               as Swagger
 import           Data.Text                  (Text)
 import qualified Data.Text                  as Text
 import           Data.Text.Encoding         (decodeUtf8, decodeUtf8', encodeUtf8)
@@ -36,7 +44,7 @@ import           Wallet.Emulator.Types      (Wallet)
 import           Wallet.UTXO.Types          (Blockchain)
 
 type API
-   = "contract" :> ReqBody '[ JSON] SourceCode :> Post '[ JSON] (Either [CompilationError] [FunctionSchema])
+   = "contract" :> ReqBody '[ JSON] SourceCode :> Post '[ JSON] (Either [CompilationError] [FunctionSchema SimpleArgumentSchema])
      :<|> "evaluate" :> ReqBody '[ JSON] Evaluation :> Post '[ JSON] Blockchain
 
 newtype SourceCode = SourceCode Text
@@ -65,21 +73,47 @@ data Evaluation = Evaluation
   }
   deriving (Generic, ToJSON, FromJSON)
 
-data FunctionSchema = FunctionSchema
+data FunctionSchema a = FunctionSchema
   { functionName   :: Fn
-  , argumentSchema :: [Schema]
-  }
-  deriving (Show, Generic, ToJSON)
+  , argumentSchema :: [a]
+  } deriving (Show, Generic, ToJSON, Functor)
 
+data SimpleArgumentSchema
+  = SimpleIntArgument
+  | SimpleStringArgument
+  | SimpleObjectArgument [(Text, SimpleArgumentSchema)]
+  | UnknownArgument Text
+  deriving (Show, Eq, Generic, ToJSON)
+
+toSimpleArgumentSchema :: Schema -> SimpleArgumentSchema
+toSimpleArgumentSchema schema@Schema {..} =
+  case _schemaParamSchema of
+    ParamSchema {..} ->
+      case _paramSchemaType of
+        SwaggerInteger -> SimpleIntArgument
+        SwaggerString -> SimpleStringArgument
+        SwaggerObject ->
+          SimpleObjectArgument $
+          over
+            _2
+            (\case
+               Inline v -> toSimpleArgumentSchema v
+               Ref _ -> unknown) <$>
+          HM.toList _schemaProperties
+        _ -> unknown
+  where
+    unknown = UnknownArgument $ Text.pack $ show schema
 
 ------------------------------------------------------------
-data CompilationError = RawError Text | CompilationError
-  { filename :: !Text
-  , row      :: !Int
-  , column   :: !Int
-  , text     :: ![Text]
-  } deriving stock (Show, Eq, Generic)
-    deriving anyclass (ToJSON)
+
+data CompilationError
+  = RawError Text
+  | CompilationError { filename :: !Text
+                     , row      :: !Int
+                     , column   :: !Int
+                     , text     :: ![Text] }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (ToJSON)
 
 parseErrorText :: Text -> CompilationError
 parseErrorText input =

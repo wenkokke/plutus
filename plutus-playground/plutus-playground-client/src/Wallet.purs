@@ -9,19 +9,28 @@ import Halogen.HTML (ClassName(ClassName), button, div, div_, h3_, span, strong_
 import Halogen.HTML.Events (input_, onClick)
 import Halogen.HTML.Properties (class_, classes)
 import Icons (Icon(..), icon)
-import Prelude (($), (<$>), show)
-import StaticData as Static
-import Types (ActionId, Query(..), Wallet, WalletId(WalletId))
+import Playground.API (FunctionSchema, SimpleArgumentSchema)
+import Prelude (show, ($), (<$>))
+import Types (Query(..), WalletId(WalletId), Wallet)
 
-walletsPane :: forall p. Array Wallet -> HTML p Query
-walletsPane wallets =
+walletsPane ::
+  forall p.
+  Array (FunctionSchema SimpleArgumentSchema)
+  -> Array Wallet
+  -> HTML p Query
+walletsPane schemas wallets =
   div_
     [ h3_ [ text "Wallets" ]
-    , row_ (Array.cons addWalletPane (mapWithIndex walletPane wallets))
+    , row_ (Array.cons addWalletPane (mapWithIndex (walletPane schemas) wallets))
     ]
 
-walletPane :: forall p. Int -> Wallet -> HTML p Query
-walletPane index wallet =
+walletPane ::
+  forall p.
+  Array (FunctionSchema SimpleArgumentSchema)
+  -> Int
+  -> Wallet
+  -> HTML p Query
+walletPane schemas index wallet =
   col_
     [ div
         [class_ $ ClassName "wallet"]
@@ -37,7 +46,7 @@ walletPane index wallet =
                 ]
             , cardFooter_
                 [ btnGroup_
-                    (actionButton wallet . walletId <$> Static.actionIds)
+                    (actionButton wallet . walletId <$> schemas)
                 ]
             ]
         ]
@@ -57,13 +66,17 @@ addWalletPane =
         ]
     ]
 
-actionButton :: forall p. WalletId -> ActionId -> HTML p Query
-actionButton walletId actionId =
+actionButton ::
+  forall p.
+  WalletId
+  -> FunctionSchema SimpleArgumentSchema
+  -> HTML p Query
+actionButton walletId functionSchema =
   button
-    [ classes [ btn, btnInfo, btnSmall ]
-    , onClick $ input_ $ SendAction { actionId, walletId }
+    [ classes [ btn, btnInfo, btnSmall]
+    , onClick $ input_ $ SendAction { functionSchema, walletId }
     ]
-    [ text $ unwrap actionId ]
+    [ text $ unwrap $ _.functionName $ unwrap functionSchema ]
 
 walletIdPane :: forall p i. WalletId -> HTML p i
 walletIdPane (WalletId walletId) =
