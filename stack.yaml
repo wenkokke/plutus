@@ -19,11 +19,11 @@ packages:
 
 - location:
     git: https://github.com/shmish111/servant-purescript.git
-    commit: 444c82330a4ebb1594054020cb563d5ad52303f2
+    commit: 315ccf5d720937c091c8cf3aca8adc8110766a23
   extra-dep: true
 
 - location:
-    git: https://github.com/eskimor/servant-subscriber
+    git: https://github.com/smobs/servant-subscriber.git
     commit: 0354e99f5e1d244d5ec01f78e7e7439478b1d1d3
   extra-dep: true
 
