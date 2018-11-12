@@ -61,6 +61,7 @@ library
     , network
     , newtype-generics
     , purescript-bridge
+    , plutus-use-cases
     , scientific
     , servant
     , servant-foreign
