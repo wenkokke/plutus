@@ -8,8 +8,7 @@ import Data.Newtype (class Newtype)
 import Data.Symbol (SProxy(..))
 import Halogen.ECharts (EChartsMessage)
 import Network.RemoteData (RemoteData)
-import Playground.API (FunctionSchema)
-import Playground.Interpreter (CompilationError)
+import Playground.API (FunctionSchema, CompilationError)
 import Servant.PureScript.Affjax (AjaxError)
 
 newtype WalletId = WalletId String

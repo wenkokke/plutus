@@ -57,9 +57,9 @@ initialState :: State
 initialState =
   { actions: []
   , wallets: StaticData.wallets
-  , evaluation: NotAsked
   , editorContents: StaticData.editorContents
-  , compilationResult: NotAsked
+  , evaluation: Success StaticData.evaluation
+  , compilationResult: Success (Right [])
   }
 
 type ChildQuery = Coproduct2 AceQuery EChartsQuery
