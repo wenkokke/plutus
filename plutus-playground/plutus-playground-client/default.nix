@@ -1,4 +1,4 @@
-{ stdenv, pkgs }:
+{ stdenv, pkgs, psSrc }:
 
 with pkgs;
 
@@ -42,6 +42,7 @@ in {
     };
 
     buildPhase = ''
+      cp -R ${psSrc}/* ./src/
       cp --reflink=auto --no-preserve=mode -R $bowerComponents/bower_components .
       yarn --offline
       yarn run --offline bower install

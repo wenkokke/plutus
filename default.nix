@@ -111,9 +111,18 @@ let
                           '';
                           installPhase = "echo nothing to install";
         };
-
+    plutus-playground-purescript = pkgs.stdenv.mkDerivation {
+        name = "plutus-playground-purescript";
+        unpackPhase = "true";
+        buildInputs = [ haskellPackages.plutus-playground-server ];
+        buildPhase = ''
+        mkdir $out
+        ${haskellPackages.plutus-playground-server}/bin/plutus-playground-server psgenerator $out
+        '';
+        installPhase = "echo nothing to install";
+    };
     plutus-core-spec = pkgs.callPackage ./plutus-core-spec {};
-    plutus-playground-client = pkgs.callPackage ./plutus-playground/plutus-playground-client { pkgs = purescriptNixpkgs; };
+    plutus-playground-client = pkgs.callPackage ./plutus-playground/plutus-playground-client { pkgs = purescriptNixpkgs; psSrc = plutus-playground-purescript; };
     inherit (pkgs) stack2nix;
     purescriptNixpkgs = import (builtins.fetchTarball 
       { url = "https://github.com/NixOS/nixpkgs/archive/889d618f16ef2fc3110e1a8a6b2014109ae49e41.tar.gz"; 
