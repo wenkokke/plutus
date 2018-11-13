@@ -1,3 +1,4 @@
+
 module Types where
 
 import Ace.Halogen.Component (AceMessage)
@@ -90,3 +91,4 @@ type Transfer =
   , target :: String
   , value :: Number
   }
+

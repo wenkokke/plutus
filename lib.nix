@@ -28,6 +28,8 @@ let
     "core-to-plc"
     "language-plutus-core"
     "plutus-core-interpreter"
+    "plutus-playground-server"
+    "plutus-playground-client"
     "plutus-exe"
     "plutus-ir"
     "plutus-th"

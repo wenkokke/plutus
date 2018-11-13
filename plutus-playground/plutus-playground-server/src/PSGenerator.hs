@@ -179,6 +179,3 @@ generate :: FilePath -> IO ()
 generate outputDir = do
   writeAPIModuleWithSettings mySettings outputDir myBridgeProxy (Proxy @API.API)
   writePSTypes outputDir (buildBridge myBridge) myTypes
-
-
-k = generate "/Users/kris/Work/Clients/IOHK/plutus/plutus-playground/plutus-playground-client/src"

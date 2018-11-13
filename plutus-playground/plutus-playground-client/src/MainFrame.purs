@@ -45,7 +45,7 @@ import Icons (Icon(..), icon)
 import Network.HTTP.Affjax (AJAX)
 import Network.RemoteData (RemoteData(..), isLoading)
 import Network.RemoteData as RemoteData
-import Playground.API (CompilationError(CompilationError, RawError), FunctionSchema, SourceCode(SourceCode))
+import Playground.API (CompilationError(CompilationError, RawError), FunctionSchema, SimpleArgumentSchema, SourceCode(SourceCode))
 import Playground.Server (SPParams_, postContract)
 import Prelude (class Eq, class Monad, class Ord, type (~>), Unit, Void, bind, const, discard, flip, pure, unit, void, ($), (+), (<$>), (<*>), (<<<), (<>), (>>=))
 import Servant.PureScript.Affjax (AjaxError)
@@ -312,7 +312,7 @@ compilationErrorPane (CompilationError error) =
 mockChainPane ::
   forall m aff.
   MonadAff (EChartsEffects (AceEffects aff)) m
-  => Array FunctionSchema
+  => Array (FunctionSchema SimpleArgumentSchema)
   -> Array Wallet
   -> Array Action
   -> RemoteData AjaxError Evaluation
@@ -325,7 +325,7 @@ mockChainPane schemas wallets actions evaluation =
         ]
     , div_
         case evaluation of
-          Success evaluation ->
+          Success _ ->
             [ h3_ [ text "Chain" ]
             , slot' cpECharts EChartsSlot
              (echarts Nothing)
