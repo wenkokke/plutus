@@ -79,7 +79,8 @@ let
     haskellPackages.plutus-playground-server
     haskellPackages.plutus-use-cases
   ]);
-  packages = self: ({
+  #purescriptNixpkgs = import (localLib.iohkNix.fetchNixpkgs ./plutus-playground/plutus-playground-client/nixpkgs-src.json) {};
+  packages = self: ( rec {
     inherit pkgs;
     inherit haskellPackages;
 
@@ -112,7 +113,13 @@ let
         };
 
     plutus-core-spec = pkgs.callPackage ./plutus-core-spec {};
+    plutus-playground-client = pkgs.callPackage ./plutus-playground/plutus-playground-client { pkgs = purescriptNixpkgs; };
     inherit (pkgs) stack2nix;
+    purescriptNixpkgs = import (builtins.fetchTarball 
+      { url = "https://github.com/NixOS/nixpkgs/archive/889d618f16ef2fc3110e1a8a6b2014109ae49e41.tar.gz"; 
+        sha256 = "14jqmpp3nkn8rk310mws1a3fhq72b0wnn5dnc1qcykva4pkc5fda"; 
+        name = "purescriptNixpkgs";
+      }) {};
   });
 
 in
