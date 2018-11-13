@@ -48,7 +48,7 @@ asIfThrown
     -> ExceptT SomeException IO a
 asIfThrown = withExceptT SomeException . hoist (pure . runIdentity)
 
-compileAndMaybeTypecheck :: Bool -> Quote (Term TyName Name a) -> Except (CompError (Provenance a)) (PLC.Term TyName Name (Provenance a))
+compileAndMaybeTypecheck :: Bool -> Quote (Term TyName Name a) -> Except (Error (Provenance a)) (PLC.Term TyName Name (Provenance a))
 compileAndMaybeTypecheck doTypecheck pir = flip runReaderT NoProvenance $ runQuoteT $ do
     -- it is important we run the two computations in the same Quote together, otherwise we might make
     -- names during compilation that are not fresh
@@ -190,9 +190,10 @@ errors = testNested "errors" [
 
 mutuallyRecursiveTypes :: Quote (Term TyName Name ())
 mutuallyRecursiveTypes = do
+    unit <- Unit.getBuiltinUnit
+
     (treeDt, forestDt@(Datatype _ _ _ _ [nil, _])) <- treeForestDatatype
 
-    unit <- Unit.getBuiltinUnit
     pure $
         Let ()
             Rec
