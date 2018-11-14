@@ -29,3 +29,6 @@ result*
 *.pdf
 *.gz
 *.synctex(busy)
+
+.terraform
+./plutus-playground/deployment/nixops/network.json

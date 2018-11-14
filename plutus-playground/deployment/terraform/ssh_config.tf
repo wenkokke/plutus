@@ -1,0 +1,23 @@
+data "template_file" "ssh_config_section_nixops" {
+  template = "${file("${path.module}/templates/ssh-config")}"
+
+  vars {
+    full_hostname    = "nixops.${aws_route53_zone.plutus_private_zone.name}"
+    short_hostname   = "nixops.${var.project}"
+    ip               = "${aws_instance.nixops.private_ip}"
+    bastion_hostname = "${aws_instance.bastion.*.public_ip[0]}"
+  }
+}
+
+data "template_file" "ssh_config" {
+  template = "\n# Mantis nodes\n$${nixops_node}"
+
+  vars {
+    nixops_node     = "${data.template_file.ssh_config_section_nixops.rendered}"
+  }
+}
+
+resource "local_file" "ssh_config" {
+  content  = "${data.template_file.ssh_config.rendered}"
+  filename = "${var.ssh_config_root}/config.d/${var.project}"
+}
