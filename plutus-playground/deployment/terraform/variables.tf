@@ -16,6 +16,10 @@ variable "tld" {
   default = "dev-plutus.iohkdev.io"
 }
 
+variable "playground_instance_type" {
+  default = "t2.large"
+}
+
 variable "bastion_ssh_keys" {
   default {
     prod    = ["david", "kris"]

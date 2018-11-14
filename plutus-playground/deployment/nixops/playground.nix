@@ -53,13 +53,11 @@
       TimeoutStartSec = "0";
       Restart = "always";
       User = "plutus";
+      PrivateTmp = true;
     };
 
-    script = ''
-      plutus-playground-server \
-	    webserver \
-        -b 127.0.0.1 -p 4000 \
-        /home/plutus/client
-    '';
+    script = "plutus-playground-server webserver -b 127.0.0.1 -p 4000 ${hydraPlayground.plutus-playground-client}";
   };
+
+};
 }

@@ -1,6 +1,6 @@
 let
   pkgs = import <nixpkgs> {};
-  machines = (pkgs.lib.importJSON ./machines.json)
+  machines = (pkgs.lib.importJSON ./machines.json);
   mkInstance = node:
   {
       deployment.targetHost = node.ip;

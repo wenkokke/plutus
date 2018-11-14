@@ -1,4 +1,4 @@
-{ esNodes, machines, stdOverlays, datadogKey, testnetType, ... }: node: pkgs:
+{ machines, stdOverlays, ... }: node: pkgs:
 {
       nixpkgs.overlays = stdOverlays;
       nix = {
