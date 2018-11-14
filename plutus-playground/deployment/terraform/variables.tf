@@ -38,6 +38,17 @@ variable "nixops_ssh_keys" {
   description = "this should contain the public keys of anyone who wants to access the nixops machine, changing the value for a particular environment will cause the nixops machine to be re-created, this is not a problem but it may take some time."
 }
 
+variable "playground_ssh_keys" {
+  default {
+    prod    = ["david", "kris"]
+    staging = ["david", "kris"]
+    david   = ["david"]
+    kris    = ["kris"]
+  }
+
+  description = "this should contain the public keys of anyone who wants to access the playground machines"
+}
+
 variable "ssh_keys" {
   default = {
     david            = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCR931i3C3i8IS6xE/gpSx3RvtLsU0div8G69+KP4tYSyd7X3e73EL8dWfyHJWOVRgorHbDDOOC5qMcNB9vpen9hibRtGEeKUTBypm4vVqhBrPp/lPWU5aqYlulA6HKx5bwcg4Xi1kQofuJz9yQdaqvqTuWbJOibNmAUREGKqpERKNU1vWMY8c9u7EmDm2uKyoFLaLxd6r+w6bBqBy/Q0q8CztGqyi/hcQfznnhT/j0dFu5MwGyQ0z/Ihl58QhUc4NlD9SRlLPa4sBe6UxvB00LhyYP6BveFKUeJyahs4pSvgHis0gD3FbmtxQbRjUqkVcFkv5kj8DlKiGPQWaeVBJx"
