@@ -41,21 +41,22 @@ instance GenerateList NoContent (Method -> Req NoContent) where
 type Web
    = "version" :> Get '[ PlainText, JSON] Text :<|> "api" :> PA.API :<|> Raw
 
-server :: FilePath -> Server Web
-server staticDir =
-  version :<|> PS.handlers :<|> serveDirectoryFileServer staticDir
+server :: (Server PA.API) -> FilePath -> Server Web
+server handlers staticDir = version :<|> handlers :<|> serveDirectoryFileServer staticDir
 
 version :: Applicative m => m Text
 version = pure $(gitHash)
 
-app :: FilePath -> Application
-app staticDir =
+app :: (Server PA.API) -> FilePath -> Application
+app handlers staticDir =
   gzip def . logStdout . cors (const $ Just policy) . serve webApi $
-  server staticDir
+  server handlers staticDir
   where
     policy = simpleCorsResourcePolicy {corsRequestHeaders = ["content-type"]}
     webApi :: Proxy Web
     webApi = Proxy
 
 run :: (MonadLogger m, MonadIO m) => Settings -> FilePath -> m ()
-run settings staticDir = liftIO . runSettings settings $ app staticDir
+run settings staticDir = do
+  handlers <- liftIO PS.mkHandlers
+  liftIO . runSettings settings $ app handlers staticDir

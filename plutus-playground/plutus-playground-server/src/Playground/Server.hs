@@ -1,13 +1,18 @@
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DerivingStrategies #-}
 module Playground.Server
-  ( handlers
+  ( mkHandlers
   ) where
 
+import           Control.Concurrent.MVar             (MVar, newMVar, withMVar)
 import           Control.Monad.IO.Class              (liftIO)
+import           Control.Newtype.Generics            (Newtype, unpack)
 import           Data.Aeson                          (encode)
 import qualified Data.ByteString.Lazy.Char8          as BSL
 import           Data.Maybe                          (catMaybes, fromMaybe)
 import qualified Data.Swagger                        as Swagger
 import qualified Data.Text                           as Text
+import           GHC.Generics                        (Generic)
 import           Language.Haskell.Interpreter        (InterpreterError (WontCompile), InterpreterT, MonadInterpreter,
                                                       errMsg)
 import qualified Language.Haskell.Interpreter        as Interpreter
@@ -22,6 +27,17 @@ import           Servant.Server                      (Handler, Server)
 import           System.Environment                  (lookupEnv)
 import           Wallet.UTXO.Types                   (Blockchain)
 
+newtype InterpreterInstance = InterpreterInstance (MVar ())
+  deriving stock (Generic)
+
+instance Newtype InterpreterInstance
+
+mkInterpreterInstance :: IO InterpreterInstance
+mkInterpreterInstance = InterpreterInstance <$> newMVar ()
+
+runInterpreterInstance :: InterpreterInstance -> InterpreterT IO a -> IO (Either InterpreterError a)
+runInterpreterInstance i = withMVar (unpack i) . const . runInterpreter
+
 runInterpreter :: InterpreterT IO a -> IO (Either InterpreterError a)
 runInterpreter action = do
   mLibDir <- liftIO $ lookupEnv "GHC_LIB_DIR"
@@ -32,23 +48,26 @@ runInterpreter action = do
     Nothing     -> Interpreter.runInterpreter action
 
 acceptSourceCode ::
-     SourceCode
+     InterpreterInstance
+  -> SourceCode
   -> Handler (Either [CompilationError] [FunctionSchema SimpleArgumentSchema])
-acceptSourceCode sourceCode = do
-  r <- liftIO . runInterpreter $ PI.compile sourceCode
+acceptSourceCode i sourceCode = do
+  r <- liftIO . runInterpreterInstance i $ PI.compile sourceCode
   case r of
     Right vs -> pure . Right $ fmap toSimpleArgumentSchema <$> vs
     Left (WontCompile errors) ->
       pure $ Left $ map (parseErrorText . Text.pack . errMsg) errors
     Left e -> throwError $ err400 {errBody = BSL.pack . show $ e}
 
-runFunction :: Evaluation -> Handler Blockchain
-runFunction e = do
+runFunction :: InterpreterInstance -> Evaluation -> Handler Blockchain
+runFunction i e = do
   mLibDir <- liftIO $ lookupEnv "GHC_LIB_DIR"
-  r <- liftIO $ runInterpreter $ PI.runFunction e
+  r <- liftIO $ runInterpreterInstance i $ PI.runFunction e
   case r of
     Left e           -> throwError $ err400 {errBody = BSL.pack . show $ e}
     Right blockchain -> pure blockchain
 
-handlers :: Server API
-handlers = acceptSourceCode :<|> runFunction
+mkHandlers :: IO (Server API)
+mkHandlers = do
+  i <- mkInterpreterInstance
+  pure $ acceptSourceCode i :<|> runFunction i
