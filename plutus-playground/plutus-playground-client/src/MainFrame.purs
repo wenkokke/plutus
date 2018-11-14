@@ -236,11 +236,16 @@ header =
   row_
     [ col_ [ h1_ [ text "Plutus Playground" ] ]
     , col_
-      [ p_ [
-          a [ href "https://github.com/input-output-hk/plutus/tree/mchakravarty/plutus-playground-spec/docs/playground"
-            , target "_blank"
-            ]
-            [ text "Design Document" ]
+      [ p_
+          [ a [ href "https://github.com/input-output-hk/plutus/tree/mchakravarty/plutus-playground-spec/docs/playground"
+              , target "_blank"
+              ]
+              [ text "Spec" ]
+          , text " "
+          , a [ href "https://app.zeplin.io/project/5be9563f0fae8e7ead3c676e/screen/5beae3c3a6ae643edaa8a9df"
+              , target "_blank"
+              ]
+              [ text "Design" ]
           ]
       ]
     ]
