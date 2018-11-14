@@ -4,7 +4,6 @@ with pkgs;
 
 let
   yarnDeps = import ./yarn.nix { inherit fetchurl linkFarm; };
-  offlineCache = yarnDeps.offline_cache;
   patchShebangs = dir: ''
     node=`type -p node`
     coffee=`type -p coffee || true`
@@ -27,10 +26,9 @@ in {
     configurePhase = ''
       export HOME="$NIX_BUILD_TOP"
   
-      yarn config --offline set yarn-offline-mirror ${offlineCache}
+      yarn config --offline set yarn-offline-mirror ${yarnDeps.offline_cache}
       yarn config --offline set yarn-offline-mirror-pruning true
   
-      # yarn install --offline --frozen-lockfile --ignore-engines --ignore-scripts
       yarn install --offline
       ${patchShebangs "node_modules/.bin/"}
     '';
@@ -44,8 +42,6 @@ in {
     buildPhase = ''
       cp -R ${psSrc}/* ./src/
       cp --reflink=auto --no-preserve=mode -R $bowerComponents/bower_components .
-      yarn --offline
-      yarn run --offline bower install
       yarn run --offline webpack
       ls
     '';

@@ -28,7 +28,7 @@ import           Playground.API               (Evaluation (program, sourceCode),
 import qualified Playground.TH                as TH
 import           System.Directory             (removeFile)
 import           System.IO                    (readFile)
-import           System.IO.Temp               (writeTempFile)
+import           System.IO.Temp               (writeSystemTempFile)
 import qualified Type.Reflection              as TR
 import           Wallet.API                   (WalletAPI)
 import           Wallet.Emulator.Types        (AssertionError, EmulatedWalletApi, EmulatorState (emChain), Trace,
@@ -60,7 +60,7 @@ loadSource fileName action =
 compile :: (MonadInterpreter m) => SourceCode -> m [FunctionSchema Schema]
 compile s = do
   fileName <-
-    liftIO $ writeTempFile "." "Contract.hs" (Text.unpack . Newtype.unpack $ s)
+    liftIO $ writeSystemTempFile "Contract.hs" (Text.unpack . Newtype.unpack $ s)
   loadSource fileName $ \moduleName -> do
     exports <- getModuleExports moduleName
     walletFunctions <- catMaybes <$> traverse isWalletFunction exports
@@ -77,8 +77,7 @@ runFunction :: (MonadInterpreter m) => Evaluation -> m Blockchain
 runFunction evaluation = do
   fileName <-
     liftIO $
-    writeTempFile
-      "."
+    writeSystemTempFile
       "Contract.hs"
       (Text.unpack . Newtype.unpack . sourceCode $ evaluation)
   loadSource fileName $ \_ -> do
