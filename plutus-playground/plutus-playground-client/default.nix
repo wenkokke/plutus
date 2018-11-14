@@ -32,6 +32,7 @@ in {
     configurePhase = ''
       export HOME="$NIX_BUILD_TOP"
 
+      sed -i -E 's|^(\s*resolved\s*")https?://.*/|\1|' yarn.lock
       yarn --offline config set yarn-offline-mirror ${yarnDeps.offline_cache}
       yarn --offline config set yarn-offline-mirror-pruning true
       yarn --offline install

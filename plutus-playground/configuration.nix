@@ -95,7 +95,7 @@ in
           return 301 https://$host$request_uri;
           '';
       };
-      "ec2-18-196-90-84.eu-central-1.compute.amazonaws.com" = {
+      "*.compute.amazonaws.com" = {
         locations = {
           "/" = {
             proxyPass = "http://127.0.0.1:4000/";
