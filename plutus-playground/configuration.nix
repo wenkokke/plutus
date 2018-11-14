@@ -1,5 +1,10 @@
 { config, pkgs, options,... }:
-let plutus = import /home/plutus/plutus { inherit config; };
+let 
+  plutusSrc = builtins.fetchGit {
+    url = "https://github.com/input-output-hk/plutus.git";
+    ref = "playground";
+  };
+  plutus = import plutusSrc { inherit config; };
 in
 {
   imports = [ <nixpkgs/nixos/modules/virtualisation/amazon-image.nix> ];

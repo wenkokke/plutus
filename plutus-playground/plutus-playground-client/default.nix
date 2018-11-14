@@ -18,40 +18,40 @@ let
 in {
   plutus-playground-client = stdenv.mkDerivation {
     src = ./.;
-  
+
     name = "plutus-playground-client";
-  
-    buildInputs = [ nodejs yarn git cacert purescript ];
-  
-    configurePhase = ''
-      export HOME="$NIX_BUILD_TOP"
-  
-      yarn config --offline set yarn-offline-mirror ${yarnDeps.offline_cache}
-      yarn config --offline set yarn-offline-mirror-pruning true
-  
-      yarn install --offline
-      ${patchShebangs "node_modules/.bin/"}
-    '';
-  
+
+    buildInputs = [ nodejs yarn git cacert purescript yarnDeps.offline_cache ];
+
     bowerComponents = pkgs.buildBowerComponents {
       name = "my-web-app";
       generated = ./bower-packages.nix;
       src = ./.;
     };
 
-    buildPhase = ''
+    configurePhase = ''
+      export HOME="$NIX_BUILD_TOP"
+
+      yarn --offline config set yarn-offline-mirror ${yarnDeps.offline_cache}
+      yarn --offline config set yarn-offline-mirror-pruning true
+      yarn --offline install
+
+      ${patchShebangs "node_modules/.bin/"}
+
       cp -R ${psSrc}/* ./src/
       cp --reflink=auto --no-preserve=mode -R $bowerComponents/bower_components .
-      yarn run --offline webpack
-      ls
     '';
-  
+
+    buildPhase = ''
+      yarn --offline run webpack
+    '';
+
     doCheck = false;
-  
+
     checkPhase = ''
       yarn test --coverage --ci --no-color
     '';
-  
+
     installPhase = ''
       mv dist $out
     '';
