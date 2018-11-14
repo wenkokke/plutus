@@ -41,13 +41,13 @@ instance GenerateList NoContent (Method -> Req NoContent) where
 type Web
    = "version" :> Get '[ PlainText, JSON] Text :<|> "api" :> PA.API :<|> Raw
 
-server :: (Server PA.API) -> FilePath -> Server Web
+server :: Server PA.API -> FilePath -> Server Web
 server handlers staticDir = version :<|> handlers :<|> serveDirectoryFileServer staticDir
 
 version :: Applicative m => m Text
 version = pure $(gitHash)
 
-app :: (Server PA.API) -> FilePath -> Application
+app :: Server PA.API -> FilePath -> Application
 app handlers staticDir =
   gzip def . logStdout . cors (const $ Just policy) . serve webApi $
   server handlers staticDir
