@@ -210,6 +210,7 @@ initEditor ∷
   => String -> Editor -> m Unit
 initEditor contents editor = liftEff $ do
   void $ Editor.setValue contents (Just 1) editor
+  Editor.setTheme "ace/theme/monokai" editor
   --
   session <- Editor.getSession editor
   Session.setMode "ace/mode/haskell" session
