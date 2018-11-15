@@ -1,9 +1,10 @@
 module Action where
 
-import Bootstrap (alertInfo_, bgInfo, btn, btnInfo, btnPrimary, btnSmall, card, cardBody_, col_, pullRight, row_, textWhite)
+import Bootstrap (alertInfo_, bgInfo, btn, btnInfo, btnPrimary, btnSmall, card, cardBody_, cardFooter_, col_, pullRight, row_, textWhite)
 import Data.Array (mapWithIndex)
 import Data.Array as Array
 import Data.Foldable (intercalate)
+import Data.Generic (gShow, toSpine)
 import Data.Newtype (unwrap)
 import Data.Tuple.Nested ((/\))
 import Halogen (HTML)
@@ -12,7 +13,7 @@ import Halogen.HTML.Events (input_, onClick)
 import Halogen.HTML.Properties (InputType(..), class_, classes, placeholder, type_)
 import Icons (Icon(..), icon)
 import Playground.API (SimpleArgumentSchema(..))
-import Prelude (pure, zero, ($), (<$>), (<<<), (==))
+import Prelude (pure, show, zero, ($), (<$>), (<<<), (==))
 import Types (Action, Query(..))
 import Wallet (walletIdPane)
 
@@ -44,7 +45,7 @@ actionPane index action =
       [ cardBody_
         [ button
             [ classes [ btn, btnInfo, pullRight ]
-            , onClick $ input_ $ KillAction index
+            , onClick $ input_ $ RemoveAction index
             ]
             [ icon Close ]
         , div_ [ walletIdPane action.walletId ]

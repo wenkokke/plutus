@@ -6,7 +6,7 @@ import Data.Either (Either(..))
 import Data.Tuple (Tuple(..))
 import Playground.API (Fn(..), FunctionSchema(..), SimpleArgumentSchema(..))
 
-wallets :: Array Wallet
+wallets :: Array DummyWallet
 wallets =
   [ { walletId: WalletId "kris0001", balance: 10.0 }
   , { walletId: WalletId "david0001", balance: 23.0 }
@@ -84,7 +84,7 @@ vestFunds :: (
     => Vesting
     -> Value
     -> String
-    -> m VestingData
+    -> m ()
 vestFunds vst value unused = do
     _ <- if value < totalAmount vst then otherError "Value must not be smaller than vested amount" else pure ()
     let v' = UTXO.Value $ fromIntegral value
@@ -93,7 +93,7 @@ vestFunds vst value unused = do
         o = scriptTxOut v' vs (DataScript $ UTXO.lifted vd)
         vd =  VestingData (validatorScriptHash vst) 0
     signAndSubmit payment [o, change]
-    pure vd
+    pure ()
 
 -- | Retrieve some of the vested funds.
 retrieveFunds :: (
@@ -177,8 +177,11 @@ validatorScript v = Validator val where
 $(mkFunction 'vestFunds)
 """
 
-evaluation :: Evaluation
-evaluation =
+evaluationResult ::
+  { balances :: Array Balance
+  , transfers :: Array Transfer
+  }
+evaluationResult =
   { balances: [
       { name: "charles"
       , value: 600.0

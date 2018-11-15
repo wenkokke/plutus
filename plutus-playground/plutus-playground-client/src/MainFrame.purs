@@ -23,11 +23,14 @@ import Data.Either (Either(..))
 import Data.Either.Nested (Either2)
 import Data.Foldable (traverse_)
 import Data.Functor.Coproduct.Nested (Coproduct2)
+import Data.Generic (GenericSpine(..), fromSpine, gShow)
 import Data.Lens (assign, modifying, use)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.RawJson (RawJson(..))
 import Data.Show (show)
 import Data.String as String
 import Data.Tuple.Nested ((/\))
+import Debug.Trace (spy)
 import ECharts.Commands as E
 import ECharts.Monad (CommandsT, interpret)
 import ECharts.Types.Phantom (I)
@@ -45,14 +48,15 @@ import Icons (Icon(..), icon)
 import Network.HTTP.Affjax (AJAX)
 import Network.RemoteData (RemoteData(..), isLoading)
 import Network.RemoteData as RemoteData
-import Playground.API (CompilationError(CompilationError, RawError), FunctionSchema, SimpleArgumentSchema, SourceCode(SourceCode))
-import Playground.Server (SPParams_, postContract)
+import Playground.API (CompilationError(CompilationError, RawError), Evaluation(..), Expression(..), Fn(..), FunctionSchema, SimpleArgumentSchema, SourceCode(SourceCode))
+import Playground.Server (SPParams_, postContract, postEvaluate)
 import Prelude (class Eq, class Monad, class Ord, type (~>), Unit, Void, bind, const, discard, flip, pure, unit, void, ($), (+), (<$>), (<*>), (<<<), (<>), (>>=))
 import Servant.PureScript.Affjax (AjaxError)
 import Servant.PureScript.Settings (SPSettings_)
 import StaticData as StaticData
-import Types (Balance, Evaluation, Query(..), State, Transfer, Wallet, WalletId(..), Action, _actions, _compilationResult, _editorContents, _evaluation, _wallets)
+import Types (Action, Balance, Blockchain, DummyWallet, Query(..), State, Transfer, WalletId(..), _actions, _compilationResult, _editorContents, _evaluationResult, _wallets)
 import Wallet (walletsPane)
+import Wallet.Emulator.Types (Wallet(..))
 
 initialState :: State
 initialState =
@@ -60,7 +64,7 @@ initialState =
   , compilationResult: NotAsked
   , wallets: StaticData.wallets
   , actions: []
-  , evaluation: NotAsked
+  , evaluationResult: NotAsked
   }
 
 type ChildQuery = Coproduct2 AceQuery EChartsQuery
@@ -138,16 +142,45 @@ eval (ScrollTo {row, column} next) = do
   withEditor $ Editor.gotoLine row (Just column) (Just true)
   pure next
 
-eval (SendAction action next) = do
+eval (AddAction action next) = do
   modifying _actions $ flip Array.snoc action
   pure next
 
-eval (KillAction index next) = do
+eval (RemoveAction index next) = do
   modifying _actions (fromMaybe <*> Array.deleteAt index)
   pure next
 
 eval (EvaluateActions next) = do
-  assign _evaluation $ Success StaticData.evaluation
+  -- | TODO This is probably wrong. We ought to be capturing the
+  -- successfully-compiled source, so that we use that even if the
+  -- editor changes, right?
+  contents <- use _editorContents
+  let wallet1 = Wallet 1
+  let evaluation = Evaluation
+        { wallets: [ wallet1 /\ 100 ]
+        , program: [ Expression
+                       { function: Fn "vestFunds"
+                       , wallet: wallet1
+                       , arguments: [ RawJson """
+                                        { vestingTranche1: { vestingTrancheDate: 1000, vestingTrancheAmount: 10 }
+                                        , vestingTranche2: { vestingTrancheDate: 2000, vestingTrancheAmount: 20 }
+                                        , vestingOwner: "ASDFADSFASDF"
+                                        }
+                                      """
+                                    , RawJson "5"
+                                    , RawJson "\"Foo\""
+                                    ]
+                       }
+                   ]
+
+        , sourceCode: SourceCode contents
+        , blockchain: []
+        }
+  --
+  assign _evaluationResult Loading
+  result <- runAjax $ postEvaluate evaluation
+  assign _evaluationResult result
+  --
   updateChartIfPossible
   pure next
 
@@ -167,9 +200,9 @@ eval (RemoveWallet index next) = do
 
 updateChartIfPossible :: forall m i o. HalogenM State i ChildQuery ChildSlot o m Unit
 updateChartIfPossible = do
-  use _evaluation >>= case _ of
-    Success evaluation ->
-      void $ H.query' cpECharts EChartsSlot $ H.action $ EC.Set $ interpret $ sankeyDiagramOptions evaluation
+  use _evaluationResult >>= case _ of
+    Success evaluationResult ->
+      void $ H.query' cpECharts EChartsSlot $ H.action $ EC.Set $ interpret $ sankeyDiagramOptions evaluationResult
     _ -> pure unit
 
 ------------------------------------------------------------
@@ -223,11 +256,11 @@ render state =
   div [ class_ (ClassName "main-frame") ] $
     [ container_
       [ header
-      , br_
       , editorPane state
       , br_
       , case state.compilationResult of
-          Success (Right functionSchemas) -> mockChainPane functionSchemas state.wallets state.actions state.evaluation
+          Success (Right functionSchemas) ->
+            mockChainPane functionSchemas state.wallets state.actions state.evaluationResult
           _ -> empty
       ]
     ]
@@ -315,22 +348,30 @@ mockChainPane ::
   forall m aff.
   MonadAff (EChartsEffects (AceEffects aff)) m
   => Array (FunctionSchema SimpleArgumentSchema)
-  -> Array Wallet
+  -> Array DummyWallet
   -> Array Action
-  -> RemoteData AjaxError Evaluation
+  -> RemoteData AjaxError Blockchain
   -> ParentHTML Query ChildQuery ChildSlot m
-mockChainPane schemas wallets actions evaluation =
+mockChainPane schemas wallets actions evaluationResult =
   div_
     [ walletsPane schemas wallets
     , actionsPane actions
     , div_
-        case evaluation of
-          Success _ ->
+        case spy $ evaluationResult of
+          Success evaluation ->
             [ h3_ [ text "Chain" ]
+            , code_ [ text $ gShow evaluation ]
             , slot' cpECharts EChartsSlot
              (echarts Nothing)
              ({width: 800, height: 800} /\ unit)
              (input HandleEChartsMessage)
+            ]
+          Failure error ->
+            [ alertDanger_
+                [ text $ showAjaxError error
+                , br_
+                , text "Please try again or contact support for assistance."
+                ]
             ]
           _ -> []
     ]
@@ -350,17 +391,13 @@ toLink {source, target, value} =
     E.targetName target
     E.value value
 
-toChartOptions :: forall m i. Monad m => Evaluation -> CommandsT (series :: I | i) m Unit
-toChartOptions {balances, transfers} =
-  E.series $ E.sankey do
-    E.buildItems (traverse_ toItem balances)
-    E.buildLinks (traverse_ toLink transfers)
-
-sankeyDiagramOptions :: forall m i. Monad m => Evaluation -> CommandsT (series :: I | i) m Unit
-sankeyDiagramOptions {balances, transfers} =
-  E.series $ E.sankey do
-    E.buildItems (traverse_ toItem balances)
-    E.buildLinks (traverse_ toLink transfers)
+sankeyDiagramOptions :: forall m i. Monad m => Blockchain -> CommandsT (series :: I | i) m Unit
+sankeyDiagramOptions evaluation =
+  let {balances, transfers} = StaticData.evaluationResult
+  in
+    E.series $ E.sankey do
+      E.buildItems (traverse_ toItem balances)
+      E.buildLinks (traverse_ toLink transfers)
 
 runAjax ::
   forall m env a e.

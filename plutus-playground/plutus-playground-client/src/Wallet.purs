@@ -11,12 +11,12 @@ import Halogen.HTML.Properties (class_, classes)
 import Icons (Icon(..), icon)
 import Playground.API (FunctionSchema, SimpleArgumentSchema)
 import Prelude (show, ($), (<$>))
-import Types (Query(..), WalletId(WalletId), Wallet)
+import Types (DummyWallet, Query(..), WalletId(..))
 
 walletsPane ::
   forall p.
   Array (FunctionSchema SimpleArgumentSchema)
-  -> Array Wallet
+  -> Array DummyWallet
   -> HTML p Query
 walletsPane schemas wallets =
   div_
@@ -28,7 +28,7 @@ walletPane ::
   forall p.
   Array (FunctionSchema SimpleArgumentSchema)
   -> Int
-  -> Wallet
+  -> DummyWallet
   -> HTML p Query
 walletPane schemas index wallet =
   col_
@@ -74,7 +74,7 @@ actionButton ::
 actionButton walletId functionSchema =
   button
     [ classes [ btn, btnInfo, btnSmall]
-    , onClick $ input_ $ SendAction { functionSchema, walletId }
+    , onClick $ input_ $ AddAction { functionSchema, walletId }
     ]
     [ text $ unwrap $ _.functionName $ unwrap functionSchema ]
 
