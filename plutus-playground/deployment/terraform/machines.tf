@@ -30,6 +30,7 @@ locals {
     playgroundA       = "${local.playgroundA}"
     nixops         = "${local.nixops}"
     playgroundSshKeys = "${data.template_file.playground_ssh_keys.*.rendered}"
+    rootSshKeys = "${data.template_file.playground_ssh_keys.*.rendered}"
     awsRegion      = "${var.aws_region}"
     environment    = "${var.env}"
     project        = "${var.project}"

@@ -1,4 +1,4 @@
-{ mkInstance = { hydraPlayground, defaultMachine, ... }: node: { config, pkgs, lib, ... }:
+{ mkInstance = { playground, defaultMachine, machines, ... }: node: { config, pkgs, lib, ... }:
   {
       imports = [ (defaultMachine node pkgs)
                 ];
@@ -6,6 +6,14 @@
   networking.firewall = {
     enable = true;
     allowedTCPPorts = [ 80 8080 ];
+  };
+
+  users.users.plutus = {
+    isNormalUser = true;
+    home = "/home/plutus";
+    description = "Plutus user";
+    extraGroups = [ "systemd-journal" ];
+    openssh.authorizedKeys.keys = machines.playgroundSshKeys;
   };
 
   services.nginx = {
@@ -46,7 +54,7 @@
     before = [ "nginx.service" ];
     enable = true;
     path = [
-      "${hydraPlayground.plutus-server-invoker}/bin"
+      "${playground.plutus-server-invoker}"
     ];
 
     serviceConfig = {
@@ -56,7 +64,7 @@
       PrivateTmp = true;
     };
 
-    script = "plutus-playground-server webserver -b 127.0.0.1 -p 4000 ${hydraPlayground.plutus-playground-client}";
+    script = "plutus-playground-server webserver -b 127.0.0.1 -p 4000 ${playground.plutus-playground-client}";
   };
 
 };
