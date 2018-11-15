@@ -113,7 +113,7 @@ walletActionExpr (Expression (Fn f) wallet args) =
 
 mkApplyExpr :: String -> [String] -> String
 mkApplyExpr functionName [] = functionName
-mkApplyExpr functionName [a] = "apply1 " <> functionName <> " " <> a
+mkApplyExpr functionName [a] = "apply1" <+> functionName <+> a
 mkApplyExpr functionName [a, b] = "apply2" <+> functionName <+> a <+> b
 mkApplyExpr functionName [a, b, c] = "apply3" <+> functionName <+> a <+> b <+> c
 mkApplyExpr functionName [a, b, c, d] =
