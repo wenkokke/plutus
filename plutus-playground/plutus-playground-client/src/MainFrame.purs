@@ -8,7 +8,7 @@ import Ace.Halogen.Component (AceEffects, AceMessage(..), AceQuery(..), Autocomp
 import Ace.Types (ACE, Editor, Annotation)
 import Action (actionsPane)
 import AjaxUtils (showAjaxError)
-import Bootstrap (alertDanger_, btn, btnBlock, btnDanger, btnPrimary, btnSecondary, btnSuccess, col2_, col7_, col_, container_, empty, listGroupItem_, listGroup_, pullRight, row_)
+import Bootstrap (alertDanger_, btn, btnDanger, btnPrimary, btnSecondary, btnSuccess, col_, container_, empty, listGroupItem_, listGroup_, pullRight, row_)
 import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (class MonadEff, liftEff)
@@ -262,19 +262,15 @@ editorPane state =
         unit
         (input HandleAceMessage)
     , br_
-    , row_
-        [ col2_
-            [ button [ classes [ btn
-                               , btnBlock
-                               , btnClass
-                               ]
-                     , onClick $ input_ CompileProgram
-                     , disabled (isLoading state.compilationResult)
-                     ]
-                [ btnText ]
+    , div_
+        [ button
+            [ classes [ btn, btnClass ]
+            , onClick $ input_ CompileProgram
+            , disabled (isLoading state.compilationResult)
             ]
-        , col_ [ errorList ]
+            [ btnText ]
         ]
+    , errorList
     ]
     where
       btnClass = case state.compilationResult of
@@ -325,10 +321,8 @@ mockChainPane ::
   -> ParentHTML Query ChildQuery ChildSlot m
 mockChainPane schemas wallets actions evaluation =
   div_
-    [ row_
-        [ col7_ [ walletsPane schemas wallets ]
-        , col_ [ actionsPane actions ]
-        ]
+    [ walletsPane schemas wallets
+    , actionsPane actions
     , div_
         case evaluation of
           Success _ ->
