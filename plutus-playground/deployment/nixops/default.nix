@@ -5,7 +5,7 @@ let
   overlays = import ./overlays.nix;
   stdOverlays = [ overlays.journalbeat ];
   playground = import ../../../. {};
-  options = { inherit stdOverlays machines defaultMachine hydraPlayground; };
+  options = { inherit stdOverlays machines defaultMachine playground; };
   defaultMachine = (import ./default-machine.nix) options;
   playgroundA = playgroundMachine.mkInstance options machines.playgroundA;
 in
