@@ -60,7 +60,8 @@ loadSource fileName action =
 compile :: (MonadInterpreter m) => SourceCode -> m [FunctionSchema Schema]
 compile s = do
   fileName <-
-    liftIO $ writeSystemTempFile "Contract.hs" (Text.unpack . Newtype.unpack $ s)
+    liftIO $
+    writeSystemTempFile "Contract.hs" (Text.unpack . Newtype.unpack $ s)
   loadSource fileName $ \moduleName -> do
     exports <- getModuleExports moduleName
     walletFunctions <- catMaybes <$> traverse isWalletFunction exports
