@@ -148,31 +148,45 @@ apply2 fun a b = fun (decode a) (decode b)
 apply3 ::
      (FromJSON a, FromJSON b, FromJSON c)
   => (a -> b -> c -> d)
-  -> (String, String, String)
+  -> String
+  -> String
+  -> String
   -> d
-apply3 fun (a, b, c) = fun (decode a) (decode b) (decode c)
+apply3 fun a b c = fun (decode a) (decode b) (decode c)
 
 apply4 ::
      (FromJSON a, FromJSON b, FromJSON c, FromJSON d)
   => (a -> b -> c -> d -> e)
-  -> (String, String, String, String)
+  -> String
+  -> String
+  -> String
+  -> String
   -> e
-apply4 fun (a, b, c, d) = fun (decode a) (decode b) (decode c) (decode d)
+apply4 fun a b c d = fun (decode a) (decode b) (decode c) (decode d)
 
 apply5 ::
      (FromJSON a, FromJSON b, FromJSON c, FromJSON d, FromJSON e)
   => (a -> b -> c -> d -> e -> f)
-  -> (String, String, String, String, String)
+  -> String
+  -> String
+  -> String
+  -> String
+  -> String
   -> f
-apply5 fun (a, b, c, d, e) =
+apply5 fun a b c d e =
   fun (decode a) (decode b) (decode c) (decode d) (decode e)
 
 apply6 ::
      (FromJSON a, FromJSON b, FromJSON c, FromJSON d, FromJSON e, FromJSON f)
   => (a -> b -> c -> d -> e -> f -> g)
-  -> (String, String, String, String, String, String)
+  -> String
+  -> String
+  -> String
+  -> String
+  -> String
+  -> String
   -> g
-apply6 fun (a, b, c, d, e, f) =
+apply6 fun a b c d e f =
   fun (decode a) (decode b) (decode c) (decode d) (decode e) (decode f)
 
 apply7 ::
@@ -185,9 +199,15 @@ apply7 ::
      , FromJSON g
      )
   => (a -> b -> c -> d -> e -> f -> g -> h)
-  -> (String, String, String, String, String, String, String)
+  -> String
+  -> String
+  -> String
+  -> String
+  -> String
+  -> String
+  -> String
   -> h
-apply7 fun (a, b, c, d, e, f, g) =
+apply7 fun a b c d e f g =
   fun
     (decode a)
     (decode b)
