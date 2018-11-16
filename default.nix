@@ -91,7 +91,13 @@ let
       shellcheck = pkgs.callPackage localLib.iohkNix.tests.shellcheck { inherit src; };
       hlint = pkgs.callPackage localLib.iohkNix.tests.hlint {
         inherit src;
-        projects = localLib.plutusPkgList;
+        projects = filter (v: v != "plutus-server-invoker")
+                          (map (v: if v == "plutus-playground-server"
+                                   then "plutus-playground/plutus-playground-server"
+                                   else (if v == "plutus-playground-client"
+                                         then "plutus-playground/plutus-playground-client"
+                                         else v))
+                                         localLib.plutusPkgList);
       };
       stylishHaskell = pkgs.callPackage localLib.iohkNix.tests.stylishHaskell {
         inherit (self.haskellPackages) stylish-haskell;
