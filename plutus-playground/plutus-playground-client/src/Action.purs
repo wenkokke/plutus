@@ -1,6 +1,6 @@
 module Action where
 
-import Bootstrap (alertInfo_, bgInfo, btn, btnInfo, btnPrimary, btnSmall, card, cardBody_, col_, pullRight, row_, textWhite)
+import Bootstrap (alertInfo_, bgInfo, btn, btnDanger, btnInfo, btnPrimary, btnSecondary, btnSmall, btnSuccess, card, cardBody_, col_, pullRight, row_, textWhite)
 import Data.Argonaut.Core (fromString)
 import Data.Argonaut.Decode.Class (decodeJson)
 import Data.Array (mapWithIndex)
@@ -11,18 +11,20 @@ import Data.Maybe (fromMaybe, maybe)
 import Data.Newtype (unwrap)
 import Data.Tuple.Nested ((/\))
 import Halogen (HTML)
-import Halogen.Query as HQ
 import Halogen.HTML (ClassName(ClassName), br_, button, div, div_, h3_, hr_, input, small_, text)
 import Halogen.HTML.Events (input_, onClick, onValueChange)
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties (InputType(InputText, InputNumber), class_, classes, type_, value)
+import Halogen.Query as HQ
 import Icons (Icon(..), icon)
+import Network.RemoteData (RemoteData(..))
 import Prelude (map, pure, show, zero, ($), (<$>), (<<<), (==))
-import Types (Action, FormEvent(..), Query(EvaluateActions, PopulateAction, RemoveAction), SimpleArgument(Unknowable, SimpleObject, SimpleString, SimpleInt))
+import Servant.PureScript.Affjax (AjaxError)
+import Types (Action, FormEvent(..), Query(EvaluateActions, PopulateAction, RemoveAction), SimpleArgument(Unknowable, SimpleObject, SimpleString, SimpleInt), Blockchain)
 import Wallet (walletIdPane)
 
-actionsPane :: forall p. Array Action -> HTML p Query
-actionsPane actions =
+actionsPane :: forall p. Array Action -> RemoteData AjaxError Blockchain -> HTML p Query
+actionsPane actions evaluationResult =
   div [ class_ $ ClassName "actions" ]
     [ h3_ [ text "Actions" ]
     , if Array.length actions == zero
@@ -37,7 +39,7 @@ actionsPane actions =
                  (mapWithIndex (\index -> pure <<< actionPane index) actions)
              )
           , br_
-          , evaluateActionsPane
+          , evaluateActionsPane evaluationResult
           , div_ [ small_ [ text "Run this set of actions against a simulated blockchain." ] ]
           ]
     ]
@@ -88,10 +90,19 @@ actionArgumentForm Unknowable =
   div_ [ text "UNKNOWN TODO"
        ]
 
-evaluateActionsPane :: forall p. HTML p Query
-evaluateActionsPane =
+evaluateActionsPane :: forall p. RemoteData AjaxError Blockchain -> HTML p Query
+evaluateActionsPane evaluationResult =
   button
-    [ classes [ btn, btnPrimary, btnSmall ]
+    [ classes [ btn, btnClass, btnSmall ]
     , onClick $ input_ EvaluateActions
     ]
-    [ text "Evaluate" ]
+    [ btnText ]
+  where
+    btnClass = case evaluationResult of
+                 Success _ -> btnSuccess
+                 Failure _ -> btnDanger
+                 Loading -> btnSecondary
+                 NotAsked -> btnPrimary
+    btnText = case evaluationResult of
+                 Loading -> icon Spinner
+                 _ -> text "Evaluate"

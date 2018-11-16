@@ -399,7 +399,7 @@ mockChainPane ::
 mockChainPane schemas wallets actions evaluationResult =
   div_
     [ walletsPane schemas wallets
-    , actionsPane (spy actions)
+    , actionsPane actions evaluationResult
     , div_
         case evaluationResult of
           Success evaluation ->
