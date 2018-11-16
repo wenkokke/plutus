@@ -30,6 +30,7 @@ let
     "plutus-core-interpreter"
     "plutus-playground-server"
     "plutus-playground-client"
+    "plutus-server-invoker"
     "plutus-exe"
     "plutus-ir"
     "plutus-th"
