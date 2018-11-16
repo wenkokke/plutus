@@ -155,7 +155,7 @@ eval (EvaluateActions next) = do
   -- successfully-compiled source, so that we use that even if the
   -- editor changes, right?
   contents <- use _editorContents
-  let wallet1 = Wallet 1
+  let wallet1 = Wallet { getWallet: 1 }
   let evaluation = Evaluation
         { wallets: [ wallet1 /\ 100 ]
         , program: [ Expression
