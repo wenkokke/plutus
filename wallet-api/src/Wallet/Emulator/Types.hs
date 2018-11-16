@@ -76,7 +76,7 @@ import           Wallet.UTXO               (Block, Blockchain, Height, Tx (..), 
 import qualified Wallet.UTXO.Index         as Index
 
 -- agents/wallets
-newtype Wallet = Wallet { getWallet :: Int }
+newtype Wallet = Wallet Int
     deriving (Show, Eq, Ord, Generic)
     deriving newtype (ToHttpApiData, FromHttpApiData, Hashable, ToJSON, FromJSON)
 

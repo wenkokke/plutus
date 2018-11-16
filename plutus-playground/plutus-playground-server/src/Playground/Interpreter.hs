@@ -32,7 +32,7 @@ import           System.IO.Temp               (writeSystemTempFile)
 import qualified Type.Reflection              as TR
 import           Wallet.API                   (WalletAPI)
 import           Wallet.Emulator.Types        (AssertionError, EmulatedWalletApi, EmulatorState (emChain), Trace,
-                                               Wallet (Wallet, getWallet), runTraceChain, runTraceTxPool, walletAction)
+                                               Wallet (Wallet), runTraceChain, runTraceTxPool, walletAction)
 import           Wallet.UTXO                  (Blockchain)
 
 defaultExtensions :: [Extension]

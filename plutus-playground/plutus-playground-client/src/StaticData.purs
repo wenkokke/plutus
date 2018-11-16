@@ -1,16 +1,20 @@
-module StaticData where
+module StaticData
+  ( editorContents
+  , wallets
+  , evaluationResult
+  ) where
 
-import Types
+import Types (Balance, MockWallet, Transfer)
+import Wallet.Emulator.Types (Wallet(..))
 
-import Data.Either (Either(..))
-import Data.Tuple (Tuple(..))
-import Playground.API (Fn(..), FunctionSchema(..), SimpleArgumentSchema(..))
+wallet1 :: MockWallet
+wallet1 = { wallet: Wallet 1, balance: 10 }
 
-wallets :: Array DummyWallet
-wallets =
-  [ { walletId: WalletId "kris0001", balance: 10.0 }
-  , { walletId: WalletId "david0001", balance: 23.0 }
-  ]
+wallet2 :: MockWallet
+wallet2 = { wallet: Wallet 2, balance: 30 }
+
+wallets :: Array MockWallet
+wallets = [ wallet1, wallet2 ]
 
 editorContents :: String
 editorContents = """-- | Vesting scheme as a PLC contract
@@ -219,11 +223,3 @@ evaluationResult =
       }
     ]
   }
-
-
-compilationResult :: CompilationResult
-compilationResult = Right [FunctionSchema {argumentSchema: [SimpleObjectArgument [Tuple "vestingTranche1" (SimpleObjectArgument [Tuple "vestingTrancheDate" SimpleIntArgument, Tuple "vestingTrancheAmount" SimpleIntArgument]), Tuple "vestingTranche2" (SimpleObjectArgument [Tuple "vestingTrancheDate" SimpleIntArgument, Tuple "vestingTrancheAmount" SimpleIntArgument]), Tuple "vestingOwner" (SimpleObjectArgument [Tuple "getPubKey" SimpleIntArgument])], SimpleIntArgument, SimpleStringArgument], functionName: Fn "vestFunds"}]
-
-
-actions :: Array Action
-actions = [{walletId: WalletId "kris0001", functionSchema: FunctionSchema {argumentSchema: [SimpleObjectArgument [Tuple "vestingTranche1" (SimpleObjectArgument [Tuple "vestingTrancheDate" SimpleIntArgument, Tuple "vestingTrancheAmount" SimpleIntArgument]), Tuple "vestingTranche2" (SimpleObjectArgument [Tuple "vestingTrancheDate" SimpleIntArgument, Tuple "vestingTrancheAmount" SimpleIntArgument]), Tuple "vestingOwner" (SimpleObjectArgument [Tuple "getPubKey" SimpleIntArgument])], SimpleIntArgument, SimpleStringArgument], functionName: Fn "vestFunds"}},{walletId: WalletId "david0001", functionSchema: FunctionSchema {argumentSchema: [SimpleObjectArgument [Tuple "vestingTranche1" (SimpleObjectArgument [Tuple "vestingTrancheDate" SimpleIntArgument, Tuple "vestingTrancheAmount" SimpleIntArgument]), Tuple "vestingTranche2" (SimpleObjectArgument [Tuple "vestingTrancheDate" SimpleIntArgument, Tuple "vestingTrancheAmount" SimpleIntArgument]), Tuple "vestingOwner" (SimpleObjectArgument [Tuple "getPubKey" SimpleIntArgument])], SimpleIntArgument, SimpleStringArgument], functionName: Fn "vestFunds"}}]
