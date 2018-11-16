@@ -92,6 +92,18 @@ resource "aws_elb" "plutus" {
   }
 }
 
+resource "aws_route53_record" "alb" {
+  zone_id = "ZBC2AQBA8QH4G"
+  name    = "${var.env}.plutus.iohkdev.io"
+  type    = "A"
+
+  alias {
+    name                   = "${aws_elb.plutus.dns_name}"
+    zone_id                = "${aws_elb.plutus.zone_id}"
+    evaluate_target_health = true
+  }
+}
+
 ## Use this ALB config if we want to switch to an ALB
 
 #resource "aws_alb" "plutus" {

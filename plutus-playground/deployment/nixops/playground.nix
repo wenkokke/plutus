@@ -34,11 +34,6 @@
     virtualHosts = {
       "~." = {
         listen = [{ addr = "0.0.0.0"; port = 80; }];
-        extraConfig = ''
-          return 301 https://$host$request_uri;
-          '';
-      };
-      "${node.dns}" = {
         locations = {
           "/" = {
             proxyPass = "http://127.0.0.1:4000/";
