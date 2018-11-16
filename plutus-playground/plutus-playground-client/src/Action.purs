@@ -1,12 +1,10 @@
 module Action where
 
 import Bootstrap (alertInfo_, bgInfo, btn, btnDanger, btnInfo, btnPrimary, btnSecondary, btnSmall, btnSuccess, card, cardBody_, col_, pullRight, row_, textWhite)
-import Data.Argonaut.Core (fromString)
-import Data.Argonaut.Decode.Class (decodeJson)
 import Data.Array (mapWithIndex)
 import Data.Array as Array
-import Data.Either (hush)
 import Data.Foldable (intercalate)
+import Data.Int as Int
 import Data.Maybe (fromMaybe, maybe)
 import Data.Newtype (unwrap)
 import Data.Tuple.Nested ((/\))
@@ -58,7 +56,12 @@ actionPane index action =
         , div_ [ text $ unwrap $ _.functionName $ unwrap $ action.functionSchema ]
        , hr_
         , div_
-          (intercalate [ hr_ ] (Array.mapWithIndex (\i action -> pure $ (map (PopulateAction index i) ( actionArgumentForm action))) (_.argumentSchema $ unwrap $ action.functionSchema)))
+          (intercalate
+             [ hr_ ]
+             (Array.mapWithIndex
+                (\i action -> pure $ (PopulateAction index i) <$> (actionArgumentForm action))
+                (_.argumentSchema $ unwrap $ action.functionSchema))
+          )
         ]
       ]
     ]
@@ -68,8 +71,8 @@ actionArgumentForm :: forall p. SimpleArgument -> HTML p FormEvent
 actionArgumentForm (SimpleInt n) =
   div_ [ input
            [ type_ InputNumber
-           , value $ show $ maybe "" show n
-           , onValueChange $ map (HQ.action <<< SetIntField) <<< hush <<< decodeJson <<< fromString
+           , value $ maybe "" show n
+           , onValueChange $ map (HQ.action <<< SetIntField) <<< Int.fromString
            ]
        ]
 actionArgumentForm (SimpleString s) =
@@ -80,7 +83,7 @@ actionArgumentForm (SimpleString s) =
            ]
        ]
 actionArgumentForm (SimpleObject subFields) =
-  div_ (subForm <$> subFields)
+  div_ (mapWithIndex (\i field -> map (SetSubField i) (subForm field)) subFields)
   where
     subForm (name /\ arg) =
       (row_ [ col_ [ text name ]
