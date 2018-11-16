@@ -1,11 +1,11 @@
 module Wallet where
 
-import Bootstrap (btn, btnGroup_, btnInfo, btnSmall, card, cardBody_, cardFooter_, cardTitle_, card_, col2_, col_, pullRight, row_)
+import Bootstrap (btn, btnBlock, btnGroupVertical, btnGroupVertical_, btnInfo, card, cardBody_, cardTitle_, card_, col2_, col_, pullRight, row_)
 import Data.Array (mapWithIndex)
 import Data.Array as Array
 import Data.Newtype (unwrap)
 import Halogen (HTML)
-import Halogen.HTML (ClassName(ClassName), button, div, div_, h3_, span, strong_, text)
+import Halogen.HTML (ClassName(ClassName), button, div, div_, h3_, span, text)
 import Halogen.HTML.Events (input_, onClick)
 import Halogen.HTML.Properties (class_, classes)
 import Icons (Icon(..), icon)
@@ -43,10 +43,12 @@ walletPane schemas index mockWallet =
                     ]
                     [ icon Close ]
                 , cardTitle_ [walletIdPane mockWallet.wallet ]
-                , div_ [text $ show mockWallet . balance, icon Bitcoin]
-                ]
-            , cardFooter_
-                [ btnGroup_
+                , div_
+                    [ text $ show mockWallet . balance
+                    , text " ADA"
+                    ]
+                , div
+                    [ classes [ btnGroupVertical, btnBlock ] ]
                     (actionButton mockWallet <$> schemas)
                 ]
             ]
@@ -74,17 +76,20 @@ actionButton ::
   -> HTML p Query
 actionButton mockWallet functionSchema =
   button
-    [ classes [ btn, btnInfo, btnSmall]
+    [ classes [ btn, btnInfo ]
     , onClick $ input_ $ AddAction { functionSchema: toValueLevel functionSchema
                                    , mockWallet
                                    }
     ]
-    [ text $ unwrap $ _.functionName $ unwrap functionSchema ]
+    [ text $ unwrap $ _.functionName $ unwrap functionSchema
+    , span
+        [ class_ pullRight ]
+        [ icon Plus ]
+    ]
 
 walletIdPane :: forall p i. Wallet -> HTML p i
 walletIdPane wallet =
   span [ class_ $ ClassName "wallet-id" ]
-    [ icon CreditCard
-    , text " "
-    , strong_ [ text $ show $ unwrap wallet ]
+    [ text "Wallet #"
+    , text $ show $ unwrap wallet
     ]

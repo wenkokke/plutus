@@ -106,6 +106,12 @@ btnGroup = ClassName "btn-group"
 btnGroup_ :: forall p i. Array (HTML p i) -> HTML p i
 btnGroup_ = div [ class_ btnGroup ]
 
+btnGroupVertical :: ClassName
+btnGroupVertical = ClassName "btn-group-vertical"
+
+btnGroupVertical_ :: forall p i. Array (HTML p i) -> HTML p i
+btnGroupVertical_ = div [ class_ btnGroupVertical ]
+
 btnPrimary :: ClassName
 btnPrimary = ClassName "btn-primary"
 
