@@ -3,20 +3,17 @@ module Types where
 import Ace.Halogen.Component (AceMessage)
 import Control.Comonad (class Comonad, extract)
 import Control.Extend (class Extend, extend)
-import Data.Either (Either(..))
-import Data.Generic (GenericSignature(SigRecord, SigString, SigInt), GenericSpine(..))
-import Data.Lens (Lens', Prism', _2, lens, over, prism, set, traversed)
-import Data.Lens.Index (ix)
+import Data.Either (Either)
+import Data.Lens (Lens', _2, over, traversed)
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
 import Data.Maybe (Maybe(..))
 import Data.Symbol (SProxy(..))
-import Data.Traversable (traverse)
-import Data.Tuple (Tuple(..))
+import Data.Tuple (Tuple)
 import Halogen.ECharts (EChartsMessage)
 import Network.RemoteData (RemoteData)
 import Playground.API (CompilationError, FunctionSchema, SimpleArgumentSchema(SimpleObjectArgument, UnknownArgument, SimpleStringArgument, SimpleIntArgument))
-import Prelude (class Functor, Unit, bind, const, pure, unit, ($), (<$>), (<<<))
+import Prelude (class Functor, ($), (<<<))
 import Servant.PureScript.Affjax (AjaxError)
 import Wallet.Emulator.Types (Wallet)
 import Wallet.UTXO.Types (Tx)
@@ -126,58 +123,6 @@ toValue SimpleIntArgument = SimpleInt Nothing
 toValue SimpleStringArgument = SimpleString Nothing
 toValue (SimpleObjectArgument fields) = SimpleObject (over (traversed <<< _2) toValue fields)
 toValue (UnknownArgument _) = Unknowable
-
-toSignature :: SimpleArgumentSchema -> Either String GenericSignature
-toSignature SimpleIntArgument = Right SigInt
-toSignature SimpleStringArgument = Right SigString
-toSignature (UnknownArgument err) = Left err
-toSignature (SimpleObjectArgument fields) = do
-  subfields <- traverse toSignatureField fields
-  pure $ SigRecord subfields
-  where
-    toSignatureField :: Tuple String SimpleArgumentSchema -> Either String { recLabel :: String, recValue :: Unit -> GenericSignature }
-    toSignatureField (Tuple recLabel value) = do
-      recValue <- const <$> toSignature value
-      pure { recLabel, recValue }
-
-
-data SetArgument
-  = SetArgumentLeaf GenericSignature
-  | SetArgumentField Int String GenericSignature
-  | SetArgumentNumber Int GenericSignature
-
-_SInt :: Prism' GenericSpine Int
-_SInt = prism SInt case _ of
-  SInt x -> Right x
-  other -> Left other
-
-_SString :: Prism' GenericSpine String
-_SString = prism SString case _ of
-  SString x -> Right x
-  other -> Left other
-
-type SField =
-  { recLabel :: String
-  , recValue :: Unit -> GenericSpine
-  }
-
-_SRecord :: Prism' GenericSpine (Array SField)
-_SRecord = prism SRecord case _ of
-  SRecord fields -> Right fields
-  other -> Left other
-
-_recLabel :: Lens' SField String
-_recLabel = prop (SProxy :: SProxy "recLabel")
-
-_recValue :: Lens' SField GenericSpine
-_recValue = lens get set
-  where
-    get r = r.recValue unit
-    set r v = r { recValue = const v }
-
-k :: Array Int
-k = set (ix 1) 5 [1,2,3]
---j = set (at 3 <<< _Just <<< _SInt) 5 []
 
 -- | This should just be `map` but we can't put an orphan instance on FunctionSchema. :-(
 toValueLevel :: FunctionSchema SimpleArgumentSchema -> FunctionSchema SimpleArgument
