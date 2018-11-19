@@ -1,6 +1,5 @@
 module Wallet where
-
-import Bootstrap (btn, btnGroup_, btnInfo, btnSmall, card, cardBody_, cardFooter_, cardTitle_, card_, col2_, col_, pullRight, row_)
+import Bootstrap (btn, btnGroup_, btnInfo, btnPrimary, btnSmall, card, cardBody_, cardFooter_, cardTitle_, card_, col2_, col4_, pullRight, row_)
 import Data.Array (mapWithIndex)
 import Data.Array as Array
 import Data.Newtype (unwrap)
@@ -21,7 +20,7 @@ walletsPane ::
 walletsPane schemas wallets =
   div_
     [ h3_ [ text "Wallets" ]
-    , row_ (Array.cons addWalletPane (mapWithIndex (walletPane schemas) wallets))
+    , row_ (Array.snoc (mapWithIndex (walletPane schemas) wallets) addWalletPane)
     ]
 
 walletPane ::
@@ -31,12 +30,14 @@ walletPane ::
   -> DummyWallet
   -> HTML p Query
 walletPane schemas index wallet =
-  col_
+  col4_
     [ div
         [class_ $ ClassName "wallet"]
         [ card_
             [ cardBody_
-                [ button
+                [ 
+                  div [class_ $ ClassName "badgePrimary"] [text "1"],
+                  button
                     [ classes [ btn, pullRight ]
                     , onClick $ input_ $ RemoveWallet index
                     ]
@@ -54,14 +55,17 @@ walletPane schemas index wallet =
 
 addWalletPane :: forall p. HTML p Query
 addWalletPane =
-  col2_
+  col4_
     [ div
         [ class_ $ ClassName "add-wallet" ]
         [ div [ class_ card
               , onClick $ input_ AddWallet
               ]
             [ cardBody_
-                [ icon Plus ]
+                [ 
+                  icon Plus,
+                  div [] [text "Add Wallet"]
+                  ]
             ]
         ]
     ]

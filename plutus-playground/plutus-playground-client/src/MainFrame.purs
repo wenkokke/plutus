@@ -40,7 +40,7 @@ import Halogen.Component (ParentHTML)
 import Halogen.Component.ChildPath (ChildPath, cp1, cp2)
 import Halogen.ECharts (EChartsEffects, EChartsQuery, echarts)
 import Halogen.ECharts as EC
-import Halogen.HTML (ClassName(ClassName), HTML, a, br_, button, code_, div, div_, h1_, h3_, p_, slot', small, strong_, text)
+import Halogen.HTML (ClassName(ClassName), HTML, a, br_, button, code_, div, div_, h1, h1_, h3_, p_, slot', small, strong_, text)
 import Halogen.HTML.Events (input, input_, onClick)
 import Halogen.HTML.Properties (class_, classes, disabled, href, target)
 import Halogen.Query (HalogenM)
@@ -267,9 +267,10 @@ render state =
 
 header :: forall p i. HTML p i
 header =
-  row_
-    [ col_ [ h1_ [ text "Plutus Playground" ] ]
-    , col_
+  div_ [
+    row_ [  
+      col_ [ h1 [class_ (ClassName "main-title") ] [ text "Plutus Playground"] ]
+      , col_
       [ p_
           [ a [ href "https://github.com/input-output-hk/plutus/tree/mchakravarty/plutus-playground-spec/docs/playground"
               , target "_blank"
@@ -283,6 +284,7 @@ header =
           ]
       ]
     ]
+  ]
 
 editorPane ::
   forall m aff.

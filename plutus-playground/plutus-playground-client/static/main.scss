@@ -1,0 +1,155 @@
+@import url(https://fonts.googleapis.com/css?family=Open+Sans);
+
+@import 'variables.scss';
+
+@import './node_modules/bootstrap/scss/functions';
+@import './node_modules/bootstrap/scss/variables';
+@import './node_modules/bootstrap/scss/mixins';
+@import './node_modules/bootstrap/scss/root';
+@import './node_modules/bootstrap/scss/reboot';
+@import './node_modules/bootstrap/scss/type';
+@import './node_modules/bootstrap/scss/images';
+@import './node_modules/bootstrap/scss/code';
+@import './node_modules/bootstrap/scss/grid';
+//  @import './node_modules/bootstrap/scss/tables';
+@import './node_modules/bootstrap/scss/forms';
+@import './node_modules/bootstrap/scss/buttons';
+@import './node_modules/bootstrap/scss/transitions';
+@import './node_modules/bootstrap/scss/dropdown';
+//  @import './node_modules/bootstrap/scss/button-group';
+//  @import './node_modules/bootstrap/scss/input-group';
+//  @import './node_modules/bootstrap/scss/custom-forms';
+@import './node_modules/bootstrap/scss/nav';
+@import './node_modules/bootstrap/scss/navbar';
+@import './node_modules/bootstrap/scss/card';
+//  @import './node_modules/bootstrap/scss/breadcrumb';
+//  @import './node_modules/bootstrap/scss/pagination';
+//  @import './node_modules/bootstrap/scss/badge';
+//  @import './node_modules/bootstrap/scss/jumbotron';
+//  @import './node_modules/bootstrap/scss/alert';
+//  @import './node_modules/bootstrap/scss/progress';
+//  @import './node_modules/bootstrap/scss/media';
+//  @import './node_modules/bootstrap/scss/list-group';
+@import './node_modules/bootstrap/scss/close';
+@import './node_modules/bootstrap/scss/modal';
+//  @import './node_modules/bootstrap/scss/tooltip';
+//  @import './node_modules/bootstrap/scss/popover';
+//  @import './node_modules/bootstrap/scss/carousel';
+ @import './node_modules/bootstrap/scss/utilities';
+//@import './node_modules/bootstrap/scss/print';
+
+* {
+  font-family: 'Open Sans', sans-serif;
+}
+
+*, p, a, button, div, span, i, b, strong, em {
+  color:rgba(255, 255, 255, 0.7);
+}
+
+body {
+  background:#121326;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight:normal;
+}
+
+.main-title {
+  font-weight:1.5rem;
+  font-size:1.5rem;
+}
+
+.ace_editor, .ace_content {
+    min-height: 20rem;
+}
+
+.wallet > .card {
+    margin-bottom: 1rem;
+}
+
+.actions {
+    text-align: center;
+    .action {
+        text-align: left;
+    }
+}
+
+.wallet-id {
+    font-style: italic;
+}
+
+.add-wallet {
+    text-align: center;
+}
+
+.compilation-error {
+    cursor: pointer;
+
+    pre {
+        margin-top: 1rem;
+    }
+}
+
+.btn {
+  border-radius: 1.5rem;
+}
+
+.fa-close {
+  font-size:26px;
+  &:before {
+	  content: '\00d7';
+  }
+}
+
+.fa-plus {
+  cursor:pointer;
+  font-size:32px;
+  transform:rotate(45deg);
+  &:before {
+	  content: '\00d7';
+  }
+}
+
+.badgePrimary {
+  padding:0.25rem 1.75rem 0.25rem 1.5rem;
+  width:2rem;
+  display: inline-block;
+  background:$primary;
+  border-radius:1.5rem;
+  color:#1e1f30;
+  position:absolute;
+  top: -1rem;
+  left: calc(50% - 26px);
+}
+
+.card {
+  background:$gray-900;
+  .btn.pull-right, .btn.pull-right:focus {
+    border:none;
+    background:none;
+    outline:0;
+    box-shadow: none;
+  }
+}
+
+.card-footer {
+  padding: $card-spacer-y $card-spacer-x;
+  background-color: $card-bg !important;
+  border-top: $card-border-width solid $card-border-color;
+}
+
+.ace-monokai {
+  background: #1e1f30;
+  .ace_gutter, .ace_marker-layer .ace_active-line, .ace_marker-layer .ace_selection {
+    background:#1a1b2c;
+  }
+  .ace_entity.ace_name.ace_tag, .ace_keyword, .ace_meta.ace_tag, .ace_storage {
+    color:#eabdfd;
+  }
+  .ace_entity.ace_name.ace_function, .ace_entity.ace_other, .ace_entity.ace_other.ace_attribute-name, .ace_variable {
+    color:#fd9fa6;
+  }
+  .ace_storage.ace_type, .ace_support.ace_class, .ace_support.ace_type {
+    color:#9bfbfa;
+  }
+}
