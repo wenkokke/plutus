@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds    #-}
+{-# LANGUAGE BangPatterns    #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE GADTs              #-}
@@ -48,9 +49,11 @@ module Wallet.Emulator.Types(
     validateEm,
     liftEmulatedWallet,
     evalEmulated,
-    processEmulated
+    processEmulated,
+    runWalletActionAndProcessPending
     ) where
 
+import Debug.Trace (trace)
 import           Control.Monad.Except
 import           Control.Monad.Operational as Op
 import           Control.Monad.State
@@ -122,7 +125,7 @@ handleNotifications :: [Notification] -> EmulatedWalletApi ()
 handleNotifications ns = pubKey <$> myKeyPair >>= \k -> mapM_ (go k) ns where
     go k = \case
             BlockHeight h -> modify (blockHeight .~ h)
-            BlockValidated blck -> mapM_ (modify . update k) blck
+            BlockValidated blck -> trace ("blk" ++ show blck) $ mapM_ (modify . update k) blck
 
     -- | Remove spent outputs and add unspent ones that can be unlocked with our key
     update k t@Tx{..} =
@@ -284,7 +287,7 @@ evalEmulated = \case
             validated = catMaybes processed
             block = validated
         put emState {
-            emChain = block : emChain emState,
+            -- emChain = block : emChain emState,
             emTxPool = [],
             emIndex = Index.insertBlock block (emIndex emState)
             }
@@ -338,3 +341,9 @@ runTraceChain ch t = runState (runExceptT $ processEmulated t) emState where
 runTraceTxPool :: TxPool -> Trace EmulatedWalletApi a -> (Either AssertionError a, EmulatorState)
 runTraceTxPool tp t = runState (runExceptT $ processEmulated t) emState where
     emState = emulatorState' tp
+
+runWalletActionAndProcessPending :: [Wallet] -> Wallet -> m () -> Trace m [Tx]
+runWalletActionAndProcessPending allWallets wallet action = do
+  _ <- walletAction wallet action
+  block <- blockchainActions
+  walletsNotifyBlock allWallets block

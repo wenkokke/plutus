@@ -158,8 +158,8 @@ especially because we only need one direction (to binary).
 newtype PubKey = PubKey { getPubKey :: Int }
     deriving (Eq, Ord, Show)
     deriving stock (Generic)
-    deriving anyclass (ToSchema)
-    deriving newtype (Serialise, ToJSON, FromJSON)
+    deriving anyclass (ToSchema, ToJSON, FromJSON)
+    deriving newtype (Serialise)
 
 instance LiftPlc PubKey
 instance TypeablePlc PubKey
@@ -341,11 +341,11 @@ height = Height . fromIntegral . length
 
 -- | Transaction including witnesses for its inputs
 data Tx = Tx {
-    txInputs     :: Set.Set TxIn',
-    txOutputs    :: [TxOut'],
+    txInputs     :: !(Set.Set TxIn'),
+    txOutputs    :: ![TxOut'],
     txForge      :: !Value,
     txFee        :: !Value,
-    txSignatures :: [Signature]
+    txSignatures :: ![Signature]
     } deriving (Show, Eq, Ord, Generic, Serialise, ToJSON, FromJSON)
 
 -- | The inputs of a transaction

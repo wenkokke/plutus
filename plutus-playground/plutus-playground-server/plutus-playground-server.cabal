@@ -23,6 +23,12 @@ source-repository head
   type: git
   location: https://github.com/iohk/plutus-playground
 
+flag development
+    description:
+        Enable `-Werror`
+    default: False
+    manual: True
+
 library
   exposed-modules:
       Playground.API
@@ -34,6 +40,7 @@ library
       PSGenerator
   other-modules:
       Paths_plutus_playground_server
+      Contract
   hs-source-dirs:
       src
   build-depends:
@@ -46,6 +53,7 @@ library
     , base64-bytestring
     , bytestring
     , containers
+    , core-to-plc -any
     , cryptonite >=0.25
     , data-default-class
     , gitrev
@@ -60,6 +68,7 @@ library
     , network
     , newtype-generics
     , purescript-bridge
+    , plutus-th
     , plutus-use-cases
     , scientific
     , servant
