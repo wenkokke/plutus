@@ -241,7 +241,7 @@ isValidated txn = do
 data Event n a where
     -- | An direct action performed by a wallet. Usually represents a "user action", as it is
     -- triggered externally.
-    WalletAction :: Wallet -> n () -> Event n [Tx]
+    WalletAction :: Wallet -> n a -> Event n [Tx]
     -- | A wallet receiving some notifications, and reacting to them.
     WalletRecvNotification :: Wallet -> [Notification] -> Event n [Tx]
     -- | The blockchain performing actions, resulting in a validated block.
@@ -337,7 +337,7 @@ processEmulated :: (MonadEmulator m) => Trace EmulatedWalletApi a -> m a
 processEmulated = interpretWithMonad evalEmulated
 
 -- | Interact with a wallet
-walletAction :: Wallet -> m () -> Trace m [Tx]
+walletAction :: Wallet -> m a -> Trace m [Tx]
 walletAction w = Op.singleton . WalletAction w
 
 -- | Notify a wallet of blockchain events
@@ -381,7 +381,7 @@ runTraceTxPool :: TxPool -> Trace EmulatedWalletApi a -> (Either AssertionError 
 runTraceTxPool tp t = runState (runExceptT $ processEmulated t) emState where
     emState = emulatorState' tp
 
-runWalletActionAndProcessPending :: [Wallet] -> Wallet -> m () -> Trace m [Tx]
+runWalletActionAndProcessPending :: [Wallet] -> Wallet -> m a -> Trace m [Tx]
 runWalletActionAndProcessPending allWallets wallet action = do
   _ <- walletAction wallet action
   block <- blockchainActions
