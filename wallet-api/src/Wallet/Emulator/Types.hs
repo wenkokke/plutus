@@ -1,5 +1,5 @@
+{-# LANGUAGE BangPatterns       #-}
 {-# LANGUAGE ConstraintKinds    #-}
-{-# LANGUAGE BangPatterns    #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE GADTs              #-}
@@ -53,7 +53,6 @@ module Wallet.Emulator.Types(
     runWalletActionAndProcessPending
     ) where
 
-import Debug.Trace (trace)
 import           Control.Monad.Except
 import           Control.Monad.Operational  as Op hiding (view)
 import           Control.Monad.State

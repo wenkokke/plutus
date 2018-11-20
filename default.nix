@@ -77,12 +77,8 @@ let
       in name: builtins.elem name pkgList;
   };
   customOverlays = optional forceError errorOverlay;
-  playgroundGhc = pkgs.haskell.packages.ghc843.ghcWithPackages (ps: [
-    haskellPackages.plutus-playground-server
-    haskellPackages.plutus-use-cases
-  ]);
   purescriptNixpkgs = import (localLib.iohkNix.fetchNixpkgs ./plutus-playground/plutus-playground-client/nixpkgs-src.json) {};
-  packages = self: ({
+  packages = self: (rec {
     inherit pkgs;
 
     # This is the stackage LTS plus overrides, plus the plutus
@@ -96,6 +92,11 @@ let
         requiredOverlay = ./nix/overlays/required.nix;
         ghc = pkgs.haskell.compiler.ghc843;
     };
+
+    playgroundGhc = pkgs.haskell.packages.ghc843.ghcWithPackages (ps: [
+      haskellPackages.plutus-playground-server
+      haskellPackages.plutus-use-cases
+    ]);
 
     localPackages = localLib.getPackages {
       inherit (self) haskellPackages; filter = localLib.isPlutus;
