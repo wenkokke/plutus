@@ -77,6 +77,11 @@ let
       in name: builtins.elem name pkgList;
   };
   customOverlays = optional forceError errorOverlay;
+  playgroundGhc = pkgs.haskell.packages.ghc843.ghcWithPackages (ps: [
+    haskellPackages.plutus-playground-server
+    haskellPackages.plutus-use-cases
+  ]);
+  purescriptNixpkgs = import (localLib.iohkNix.fetchNixpkgs ./plutus-playground/plutus-playground-client/nixpkgs-src.json) {};
   packages = self: ({
     inherit pkgs;
 
@@ -99,14 +104,46 @@ let
       shellcheck = pkgs.callPackage localLib.iohkNix.tests.shellcheck { inherit src; };
       hlint = pkgs.callPackage localLib.iohkNix.tests.hlint {
         inherit src;
-        projects = localLib.plutusPkgList;
+        projects = filter (v: v != "plutus-server-invoker")
+                          (map (v: if v == "plutus-playground-server"
+                                   then "plutus-playground/plutus-playground-server"
+                                   else (if v == "plutus-playground-client"
+                                         then "plutus-playground/plutus-playground-client"
+                                         else v))
+                                         localLib.plutusPkgList);
       };
       stylishHaskell = pkgs.callPackage localLib.iohkNix.tests.stylishHaskell {
         inherit (self.haskellPackages) stylish-haskell;
         inherit src;
       };
     };
+    plutus-server-invoker = pkgs.stdenv.mkDerivation {
+      name = "plutus-server-invoker";
+      unpackPhase = "true";
+      buildInputs = [ playgroundGhc haskellPackages.plutus-playground-server pkgs.makeWrapper ];
+      buildPhase = ''
+        # We need to provide the ghc interpreter (hint) with the location of the ghc lib dir and the package db
+        mkdir -p $out/bin
+        ln -s ${haskellPackages.plutus-playground-server}/bin/plutus-playground-server $out/bin/plutus-playground-server
+        wrapProgram $out/bin/plutus-playground-server --set GHC_LIB_DIR "${playgroundGhc}/lib/ghc-8.4.3" --set GHC_PACKAGE_PATH "${playgroundGhc}/lib/ghc-8.4.3/package.conf.d"
+      '';
+      installPhase = "echo nothing to install";
+    };
+    plutus-playground-purescript = pkgs.stdenv.mkDerivation {
+        name = "plutus-playground-purescript";
+        unpackPhase = "true";
+        buildInputs = [ haskellPackages.plutus-playground-server ];
+        buildPhase = ''
+        mkdir $out
+        ${haskellPackages.plutus-playground-server}/bin/plutus-playground-server psgenerator $out
+        '';
+        installPhase = "echo nothing to install";
+    };
     plutus-core-spec = pkgs.callPackage ./plutus-core-spec {};
+    inherit (pkgs.callPackage ./plutus-playground/plutus-playground-client {
+         pkgs = purescriptNixpkgs;
+         psSrc = plutus-playground-purescript;
+    }) plutus-playground-client;
     inherit (pkgs) stack2nix;
   });
 
