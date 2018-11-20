@@ -35,3 +35,4 @@ result*
 **/nixops/machines.json
 **/nixops/bastion_machines.json
 **/nixops/network.json
+plutus-playground/plutus-playground-client/src/Playground/*
