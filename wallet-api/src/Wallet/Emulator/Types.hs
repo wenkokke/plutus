@@ -287,7 +287,7 @@ evalEmulated = \case
             validated = catMaybes processed
             block = validated
         put emState {
-            -- emChain = block : emChain emState,
+            emChain = block : emChain emState,
             emTxPool = [],
             emIndex = Index.insertBlock block (emIndex emState)
             }
