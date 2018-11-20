@@ -1,5 +1,5 @@
 module Wallet where
-import Bootstrap (btn, btnGroup_, btnInfo, btnPrimary, btnSmall, card, cardBody_, cardFooter_, cardTitle_, card_, col2_, col4_, pullRight, row_)
+import Bootstrap (btn, btnGroup_, btnSecondary, btnPrimary, btnSmall, card, cardBody_, cardFooter_, cardTitle_, card_, col2_, col4_, pullRight, row_)
 import Data.Array (mapWithIndex)
 import Data.Array as Array
 import Data.Newtype (unwrap)
@@ -77,7 +77,7 @@ actionButton ::
   -> HTML p Query
 actionButton walletId functionSchema =
   button
-    [ classes [ btn, btnInfo, btnSmall]
+    [ classes [ btn, btnSecondary, btnSmall]
     , onClick $ input_ $ AddAction { functionSchema, walletId }
     ]
     [ text $ unwrap $ _.functionName $ unwrap functionSchema ]

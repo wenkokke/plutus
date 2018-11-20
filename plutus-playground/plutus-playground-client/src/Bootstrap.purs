@@ -145,6 +145,9 @@ btnDark_ = div [ classes [ btn, btnDark ] ]
 btnInfo :: ClassName
 btnInfo = ClassName "btn-info"
 
+btnDefault :: ClassName
+btnDefault = ClassName "btn-default"
+
 btnSuccess :: ClassName
 btnSuccess = ClassName "btn-success"
 

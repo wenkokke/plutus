@@ -69,6 +69,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .actions {
     text-align: center;
+    width:100%;
     .action {
         text-align: left;
     }
@@ -120,10 +121,13 @@ h1, h2, h3, h4, h5, h6 {
   position:absolute;
   top: -1rem;
   left: calc(50% - 26px);
+  + button {
+    margin:-0.5rem 0 0 0;
+    padding:0;
+  }
 }
 
 .card {
-  background:$gray-900;
   .btn.pull-right, .btn.pull-right:focus {
     border:none;
     background:none;
