@@ -10,6 +10,7 @@ packages:
 - plutus-use-cases
 - wallet-api
 - plutus-playground/plutus-playground-server
+- plutus-playground/plutus-playground-lib
 
 # Add custom stylish-haskell while waiting for PR upstream: https://github.com/jaspervdj/stylish-haskell/pull/214
 - location:
