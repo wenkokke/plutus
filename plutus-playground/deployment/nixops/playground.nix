@@ -31,6 +31,8 @@
                        '"$http_referer" "$http_user_agent" "$gzip_ratio"';
     '';
 
+    upstreams.playground.servers."127.0.0.1:4000" = {};
+    upstreams.playground.servers."127.0.0.1:4001" = {};
     virtualHosts = {
       "~." = {
         listen = [{ addr = "0.0.0.0"; port = 80; }];
@@ -44,7 +46,7 @@
     };
   };
 
-  systemd.services.plutus-playground = {
+  systemd.services.plutus-playground-1 = {
     wantedBy = [ "nginx.service" ];
     before = [ "nginx.service" ];
     enable = true;
@@ -60,6 +62,24 @@
     };
 
     script = "plutus-playground-server webserver -b 127.0.0.1 -p 4000 ${playground.plutus-playground-client}";
+  };
+
+  systemd.services.plutus-playground-2 = {
+    wantedBy = [ "nginx.service" ];
+    before = [ "nginx.service" ];
+    enable = true;
+    path = [
+      "${playground.plutus-server-invoker}"
+    ];
+
+    serviceConfig = {
+      TimeoutStartSec = "0";
+      Restart = "always";
+      User = "plutus";
+      PrivateTmp = true;
+    };
+
+    script = "plutus-playground-server webserver -b 127.0.0.1 -p 4001 ${playground.plutus-playground-client}";
   };
 
 };
