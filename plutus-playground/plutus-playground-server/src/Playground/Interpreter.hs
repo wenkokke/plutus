@@ -1,6 +1,3 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings  #-}
 
 module Playground.Interpreter where
@@ -86,6 +83,8 @@ getSchema :: (MonadInterpreter m) => ModuleElem -> m (FunctionSchema Schema)
 getSchema (Fun m) = interpret m (as :: FunctionSchema Schema)
 getSchema _ =
   error "Trying to get a schema by calling something other than a function"
+
+{-# ANN getJsonString ("HLint: ignore" :: String) #-}
 
 getJsonString :: JSON.Value -> String
 getJsonString (JSON.String s) = Text.unpack s

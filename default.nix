@@ -95,6 +95,7 @@ let
 
     playgroundGhc = pkgs.haskell.packages.ghc843.ghcWithPackages (ps: [
       haskellPackages.plutus-playground-server
+      haskellPackages.plutus-playground-lib
       haskellPackages.plutus-use-cases
     ]);
 
@@ -110,7 +111,9 @@ let
                                    then "plutus-playground/plutus-playground-server"
                                    else (if v == "plutus-playground-client"
                                          then "plutus-playground/plutus-playground-client"
-                                         else v))
+                                         else (if v == "plutus-playground-lib"
+                                              then "plutus-playground/plutus-playground-lib"
+                                              else v)))
                                          localLib.plutusPkgList);
       };
       stylishHaskell = pkgs.callPackage localLib.iohkNix.tests.stylishHaskell {
