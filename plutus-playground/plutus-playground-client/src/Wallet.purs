@@ -80,20 +80,8 @@ actionButton ::
   -> HTML p Query
 actionButton mockWallet functionSchema =
   button
-<<<<<<< HEAD
     [ classes [ btn, btnSecondary, btnSmall]
     , onClick $ input_ $ AddAction { functionSchema, walletId }
-=======
-    [ classes [ btn, btnInfo ]
-    , onClick $ input_ $ AddAction { functionSchema: toValueLevel functionSchema
-                                   , mockWallet
-                                   }
-    ]
-    [ text $ unwrap $ _.functionName $ unwrap functionSchema
-    , span
-        [ class_ pullRight ]
-        [ icon Plus ]
->>>>>>> c6ba780fbbcd47f08629e855a1c08b2b38dce420
     ]
 
 walletIdPane :: forall p i. Wallet -> HTML p i
