@@ -2,5 +2,8 @@
 /node_modules/
 /output/
 /yarn-error.log
-/src/PSGenerator.purs
+/src/Playground/API.purs
 /src/Playground/Server.purs
+/src/Wallet/UTXO/Types.purs
+/src/Wallet/Emulator/Types.purs
+/.psci_modules/

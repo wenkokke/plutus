@@ -4,17 +4,21 @@ import Bootstrap (alertInfo_, bgInfo, btn, btnInfo, btnPrimary, btnSmall, card, 
 import Data.Array (mapWithIndex)
 import Data.Array as Array
 import Data.Foldable (intercalate)
-import Data.Generic (gShow, toSpine)
+import Data.Int as Int
+import Data.Maybe (fromMaybe, maybe)
 import Data.Newtype (unwrap)
 import Data.Tuple.Nested ((/\))
 import Halogen (HTML)
 import Halogen.HTML (ClassName(ClassName), br_, button, div, div_, h3_, hr_, input, small_, text)
-import Halogen.HTML.Events (input_, onClick)
-import Halogen.HTML.Properties (InputType(..), class_, classes, placeholder, type_)
+import Halogen.HTML.Events (input_, onClick, onValueChange)
+import Halogen.HTML.Events as HE
+import Halogen.HTML.Properties (InputType(InputText, InputNumber), class_, classes, type_, value)
+import Halogen.Query as HQ
 import Icons (Icon(..), icon)
-import Playground.API (SimpleArgumentSchema(..))
-import Prelude (pure, show, zero, ($), (<$>), (<<<), (==))
-import Types (Action, Query(..))
+import Network.RemoteData (RemoteData(..))
+import Prelude (map, pure, show, zero, ($), (<$>), (<<<), (==))
+import Servant.PureScript.Affjax (AjaxError)
+import Types (Action, FormEvent(..), Query(EvaluateActions, PopulateAction, RemoveAction), SimpleArgument(Unknowable, SimpleObject, SimpleString, SimpleInt), Blockchain)
 import Wallet (walletIdPane)
 
 actionsPane :: forall p. Array Action -> HTML p Query
@@ -34,7 +38,7 @@ actionsPane actions =
                  (mapWithIndex (\index -> pure <<< actionPane index) actions)
              )
           , br_
-          , evaluateActionsPane
+          , evaluateActionsPane evaluationResult
           , div_ [ small_ [ text "Run this set of actions against a simulated blockchain." ] ]
           ]
     ]
@@ -61,34 +65,46 @@ actionPane index action =
       ]
     ]
 
-actionArgumentForm :: forall p. SimpleArgumentSchema -> HTML p Query
-actionArgumentForm SimpleIntArgument =
+
+actionArgumentForm :: forall p. SimpleArgument -> HTML p FormEvent
+actionArgumentForm (SimpleInt n) =
   div_ [ input
            [ type_ InputNumber
-           , placeholder "Int"
+           , value $ maybe "" show n
+           , onValueChange $ map (HQ.action <<< SetIntField) <<< Int.fromString
            ]
        ]
-actionArgumentForm SimpleStringArgument =
+actionArgumentForm (SimpleString s) =
   div_ [ input
            [ type_ InputText
-           , placeholder "String"
+           , value $ fromMaybe "" s
+           , onValueChange $ HE.input SetStringField
            ]
        ]
-actionArgumentForm (SimpleObjectArgument subFields) =
-  div_ (sub <$> subFields)
+actionArgumentForm (SimpleObject subFields) =
+  div_ (mapWithIndex (\i field -> map (SetSubField i) (subForm field)) subFields)
   where
-    sub (name /\ arg) =
-      row_ [ col_ [ text name ]
+    subForm (name /\ arg) =
+      (row_ [ col_ [ text name ]
            , col_ [ actionArgumentForm arg ]
-           ]
-actionArgumentForm (UnknownArgument _) =
+           ])
+actionArgumentForm Unknowable =
   div_ [ text "UNKNOWN TODO"
        ]
 
-evaluateActionsPane :: forall p. HTML p Query
-evaluateActionsPane =
+evaluateActionsPane :: forall p. RemoteData AjaxError Blockchain -> HTML p Query
+evaluateActionsPane evaluationResult =
   button
-    [ classes [ btn, btnPrimary, btnSmall ]
+    [ classes [ btn, btnClass, btnSmall ]
     , onClick $ input_ EvaluateActions
     ]
-    [ text "Evaluate" ]
+    [ btnText ]
+  where
+    btnClass = case evaluationResult of
+                 Success _ -> btnSuccess
+                 Failure _ -> btnDanger
+                 Loading -> btnSecondary
+                 NotAsked -> btnPrimary
+    btnText = case evaluationResult of
+                 Loading -> icon Spinner
+                 _ -> text "Evaluate"

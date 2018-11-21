@@ -9,6 +9,7 @@ import Ace.Types (ACE, Editor, Annotation)
 import Action (actionsPane)
 import AjaxUtils (showAjaxError)
 import Bootstrap (alertDanger_, btn, btnDanger, btnPrimary, btnSecondary, btnSuccess, col_, container_, empty, listGroupItem_, listGroup_, pullRight, row_)
+import Control.Comonad (extract)
 import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (class MonadEff, liftEff)
@@ -17,18 +18,29 @@ import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Reader (ReaderT)
 import Control.Monad.Reader.Class (class MonadAsk, ask)
 import Control.Monad.Reader.Trans (runReaderT)
+import Control.Monad.State (class MonadState)
+import Data.Argonaut.Core (Json)
+import Data.Argonaut.Core as Json
 import Data.Array (catMaybes)
 import Data.Array as Array
 import Data.Either (Either(..))
 import Data.Either.Nested (Either2)
 import Data.Foldable (traverse_)
 import Data.Functor.Coproduct.Nested (Coproduct2)
-import Data.Generic (GenericSpine(..), fromSpine, gShow)
-import Data.Lens (assign, modifying, use)
+import Data.Generic (gShow)
+import Data.Int as Int
+import Data.Lens (_2, assign, modifying, over, traversed, use)
+import Data.Lens.Index (ix)
+import Data.Lens.Iso.Newtype (_Newtype)
+import Data.Lens.Record (prop)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Newtype (unwrap)
 import Data.RawJson (RawJson(..))
 import Data.Show (show)
+import Data.StrMap as M
 import Data.String as String
+import Data.Symbol (SProxy(..))
+import Data.Tuple (Tuple)
 import Data.Tuple.Nested ((/\))
 import Debug.Trace (spy)
 import ECharts.Commands as E
@@ -48,13 +60,13 @@ import Icons (Icon(..), icon)
 import Network.HTTP.Affjax (AJAX)
 import Network.RemoteData (RemoteData(..), isLoading)
 import Network.RemoteData as RemoteData
-import Playground.API (CompilationError(CompilationError, RawError), Evaluation(..), Expression(..), Fn(..), FunctionSchema, SimpleArgumentSchema, SourceCode(SourceCode))
+import Playground.API (CompilationError(CompilationError, RawError), Evaluation(Evaluation), Expression(Expression), FunctionSchema, SimpleArgumentSchema, SourceCode(SourceCode))
 import Playground.Server (SPParams_, postContract, postEvaluate)
-import Prelude (class Eq, class Monad, class Ord, type (~>), Unit, Void, bind, const, discard, flip, pure, unit, void, ($), (+), (<$>), (<*>), (<<<), (<>), (>>=))
+import Prelude (class Eq, class Monad, class Ord, type (~>), Unit, Void, bind, const, discard, flip, map, pure, unit, void, ($), (+), (<$>), (<*>), (<<<), (<>), (>>=))
 import Servant.PureScript.Affjax (AjaxError)
 import Servant.PureScript.Settings (SPSettings_)
 import StaticData as StaticData
-import Types (Action, Balance, Blockchain, DummyWallet, Query(..), State, Transfer, WalletId(..), _actions, _compilationResult, _editorContents, _evaluationResult, _wallets)
+import Types (Action, Balance, Blockchain, FormEvent(..), MockWallet, Query(..), SimpleArgument(..), State, Transfer, _actions, _compilationResult, _editorContents, _evaluationResult, _wallets)
 import Wallet (walletsPane)
 import Wallet.Emulator.Types (Wallet(..))
 
@@ -95,7 +107,7 @@ mainFrame =
   H.parentComponent
     { initialState: const initialState
     , render
-    , eval
+    , eval: eval <<< spy
     , receiver: const Nothing
     }
 
@@ -155,28 +167,7 @@ eval (EvaluateActions next) = do
   -- successfully-compiled source, so that we use that even if the
   -- editor changes, right?
   contents <- use _editorContents
-  let wallet1 = Wallet { getWallet: 1 }
-  let evaluation = Evaluation
-        { wallets: [ wallet1 /\ 100 ]
-        , program: [ Expression
-                       { function: Fn "vestFunds"
-                       , wallet: wallet1
-                       , arguments: [ RawJson """
-                                        { vestingTranche1: { vestingTrancheDate: 1000, vestingTrancheAmount: 10 }
-                                        , vestingTranche2: { vestingTrancheDate: 2000, vestingTrancheAmount: 20 }
-                                        , vestingOwner: "ASDFADSFASDF"
-                                        }
-                                      """
-                                    , RawJson "5"
-                                    , RawJson "\"Foo\""
-                                    ]
-                       }
-                   ]
-
-        , sourceCode: SourceCode contents
-        , blockchain: []
-        }
-  --
+  evaluation <- currentEvaluation
   assign _evaluationResult Loading
   result <- runAjax $ postEvaluate evaluation
   assign _evaluationResult result
@@ -187,8 +178,8 @@ eval (EvaluateActions next) = do
 eval (AddWallet next) = do
   count <- Array.length <$> use _wallets
   let newWallet =
-        { walletId: WalletId (show (count + 1))
-        , balance: 10.0
+        { wallet: Wallet (count + 1)
+        , balance: 10
         }
   modifying _wallets (flip Array.snoc newWallet)
   pure next
@@ -197,6 +188,59 @@ eval (RemoveWallet index next) = do
   modifying _wallets (fromMaybe <*> Array.deleteAt index)
   assign _actions []
   pure next
+
+eval (PopulateAction n l event) = do
+  modifying
+    (_actions
+       <<< ix n
+       <<< prop (SProxy :: SProxy "functionSchema")
+       <<< _Newtype
+       <<<  prop (SProxy :: SProxy "argumentSchema")
+       <<< ix l)
+    (evalForm event)
+  pure $ extract event
+
+evalForm :: forall a. FormEvent a -> SimpleArgument -> SimpleArgument
+evalForm (SetIntField n next) (SimpleInt _) = SimpleInt (Just n)
+evalForm (SetStringField s next) (SimpleString _) = SimpleString (Just s)
+evalForm (SetSubField n subEvent) old@(SimpleObject fields) =
+  case Array.index fields n of
+    Nothing -> old
+    Just (name /\ oldArg) ->
+      let foo = evalForm subEvent oldArg
+          newArg = evalForm subEvent oldArg
+      in
+      case Array.updateAt n (name /\ newArg) fields of
+        Nothing -> old
+        Just newFields -> SimpleObject newFields
+evalForm other arg = arg
+
+currentEvaluation :: forall m. MonadState State m => m Evaluation
+currentEvaluation = do
+  actions <- use _actions
+  let toPair :: MockWallet -> Tuple Wallet Int
+      toPair mockWallet = mockWallet.wallet /\ mockWallet.balance
+  wallets <- map toPair <$> use _wallets
+  let program = toExpression <$> actions
+  sourceCode <- SourceCode <$> use _editorContents
+  let blockchain = []
+  pure $ Evaluation { wallets, program, sourceCode, blockchain }
+
+toExpression :: Action -> Expression
+toExpression action = Expression
+  { wallet: action.mockWallet.wallet
+  , function: functionSchema.functionName
+  , arguments: jsonArguments
+  }
+  where
+    functionSchema = unwrap $ action.functionSchema
+    jsonArguments = RawJson <<< Json.stringify <<< toJson <$> functionSchema.argumentSchema
+    toJson :: SimpleArgument -> Json
+    toJson (SimpleInt (Just str)) = Json.fromNumber $ Int.toNumber str
+    toJson (SimpleString (Just str)) = Json.fromString str
+    toJson (SimpleObject fields) =
+      Json.fromObject $ M.fromFoldable $ over (traversed <<< _2) toJson fields
+    toJson _ = Json.fromNull Json.jNull -- TODO
 
 updateChartIfPossible :: forall m i o. HalogenM State i ChildQuery ChildSlot o m Unit
 updateChartIfPossible = do
@@ -350,16 +394,16 @@ mockChainPane ::
   forall m aff.
   MonadAff (EChartsEffects (AceEffects aff)) m
   => Array (FunctionSchema SimpleArgumentSchema)
-  -> Array DummyWallet
+  -> Array MockWallet
   -> Array Action
   -> RemoteData AjaxError Blockchain
   -> ParentHTML Query ChildQuery ChildSlot m
 mockChainPane schemas wallets actions evaluationResult =
   div_
     [ walletsPane schemas wallets
-    , actionsPane actions
+    , actionsPane actions evaluationResult
     , div_
-        case spy $ evaluationResult of
+        case evaluationResult of
           Success evaluation ->
             [ h3_ [ text "Chain" ]
             , code_ [ text $ gShow evaluation ]

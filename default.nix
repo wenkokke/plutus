@@ -31,7 +31,7 @@ in
 , config ? {}  # The nixpkgs configuration file
 
 # Use a pinned version nixpkgs.
-, pkgs ? localLib.importPkgs { inherit system config; }
+, pkgs ? localLib.pkgs
 
 # Disable running of tests for all local packages.
 , forceDontCheck ? false
@@ -59,30 +59,44 @@ in
 # Disables optimization in the build for all local packages.
 , fasterBuild ? false
 
+# Forces all warnings as errors
+, forceError ? true
+
 }:
 
 with pkgs.lib;
 
 let
-  src = localLib.cleanSourceHaskell ./.;
-  # This is the stackage LTS plus overrides, plus the plutus
-  # packages.
-  haskellPackages = pkgs.callPackage localLib.iohkNix.haskellPackages {
-    inherit forceDontCheck enableProfiling enablePhaseMetrics enableHaddockHydra
-      enableBenchmarks fasterBuild enableDebugging enableSplitCheck;
-      pkgsGenerated = ./pkgs;
-      filter = localLib.isPlutus;
-      requiredOverlay = ./nix/overlays/required.nix;
-      ghc = pkgs.haskell.compiler.ghc843;
-  };
-  playgroundGhc = pkgs.haskell.packages.ghc843.ghcWithPackages (ps: [
-    haskellPackages.plutus-playground-server
-    haskellPackages.plutus-use-cases
-  ]);
-  purescriptNixpkgs = import (localLib.iohkNix.fetchNixpkgs ./plutus-playground/plutus-playground-client/nixpkgs-src.json) {};
-  packages = self: ( rec {
+  src = localLib.iohkNix.cleanSourceHaskell ./.;
+  errorOverlay = import ./nix/overlays/force-error.nix {
     inherit pkgs;
-    inherit haskellPackages;
+    # TODO: fix plutus-use-cases and plutus-exe warnings
+    #filter = localLib.isPlutus;
+    filter = let
+      pkgList = pkgs.lib.remove "plutus-use-cases" localLib.plutusPkgList;
+      in name: builtins.elem name pkgList;
+  };
+  customOverlays = optional forceError errorOverlay;
+  purescriptNixpkgs = import (localLib.iohkNix.fetchNixpkgs ./plutus-playground/plutus-playground-client/nixpkgs-src.json) {};
+  packages = self: (rec {
+    inherit pkgs;
+
+    # This is the stackage LTS plus overrides, plus the plutus
+    # packages.
+    haskellPackages = self.callPackage localLib.iohkNix.haskellPackages {
+      inherit forceDontCheck enableProfiling enablePhaseMetrics
+      enableHaddockHydra enableBenchmarks fasterBuild enableDebugging
+      enableSplitCheck customOverlays;
+        pkgsGenerated = ./pkgs;
+        filter = localLib.isPlutus;
+        requiredOverlay = ./nix/overlays/required.nix;
+        ghc = pkgs.haskell.compiler.ghc843;
+    };
+
+    playgroundGhc = pkgs.haskell.packages.ghc843.ghcWithPackages (ps: [
+      haskellPackages.plutus-playground-server
+      haskellPackages.plutus-use-cases
+    ]);
 
     localPackages = localLib.getPackages {
       inherit (self) haskellPackages; filter = localLib.isPlutus;
@@ -91,11 +105,17 @@ let
       shellcheck = pkgs.callPackage localLib.iohkNix.tests.shellcheck { inherit src; };
       hlint = pkgs.callPackage localLib.iohkNix.tests.hlint {
         inherit src;
-        projects = localLib.plutusPkgList;
+        projects = filter (v: v != "plutus-server-invoker")
+                          (map (v: if v == "plutus-playground-server"
+                                   then "plutus-playground/plutus-playground-server"
+                                   else (if v == "plutus-playground-client"
+                                         then "plutus-playground/plutus-playground-client"
+                                         else v))
+                                         localLib.plutusPkgList);
       };
       stylishHaskell = pkgs.callPackage localLib.iohkNix.tests.stylishHaskell {
         inherit (self.haskellPackages) stylish-haskell;
-          inherit src;
+        inherit src;
       };
     };
     plutus-server-invoker = pkgs.stdenv.mkDerivation {
@@ -125,7 +145,6 @@ let
          pkgs = purescriptNixpkgs;
          psSrc = plutus-playground-purescript;
     }) plutus-playground-client;
-
     inherit (pkgs) stack2nix;
   });
 

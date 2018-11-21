@@ -6,7 +6,7 @@
 
 name:           plutus-playground-server
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/plutus-playground#readme>
+description:    Please see the README on GitHub at <https://github.com/input-output-hk/plutus#readme>
 homepage:       https://github.com/iohk/plutus-playground#readme
 bug-reports:    https://github.com/iohk/plutus-playground/issues
 author:         Kris Jenkins
@@ -18,11 +18,16 @@ build-type:     Simple
 cabal-version:  >= 1.10
 extra-source-files:
     ChangeLog.md
-    README.md
 
 source-repository head
   type: git
   location: https://github.com/iohk/plutus-playground
+
+flag development
+    description:
+        Enable `-Werror`
+    default: False
+    manual: True
 
 library
   exposed-modules:
@@ -35,6 +40,7 @@ library
       PSGenerator
   other-modules:
       Paths_plutus_playground_server
+      Contract
   hs-source-dirs:
       src
   build-depends:
@@ -47,6 +53,7 @@ library
     , base64-bytestring
     , bytestring
     , containers
+    , core-to-plc -any
     , cryptonite >=0.25
     , data-default-class
     , gitrev
@@ -61,6 +68,7 @@ library
     , network
     , newtype-generics
     , purescript-bridge
+    , plutus-th
     , plutus-use-cases
     , scientific
     , servant

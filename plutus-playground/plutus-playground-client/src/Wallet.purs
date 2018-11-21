@@ -4,20 +4,21 @@ import Data.Array (mapWithIndex)
 import Data.Array as Array
 import Data.Newtype (unwrap)
 import Halogen (HTML)
-import Halogen.HTML (ClassName(ClassName), button, div, div_, h3_, span, strong_, text)
+import Halogen.HTML (ClassName(ClassName), button, div, div_, h3_, span, text)
 import Halogen.HTML.Events (input_, onClick)
 import Halogen.HTML.Properties (class_, classes)
 import Icons (Icon(..), icon)
 import Playground.API (FunctionSchema, SimpleArgumentSchema)
 import Prelude (show, ($), (<$>))
-import Types (DummyWallet, Query(..), WalletId(..))
+import Types (MockWallet, Query(AddAction, AddWallet, RemoveWallet), toValueLevel)
+import Wallet.Emulator.Types (Wallet)
 
 walletsPane ::
   forall p.
   Array (FunctionSchema SimpleArgumentSchema)
-  -> Array DummyWallet
+  -> Array MockWallet
   -> HTML p Query
-walletsPane schemas wallets =
+walletsPane schemas mockWallets =
   div_
     [ h3_ [ text "Wallets" ]
     , row_ (Array.snoc (mapWithIndex (walletPane schemas) wallets) addWalletPane)
@@ -27,7 +28,7 @@ walletPane ::
   forall p.
   Array (FunctionSchema SimpleArgumentSchema)
   -> Int
-  -> DummyWallet
+  -> MockWallet
   -> HTML p Query
 walletPane schemas index wallet =
   col4_
@@ -42,12 +43,14 @@ walletPane schemas index wallet =
                     , onClick $ input_ $ RemoveWallet index
                     ]
                     [ icon Close ]
-                , cardTitle_ [walletIdPane wallet . walletId]
-                , div_ [text $ show wallet . balance, icon Bitcoin]
-                ]
-            , cardFooter_
-                [ btnGroup_
-                    (actionButton wallet . walletId <$> schemas)
+                , cardTitle_ [walletIdPane mockWallet.wallet ]
+                , div_
+                    [ text $ show mockWallet . balance
+                    , text " ADA"
+                    ]
+                , div
+                    [ classes [ btnGroupVertical, btnBlock ] ]
+                    (actionButton mockWallet <$> schemas)
                 ]
             ]
         ]
@@ -72,20 +75,30 @@ addWalletPane =
 
 actionButton ::
   forall p.
-  WalletId
+  MockWallet
   -> FunctionSchema SimpleArgumentSchema
   -> HTML p Query
-actionButton walletId functionSchema =
+actionButton mockWallet functionSchema =
   button
+<<<<<<< HEAD
     [ classes [ btn, btnSecondary, btnSmall]
     , onClick $ input_ $ AddAction { functionSchema, walletId }
+=======
+    [ classes [ btn, btnInfo ]
+    , onClick $ input_ $ AddAction { functionSchema: toValueLevel functionSchema
+                                   , mockWallet
+                                   }
     ]
-    [ text $ unwrap $ _.functionName $ unwrap functionSchema ]
+    [ text $ unwrap $ _.functionName $ unwrap functionSchema
+    , span
+        [ class_ pullRight ]
+        [ icon Plus ]
+>>>>>>> c6ba780fbbcd47f08629e855a1c08b2b38dce420
+    ]
 
-walletIdPane :: forall p i. WalletId -> HTML p i
-walletIdPane (WalletId walletId) =
+walletIdPane :: forall p i. Wallet -> HTML p i
+walletIdPane wallet =
   span [ class_ $ ClassName "wallet-id" ]
-    [ icon CreditCard
-    , text " "
-    , strong_ [ text walletId ]
+    [ text "Wallet #"
+    , text $ show $ unwrap wallet
     ]

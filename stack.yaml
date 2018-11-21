@@ -45,6 +45,8 @@ flags:
     development: true
   plutus-core-interpreter:
     development: true
+  plutus-playground-server:
+    development: true
 extra-package-dbs: []
 nix:
   packages: [gmp, openssl]

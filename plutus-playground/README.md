@@ -15,12 +15,10 @@ stack exec -- plutus-playground-server webserver -p 8080 ../plutus-playground-cl
 cd plutus-playground-client
 yarn
 yarn run bower install
-yarn run webpack
 ```
 
-## Viewing
-
-Now navigate to the webserver on http://localhost:8080
+Then run: `yarn run webpack` for a production build on http://localhost:8080
+...or `yarn run webpack:server` for an auto-reloading dev build on http://localhost:8009
 
 # TroubleShooting
 
