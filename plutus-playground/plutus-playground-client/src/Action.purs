@@ -22,8 +22,8 @@ import Types (Action, FormEvent(..), Query(EvaluateActions, PopulateAction, Remo
 import Wallet (walletIdPane)
 
 actionsPane :: forall p. Array Action -> RemoteData AjaxError Blockchain -> HTML p Query
-actionsPane actions evaluationResult = 
-  div [ class_ [$ ClassName "actions row"] ]
+actionsPane actions evaluationResult =
+  div [ classes [ ClassName "actions", row ] ]
       [ h3_ [ text "Actions" ]
       , if Array.length actions == zero
         then
