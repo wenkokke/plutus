@@ -1,6 +1,6 @@
 module Action where
 
-import Bootstrap (alertInfo_, bgInfo, btn, btnDanger, btnInfo, btnPrimary, btnSecondary, btnSmall, btnSuccess, card, cardBody_, col_, pullRight, row_, textWhite)
+import Bootstrap (alertInfo_, bgInfo, btn, btnSuccess, btnDanger, btnSecondary, btnInfo, btnPrimary, btnSmall, card, cardBody_, cardFooter_, col_, col4_, pullRight, row_, textWhite)
 import Data.Array (mapWithIndex)
 import Data.Array as Array
 import Data.Foldable (intercalate)
@@ -23,7 +23,8 @@ import Wallet (walletIdPane)
 
 actionsPane :: forall p. Array Action -> RemoteData AjaxError Blockchain -> HTML p Query
 actionsPane actions evaluationResult =
-  div [ class_ $ ClassName "actions" ]
+  row_ [
+    div [ class_ $ ClassName "actions" ]
     [ h3_ [ text "Actions" ]
     , if Array.length actions == zero
       then
@@ -41,27 +42,27 @@ actionsPane actions evaluationResult =
           , div_ [ small_ [ text "Run this set of actions against a simulated blockchain." ] ]
           ]
     ]
+  ]
 
 actionPane :: forall p. Int -> Action -> HTML p Query
 actionPane index action =
-  div [ class_ $ ClassName "action" ]
-    [ div [ classes [ card, textWhite, bgInfo ] ]
-      [ cardBody_
-        [ button
-            [ classes [ btn, btnInfo, pullRight ]
-            , onClick $ input_ $ RemoveAction index
-            ]
-            [ icon Close ]
-        , div_ [ walletIdPane action.mockWallet.wallet ]
-        , div_ [ text $ unwrap $ _.functionName $ unwrap $ action.functionSchema ]
-       , hr_
-        , div_
-          (intercalate
-             [ hr_ ]
-             (Array.mapWithIndex
-                (\i action -> pure $ (PopulateAction index i) <$> (actionArgumentForm action))
-                (_.argumentSchema $ unwrap $ action.functionSchema))
-          )
+  col4_
+    [ div [ class_ $ ClassName "action" ]
+      [ div [ classes [ card, textWhite, bgInfo ] ]
+        [ cardBody_
+          [ button
+              [ classes [ btn, btnInfo, pullRight ]
+              , onClick $ input_ $ RemoveAction index
+              ]
+              [ icon Close ]
+          , div_ [ walletIdPane action.mockWallet.wallet ]
+          , div_ [ text $ unwrap $ _.functionName $ unwrap $ action.functionSchema ]
+        , hr_
+          , div_
+            (intercalate [ hr_ ] (Array.mapWithIndex
+                                  (\i action -> pure $ (PopulateAction index i) <$> (actionArgumentForm action))
+                                  (_.argumentSchema $ unwrap $ action.functionSchema)))
+          ]
         ]
       ]
     ]

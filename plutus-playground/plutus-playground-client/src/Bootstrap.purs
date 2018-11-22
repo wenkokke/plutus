@@ -37,6 +37,18 @@ col2 = ClassName "col-2"
 col2_ :: forall p i. Array (HTML p i) -> HTML p i
 col2_ = div [ classes [ col, col2 ] ]
 
+col3 :: ClassName
+col3 = ClassName "col-3"
+
+col3_ :: forall p i. Array (HTML p i) -> HTML p i
+col3_ = div [ classes [ col, col3 ] ]
+
+col4 :: ClassName
+col4 = ClassName "col-4"
+
+col4_ :: forall p i. Array (HTML p i) -> HTML p i
+col4_ = div [ classes [ col, col4 ] ]
+
 col7 :: ClassName
 col7 = ClassName "col-7"
 
@@ -138,6 +150,9 @@ btnDark_ = div [ classes [ btn, btnDark ] ]
 
 btnInfo :: ClassName
 btnInfo = ClassName "btn-info"
+
+btnDefault :: ClassName
+btnDefault = ClassName "btn-default"
 
 btnSuccess :: ClassName
 btnSuccess = ClassName "btn-success"

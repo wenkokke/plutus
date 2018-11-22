@@ -1,6 +1,5 @@
-import 'bootstrap/dist/css/bootstrap.min.css';
 import 'font-awesome/less/font-awesome.less';
-import './static/main.less';
+import './static/main.scss';
 
 import 'ace-builds';
 import 'ace-builds/src-noconflict/mode-haskell.js';

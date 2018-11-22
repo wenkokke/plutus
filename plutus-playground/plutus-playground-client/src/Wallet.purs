@@ -1,6 +1,5 @@
 module Wallet where
-
-import Bootstrap (btn, btnBlock, btnGroupVertical, btnInfo, card, cardBody_, cardTitle_, card_, col2_, col_, pullRight, row_)
+import Bootstrap (btn, btnSecondary, btnSmall, card, cardBody_, cardTitle_, card_, col4_, pullRight, row_, btnGroupVertical, btnBlock)
 import Data.Array (mapWithIndex)
 import Data.Array as Array
 import Data.Newtype (unwrap)
@@ -22,7 +21,7 @@ walletsPane ::
 walletsPane schemas mockWallets =
   div_
     [ h3_ [ text "Wallets" ]
-    , row_ (Array.cons addWalletPane (mapWithIndex (walletPane schemas) mockWallets))
+    , row_ (Array.snoc (mapWithIndex (walletPane schemas) mockWallets) addWalletPane)
     ]
 
 walletPane ::
@@ -32,12 +31,14 @@ walletPane ::
   -> MockWallet
   -> HTML p Query
 walletPane schemas index mockWallet =
-  col_
+  col4_
     [ div
         [class_ $ ClassName "wallet"]
         [ card_
             [ cardBody_
-                [ button
+                [
+                  div [class_ $ ClassName "badgePrimary"] [text "1"],
+                  button
                     [ classes [ btn, pullRight ]
                     , onClick $ input_ $ RemoveWallet index
                     ]
@@ -57,14 +58,17 @@ walletPane schemas index mockWallet =
 
 addWalletPane :: forall p. HTML p Query
 addWalletPane =
-  col2_
+  col4_
     [ div
         [ class_ $ ClassName "add-wallet" ]
         [ div [ class_ card
               , onClick $ input_ AddWallet
               ]
             [ cardBody_
-                [ icon Plus ]
+                [ 
+                  icon Plus,
+                  div [] [text "Add Wallet"]
+                  ]
             ]
         ]
     ]
@@ -76,16 +80,16 @@ actionButton ::
   -> HTML p Query
 actionButton mockWallet functionSchema =
   button
-    [ classes [ btn, btnInfo ]
+    [ classes [ btn, btnSecondary, btnSmall]
     , onClick $ input_ $ AddAction { functionSchema: toValueLevel functionSchema
                                    , mockWallet
                                    }
     ]
     [ text $ unwrap $ _.functionName $ unwrap functionSchema
-    , span
-        [ class_ pullRight ]
-        [ icon Plus ]
-    ]
+      , span
+          [ class_ pullRight ]
+          [ icon Plus ]
+      ]
 
 walletIdPane :: forall p i. Wallet -> HTML p i
 walletIdPane wallet =
