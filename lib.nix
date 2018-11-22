@@ -25,6 +25,7 @@ let
     "language-plutus-core"
     "plutus-core-interpreter"
     "plutus-playground-server"
+    "plutus-playground-lib"
     "plutus-playground-client"
     "plutus-server-invoker"
     "plutus-exe"
