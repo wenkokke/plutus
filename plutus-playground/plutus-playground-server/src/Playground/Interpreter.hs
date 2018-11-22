@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings  #-}
 
 module Playground.Interpreter where
@@ -41,6 +42,9 @@ import           Wallet.Emulator.Types        (AssertionError, EmulatedWalletApi
 import           Wallet.Generators            (GeneratorModel (GeneratorModel))
 import qualified Wallet.Generators            as Gen
 import           Wallet.UTXO                  (Tx, Blockchain, Height, PubKey (PubKey), Value (Value))
+import Wallet.API (payToPubKey)
+
+$(TH.mkFunction 'payToPubKey)
 
 defaultExtensions :: [Extension]
 defaultExtensions =
@@ -72,7 +76,8 @@ compile s = do
   loadSource fileName $ \moduleName -> do
     exports <- getModuleExports moduleName
     walletFunctions <- catMaybes <$> traverse isWalletFunction exports
-    traverse getSchema walletFunctions
+    schemas <- traverse getSchema walletFunctions
+    pure (schemas <> pure payToPubKeySchema)
 
 jsonToString :: ToJSON a => a -> String
 jsonToString = show . JSON.encode
