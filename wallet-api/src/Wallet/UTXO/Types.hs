@@ -182,8 +182,8 @@ signedBy (Signature k) (PubKey s) = k == s
 newtype Value = Value { getValue :: Integer }
     deriving (Eq, Ord, Show, Enum)
     deriving stock (Generic)
-    deriving anyclass (ToSchema)
-    deriving newtype (Num, Integral, Real, Serialise, ToJSON, FromJSON)
+    deriving anyclass (ToSchema, ToJSON, FromJSON)
+    deriving newtype (Num, Integral, Real, Serialise)
 
 -- | Transaction ID (double SHA256 hash of the transaction)
 newtype TxId h = TxId { getTxId :: h }
@@ -229,8 +229,8 @@ newtype Address h = Address { getAddress :: h }
 type Address' = Address (Digest SHA256)
 
 deriving newtype instance Serialise Address'
-deriving newtype instance ToJSON Address'
-deriving newtype instance FromJSON Address'
+deriving anyclass instance ToJSON Address'
+deriving anyclass instance FromJSON Address'
 
 -- | Script
 newtype Script = Script { getSerialized :: BSL.ByteString }
