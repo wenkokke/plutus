@@ -84,11 +84,16 @@ actionButton mockWallet functionSchema =
     , onClick $ input_ $ AddAction { functionSchema: toValueLevel functionSchema
                                    , mockWallet
                                    }
-    ] []
+    ]
+    [ text $ unwrap $ _.functionName $ unwrap functionSchema
+      , span
+          [ class_ pullRight ]
+          [ icon Plus ]
+      ]
 
 walletIdPane :: forall p i. Wallet -> HTML p i
 walletIdPane wallet =
   span [ class_ $ ClassName "wallet-id" ]
     [ text "Wallet #"
-    , text $ show $ (unwrap wallet).getWallet
+    , text $ show $ unwrap wallet
     ]

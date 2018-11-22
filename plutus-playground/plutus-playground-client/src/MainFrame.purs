@@ -178,7 +178,7 @@ eval (EvaluateActions next) = do
 eval (AddWallet next) = do
   count <- Array.length <$> use _wallets
   let newWallet =
-        { wallet: Wallet { getWallet: (count + 1) }
+        { wallet: Wallet (count + 1)
         , balance: 10
         }
   modifying _wallets (flip Array.snoc newWallet)
