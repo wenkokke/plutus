@@ -16,29 +16,28 @@ import Halogen.HTML.Properties (InputType(InputText, InputNumber), class_, class
 import Halogen.Query as HQ
 import Icons (Icon(..), icon)
 import Network.RemoteData (RemoteData(..))
-import Prelude (map, pure, show, zero, ($), (<$>), (<<<), (==))
+import Prelude (map, pure, show, zero, (<>), ($), (<$>), (<<<), (==))
 import Servant.PureScript.Affjax (AjaxError)
 import Types (Action, FormEvent(..), Query(EvaluateActions, PopulateAction, RemoveAction), SimpleArgument(Unknowable, SimpleObject, SimpleString, SimpleInt), Blockchain)
 import Wallet (walletIdPane)
 
 actionsPane :: forall p. Array Action -> RemoteData AjaxError Blockchain -> HTML p Query
 actionsPane actions evaluationResult =
-  div [ classes [ ClassName "actions", row ] ]
-      [ h3_ [ text "Actions" ]
-      , if Array.length actions == zero
-        then
-          alertInfo_ [ text "Select some actions to run against the blockchain. First choose a wallet from the list on the left, then click one the actions below it to add it to the stack." ]
-        else
-          div_
-              (
-                intercalate
-                  [ ]
-                  (mapWithIndex (\index -> pure <<< actionPane index) actions)
-              )
-          , br_
-          , evaluateActionsPane evaluationResult
-          , div_ [ small_ [ text "Run this set of actions against a simulated blockchain." ] ]
-      ]
+  div_
+    [ h3_ [ text "Actions" ]
+    , div [ classes [ ClassName "actions", row ] ]
+        if Array.length actions == zero
+          then
+            [ alertInfo_ [ text "Select some actions to run against the blockchain. First choose a wallet from the list on the left, then click one the actions below it to add it to the stack." ] ]
+          else
+            (
+              intercalate
+                [ ]
+                (mapWithIndex (\index -> pure <<< actionPane index) actions)
+            )
+    , div [ classes [ row ] ] [ evaluateActionsPane evaluationResult ]
+    , div_ [ small_ [ text "Run this set of actions against a simulated blockchain." ] ]
+    ]
 
 actionPane :: forall p. Int -> Action -> HTML p Query
 actionPane index action =

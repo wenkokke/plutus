@@ -121,10 +121,6 @@ h1, h2, h3, h4, h5, h6 {
   position:absolute;
   top: -1rem;
   left: calc(50% - 26px);
-  + button {
-    margin:-0.5rem 0 0 0;
-    padding:0;
-  }
 }
 
 .card {
@@ -133,6 +129,19 @@ h1, h2, h3, h4, h5, h6 {
     background:none;
     outline:0;
     box-shadow: none;
+  }
+  button.pull-right {
+    margin:-0.5rem 0 0 0;
+    padding:0;
+  }
+  span.pull-right {
+    .fa-plus {
+      font-size:1rem;
+      margin-left: 1rem;
+    }
+  }
+  div + div {
+    margin-bottom:0.5rem;
   }
 }
 
