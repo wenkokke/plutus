@@ -56,12 +56,14 @@ newtype Fn = Fn Text
   deriving stock (Show, Generic, TH.Lift)
   deriving newtype (ToJSON, FromJSON)
 
-data Expression = Expression
-  { function  :: Fn
-  , wallet    :: Wallet
-  , arguments :: [Value]
-  }
-  deriving (Generic, ToJSON, FromJSON)
+data Expression
+  = Action
+    { function  :: Fn
+    , wallet    :: Wallet
+    , arguments :: [Value]
+    }
+  | Wait { blocks :: Int }
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 type Program = [Expression]
 

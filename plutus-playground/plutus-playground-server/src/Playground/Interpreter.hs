@@ -1,5 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Playground.Interpreter where
 
@@ -28,7 +28,7 @@ import           Language.Haskell.Interpreter (Extension (..), GhcError, Interpr
                                                loadModules, runInterpreter, set, setImportsQ, setTopLevelModules,
                                                typeChecksWithDetails, typeOf)
 import qualified Language.Haskell.TH          as TH
-import           Playground.API               (Evaluation (program, sourceCode), Expression (Expression), Fn (Fn),
+import           Playground.API               (Evaluation (program, sourceCode), Expression (Action, Wait), Fn (Fn),
                                                FunctionSchema (FunctionSchema), Program, SourceCode, arguments,
                                                blockchain, wallets)
 import qualified Playground.TH                as TH
@@ -36,13 +36,12 @@ import           System.Directory             (removeFile)
 import           System.IO                    (readFile)
 import           System.IO.Temp               (writeSystemTempFile)
 import qualified Type.Reflection              as TR
-import           Wallet.API                   (WalletAPI)
+import           Wallet.API                   (WalletAPI, payToPubKey)
 import           Wallet.Emulator.Types        (AssertionError, EmulatedWalletApi, EmulatorState (emChain), Trace,
                                                Wallet (Wallet), runTraceChain, runTraceTxPool, walletAction)
 import           Wallet.Generators            (GeneratorModel (GeneratorModel))
 import qualified Wallet.Generators            as Gen
-import           Wallet.UTXO                  (Tx, Blockchain, Height, PubKey (PubKey), Value (Value))
-import Wallet.API (payToPubKey)
+import           Wallet.UTXO                  (Blockchain, Height, PubKey (PubKey), Tx, Value (Value))
 
 $(TH.mkFunction 'payToPubKey)
 
@@ -97,7 +96,7 @@ getJsonString _               = error "failed to decode as a JSON String"
 
 runFunction :: (MonadInterpreter m) => Evaluation -> m Blockchain
 runFunction evaluation = do
-  liftIO . print . arguments . head . program $ evaluation
+  liftIO . print . head . program $ evaluation
   fileName <-
     liftIO $
     writeSystemTempFile
@@ -122,12 +121,13 @@ mkExpr evaluation =
       ")"
 
 walletActionExpr :: [Wallet] -> Expression -> String
-walletActionExpr allWallets (Expression (Fn f) wallet args) =
+walletActionExpr allWallets (Action (Fn f) wallet args) =
   "(runWalletActionAndProcessPending (" <> show allWallets <> ") (" <>
   show wallet <>
   ") (" <>
   mkApplyExpr (Text.unpack f) (fmap (show . getJsonString) args) <>
   "))"
+walletActionExpr allWallets (Wait blocks) = "(addBlocks " <> show blocks <> ")"
 
 mkApplyExpr :: String -> [String] -> String
 mkApplyExpr functionName [] = functionName

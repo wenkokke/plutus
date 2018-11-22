@@ -60,7 +60,7 @@ import Icons (Icon(..), icon)
 import Network.HTTP.Affjax (AJAX)
 import Network.RemoteData (RemoteData(..), isLoading)
 import Network.RemoteData as RemoteData
-import Playground.API (CompilationError(CompilationError, RawError), Evaluation(Evaluation), Expression(Expression), FunctionSchema, SimpleArgumentSchema, SourceCode(SourceCode))
+import Playground.API (CompilationError(CompilationError, RawError), Evaluation(Evaluation), Expression(Action), FunctionSchema, SimpleArgumentSchema, SourceCode(SourceCode))
 import Playground.Server (SPParams_, postContract, postEvaluate)
 import Prelude (class Eq, class Monad, class Ord, type (~>), Unit, Void, bind, const, discard, flip, map, pure, unit, void, ($), (+), (<$>), (<*>), (<<<), (<>), (>>=))
 import Servant.PureScript.Affjax (AjaxError)
@@ -227,7 +227,7 @@ currentEvaluation = do
   pure $ Evaluation { wallets, program, sourceCode, blockchain }
 
 toExpression :: Action -> Expression
-toExpression action = Expression
+toExpression action = Action
   { wallet: action.mockWallet.wallet
   , function: functionSchema.functionName
   , arguments: jsonArguments

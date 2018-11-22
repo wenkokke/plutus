@@ -109,19 +109,30 @@ _CompilationError = prism' CompilationError f
     f _ = Nothing
 
 --------------------------------------------------------------------------------
-newtype Expression =
-    Expression {
+data Expression =
+    Action {
       function :: Fn
     , wallet :: Wallet
     , arguments :: Array RawJson
     }
+  | Wait {
+      blocks :: Int
+    }
 
 derive instance genericExpression :: Generic Expression
-derive instance newtypeExpression :: Newtype Expression _
 
 --------------------------------------------------------------------------------
-_Expression :: Iso' Expression { function :: Fn, wallet :: Wallet, arguments :: Array RawJson}
-_Expression = _Newtype
+_Action :: Prism' Expression { function :: Fn, wallet :: Wallet, arguments :: Array RawJson }
+_Action = prism' Action f
+  where
+    f (Action r) = Just r
+    f _ = Nothing
+
+_Wait :: Prism' Expression { blocks :: Int }
+_Wait = prism' Wait f
+  where
+    f (Wait r) = Just r
+    f _ = Nothing
 
 --------------------------------------------------------------------------------
 newtype Evaluation =
