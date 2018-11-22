@@ -1,6 +1,6 @@
 module Action where
 
-import Bootstrap (alertInfo_, bgInfo, btn, btnSuccess, btnDanger, btnSecondary, btnInfo, btnPrimary, btnSmall, card, cardBody_, cardFooter_, col_, col4_, pullRight, row_, textWhite)
+import Bootstrap (alertInfo_, bgInfo, btn, btnSuccess, btnDanger, btnSecondary, btnInfo, btnPrimary, btnSmall, card, cardBody_, cardFooter_, col_, col4_, pullRight, row_, textWhite, row)
 import Data.Array (mapWithIndex)
 import Data.Array as Array
 import Data.Foldable (intercalate)
@@ -23,26 +23,22 @@ import Wallet (walletIdPane)
 
 actionsPane :: forall p. Array Action -> RemoteData AjaxError Blockchain -> HTML p Query
 actionsPane actions evaluationResult =
-  row_ [
-    div [ class_ $ ClassName "actions" ]
-    [ h3_ [ text "Actions" ]
-    , if Array.length actions == zero
-      then
-        alertInfo_ [ text "Select some actions to run against the blockchain. First choose a wallet from the list on the left, then click one the actions below it to add it to the stack." ]
-      else
-        div_
-          [ div_
-             (
-               intercalate
-                 [ icon LongArrowDown ]
-                 (mapWithIndex (\index -> pure <<< actionPane index) actions)
-             )
+  div [ classes [ ClassName "actions", row ] ]
+      [ h3_ [ text "Actions" ]
+      , if Array.length actions == zero
+        then
+          alertInfo_ [ text "Select some actions to run against the blockchain. First choose a wallet from the list on the left, then click one the actions below it to add it to the stack." ]
+        else
+          div_
+              (
+                intercalate
+                  [ ]
+                  (mapWithIndex (\index -> pure <<< actionPane index) actions)
+              )
           , br_
           , evaluateActionsPane evaluationResult
           , div_ [ small_ [ text "Run this set of actions against a simulated blockchain." ] ]
-          ]
-    ]
-  ]
+      ]
 
 actionPane :: forall p. Int -> Action -> HTML p Query
 actionPane index action =
