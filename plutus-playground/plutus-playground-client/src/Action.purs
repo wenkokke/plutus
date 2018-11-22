@@ -1,6 +1,6 @@
 module Action where
 
-import Bootstrap (alertInfo_, bgInfo, btn, btnInfo, btnPrimary, btnSmall, card, cardBody_, cardFooter_, col_, col4_, pullRight, row_, textWhite)
+import Bootstrap (alertInfo_, bgInfo, btn, btnSuccess, btnDanger, btnSecondary, btnInfo, btnPrimary, btnSmall, card, cardBody_, cardFooter_, col_, col4_, pullRight, row_, textWhite)
 import Data.Array (mapWithIndex)
 import Data.Array as Array
 import Data.Foldable (intercalate)
@@ -21,8 +21,8 @@ import Servant.PureScript.Affjax (AjaxError)
 import Types (Action, FormEvent(..), Query(EvaluateActions, PopulateAction, RemoveAction), SimpleArgument(Unknowable, SimpleObject, SimpleString, SimpleInt), Blockchain)
 import Wallet (walletIdPane)
 
-actionsPane :: forall p. Array Action -> HTML p Query
-actionsPane actions =
+actionsPane :: forall p. Array Action -> RemoteData AjaxError Blockchain -> HTML p Query
+actionsPane actions evaluationResult =
   row_ [
     div [ class_ $ ClassName "actions" ]
     [ h3_ [ text "Actions" ]
@@ -55,11 +55,13 @@ actionPane index action =
               , onClick $ input_ $ RemoveAction index
               ]
               [ icon Close ]
-          , div_ [ walletIdPane action.walletId ]
+          , div_ [ walletIdPane action.mockWallet.wallet ]
           , div_ [ text $ unwrap $ _.functionName $ unwrap $ action.functionSchema ]
         , hr_
           , div_
-            (intercalate [ hr_ ] (pure <<< actionArgumentForm <$> (_.argumentSchema $ unwrap $ action.functionSchema)))
+            (intercalate [ hr_ ] (Array.mapWithIndex
+                                  (\i action -> pure $ (PopulateAction index i) <$> (actionArgumentForm action))
+                                  (_.argumentSchema $ unwrap $ action.functionSchema)))
           ]
         ]
       ]

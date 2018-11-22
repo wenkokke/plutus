@@ -52,7 +52,7 @@ import Halogen.Component (ParentHTML)
 import Halogen.Component.ChildPath (ChildPath, cp1, cp2)
 import Halogen.ECharts (EChartsEffects, EChartsQuery, echarts)
 import Halogen.ECharts as EC
-import Halogen.HTML (ClassName(ClassName), HTML, a, br_, button, code_, div, div_, h1, h1_, h3_, p_, slot', small, strong_, text)
+import Halogen.HTML (ClassName(ClassName), HTML, a, br_, button, code_, div, div_, h1, h3_, p_, slot', small, strong_, text)
 import Halogen.HTML.Events (input, input_, onClick)
 import Halogen.HTML.Properties (class_, classes, disabled, href, target)
 import Halogen.Query (HalogenM)
@@ -178,7 +178,7 @@ eval (EvaluateActions next) = do
 eval (AddWallet next) = do
   count <- Array.length <$> use _wallets
   let newWallet =
-        { wallet: Wallet (count + 1)
+        { wallet: Wallet { getWallet: (count + 1) }
         , balance: 10
         }
   modifying _wallets (flip Array.snoc newWallet)

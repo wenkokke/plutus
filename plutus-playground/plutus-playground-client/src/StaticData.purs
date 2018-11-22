@@ -8,10 +8,10 @@ import Types (Balance, MockWallet, Transfer)
 import Wallet.Emulator.Types (Wallet(..))
 
 wallet1 :: MockWallet
-wallet1 = { wallet: Wallet 1, balance: 10 }
+wallet1 = { wallet: Wallet { getWallet: 1 }, balance: 10 }
 
 wallet2 :: MockWallet
-wallet2 = { wallet: Wallet 2, balance: 30 }
+wallet2 = { wallet: Wallet { getWallet: 2 }, balance: 30 }
 
 wallets :: Array MockWallet
 wallets = [ wallet1, wallet2 ]

@@ -1,5 +1,5 @@
 module Wallet where
-import Bootstrap (btn, btnGroup_, btnSecondary, btnPrimary, btnSmall, card, cardBody_, cardFooter_, cardTitle_, card_, col2_, col4_, pullRight, row_)
+import Bootstrap (btn, btnSecondary, btnSmall, card, cardBody_, cardTitle_, card_, col4_, pullRight, row_, btnGroupVertical, btnBlock)
 import Data.Array (mapWithIndex)
 import Data.Array as Array
 import Data.Newtype (unwrap)
@@ -21,7 +21,7 @@ walletsPane ::
 walletsPane schemas mockWallets =
   div_
     [ h3_ [ text "Wallets" ]
-    , row_ (Array.snoc (mapWithIndex (walletPane schemas) wallets) addWalletPane)
+    , row_ (Array.snoc (mapWithIndex (walletPane schemas) mockWallets) addWalletPane)
     ]
 
 walletPane ::
@@ -30,13 +30,13 @@ walletPane ::
   -> Int
   -> MockWallet
   -> HTML p Query
-walletPane schemas index wallet =
+walletPane schemas index mockWallet =
   col4_
     [ div
         [class_ $ ClassName "wallet"]
         [ card_
             [ cardBody_
-                [ 
+                [
                   div [class_ $ ClassName "badgePrimary"] [text "1"],
                   button
                     [ classes [ btn, pullRight ]
@@ -81,12 +81,14 @@ actionButton ::
 actionButton mockWallet functionSchema =
   button
     [ classes [ btn, btnSecondary, btnSmall]
-    , onClick $ input_ $ AddAction { functionSchema, walletId }
-    ]
+    , onClick $ input_ $ AddAction { functionSchema: toValueLevel functionSchema
+                                   , mockWallet
+                                   }
+    ] []
 
 walletIdPane :: forall p i. Wallet -> HTML p i
 walletIdPane wallet =
   span [ class_ $ ClassName "wallet-id" ]
     [ text "Wallet #"
-    , text $ show $ unwrap wallet
+    , text $ show $ (unwrap wallet).getWallet
     ]
