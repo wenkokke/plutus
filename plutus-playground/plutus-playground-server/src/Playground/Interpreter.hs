@@ -1,12 +1,14 @@
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
 module Playground.Interpreter where
 
 import           Control.Monad.Catch          (finally, throwM)
+import           Control.Monad.Error.Class    (MonadError, throwError)
 import           Control.Monad.IO.Class       (liftIO)
 import qualified Control.Newtype.Generics     as Newtype
-import           Data.Aeson                   (FromJSON, Result (Success), ToJSON, fromJSON)
+import           Data.Aeson                   (FromJSON, Result (Success), ToJSON, encode, fromJSON)
 import qualified Data.Aeson                   as JSON
 import qualified Data.ByteString.Lazy.Char8   as BSL
 import           Data.List                    (intercalate)
@@ -29,8 +31,9 @@ import           Language.Haskell.Interpreter (Extension (..), GhcError, Interpr
                                                typeChecksWithDetails, typeOf)
 import qualified Language.Haskell.TH          as TH
 import           Playground.API               (Evaluation (program, sourceCode), Expression (Action, Wait), Fn (Fn),
-                                               FunctionSchema (FunctionSchema), Program, SourceCode, arguments,
-                                               blockchain, wallets)
+                                               FunctionSchema (FunctionSchema),
+                                               PlaygroundError (DecodeJsonTypeError, FunctionSchemaError), Program,
+                                               SourceCode, arguments, blockchain, wallets)
 import qualified Playground.TH                as TH
 import           System.Directory             (removeFile)
 import           System.IO                    (readFile)
@@ -67,7 +70,7 @@ loadSource fileName action =
     setTopLevelModules [m]
     action m
 
-compile :: (MonadInterpreter m) => SourceCode -> m [FunctionSchema Schema]
+compile :: (MonadInterpreter m, MonadError PlaygroundError m) => SourceCode -> m [FunctionSchema Schema]
 compile s = do
   fileName <-
     liftIO $
@@ -83,20 +86,20 @@ jsonToString = show . JSON.encode
 
 {-# ANN getSchema ("HLint: ignore" :: String) #-}
 
-getSchema :: (MonadInterpreter m) => ModuleElem -> m (FunctionSchema Schema)
+getSchema :: (MonadInterpreter m, MonadError PlaygroundError m) => ModuleElem -> m (FunctionSchema Schema)
 getSchema (Fun m) = interpret m (as :: FunctionSchema Schema)
-getSchema _ =
-  error "Trying to get a schema by calling something other than a function"
+getSchema _       = throwError FunctionSchemaError
+  -- error "Trying to get a schema by calling something other than a function"
 
 {-# ANN getJsonString ("HLint: ignore" :: String) #-}
 
-getJsonString :: JSON.Value -> String
-getJsonString (JSON.String s) = Text.unpack s
-getJsonString _               = error "failed to decode as a JSON String"
+getJsonString :: (MonadError PlaygroundError m) => JSON.Value -> m String
+getJsonString (JSON.String s) = pure $ Text.unpack s
+getJsonString v               = throwError . DecodeJsonTypeError "String" . BSL.unpack . encode $ v
 
-runFunction :: (MonadInterpreter m) => Evaluation -> m Blockchain
+runFunction :: (MonadInterpreter m, MonadError PlaygroundError m) => Evaluation -> m Blockchain
 runFunction evaluation = do
-  liftIO . print . head . program $ evaluation
+  expr <- mkExpr evaluation
   fileName <-
     liftIO $
     writeSystemTempFile
@@ -105,30 +108,26 @@ runFunction evaluation = do
   loadSource fileName $ \_ -> do
     setImportsQ
       [("Playground.Interpreter.Util", Nothing), ("Wallet.Emulator", Nothing)]
-    liftIO . putStrLn $ mkExpr evaluation
+    liftIO . putStrLn $ expr
     res <-
-      interpret (mkExpr evaluation) (as :: Either AssertionError Blockchain)
+      interpret expr (as :: Either AssertionError Blockchain)
     case res of
       Left e           -> throwM . UnknownError $ show e
       Right blockchain -> pure blockchain
 
-mkExpr :: Evaluation -> String
-mkExpr evaluation =
+mkExpr :: (MonadError PlaygroundError m) => Evaluation -> m String
+mkExpr evaluation = do
   let allWallets = fst <$> wallets evaluation
-   in "runTrace (decode " <> jsonToString (wallets evaluation) <> ") (" <>
-      (intercalate " >> " $
-       fmap (walletActionExpr allWallets) (program evaluation)) <>
-      ")"
+  exprs <- traverse (walletActionExpr allWallets) (program evaluation)
+  pure $ "runTrace (decode " <> jsonToString (wallets evaluation) <> ") (" <>
+      intercalate " >> " exprs <> ")"
 
-walletActionExpr :: [Wallet] -> Expression -> String
-walletActionExpr allWallets (Action (Fn f) wallet args) =
-  "(runWalletActionAndProcessPending (" <> show allWallets <> ") (" <>
-  show wallet <>
-  ") (" <>
-  mkApplyExpr (Text.unpack f) (fmap (show . getJsonString) args) <>
-  "))"
+walletActionExpr :: (MonadError PlaygroundError m) => [Wallet] -> Expression -> m String
+walletActionExpr allWallets (Action (Fn f) wallet args) = do
+  argStrings <- fmap show <$> traverse getJsonString args
+  pure $ "(runWalletActionAndProcessPending (" <> show allWallets <> ") (" <> show wallet <> ") (" <> mkApplyExpr (Text.unpack f) argStrings <> "))"
 walletActionExpr allWallets (Wait blocks) =
-  "addBlocksAndNotify (" <> show allWallets <> ") " <> show blocks
+  pure $ "addBlocksAndNotify (" <> show allWallets <> ") " <> show blocks
 
 mkApplyExpr :: String -> [String] -> String
 mkApplyExpr functionName [] = functionName

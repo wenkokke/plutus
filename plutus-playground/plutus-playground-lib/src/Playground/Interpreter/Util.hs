@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Playground.Interpreter.Util where
 
 import           Data.Aeson                 (FromJSON, Result (Success), ToJSON, fromJSON)

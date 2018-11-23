@@ -47,11 +47,13 @@ library
     , exceptions
     , gitrev
     , hint >= 0.9.0
+    , bifunctors
     , http-types
     , insert-ordered-containers
     , lens
     , monad-logger
     , mtl
+    , transformers
     , newtype-generics
     , plutus-playground-lib
     , purescript-bridge

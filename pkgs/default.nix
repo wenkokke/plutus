@@ -55737,6 +55737,7 @@ license = stdenv.lib.licenses.bsd3;
 , bytestring
 , containers
 , core-to-plc
+, hint
 , http-media
 , insert-ordered-containers
 , lens
@@ -55765,6 +55766,7 @@ base64-bytestring
 bytestring
 containers
 core-to-plc
+hint
 http-media
 insert-ordered-containers
 lens
@@ -55790,6 +55792,7 @@ license = stdenv.lib.licenses.bsd3;
   mkDerivation
 , aeson
 , base
+, bifunctors
 , bytestring
 , containers
 , cryptonite
@@ -55839,6 +55842,7 @@ isExecutable = true;
 libraryHaskellDepends = [
 aeson
 base
+bifunctors
 bytestring
 containers
 cryptonite
@@ -55864,6 +55868,7 @@ swagger2
 template-haskell
 temporary
 text
+transformers
 wai
 wai-cors
 wai-extra
