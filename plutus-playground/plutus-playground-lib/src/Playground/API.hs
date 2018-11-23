@@ -14,34 +14,36 @@
 
 module Playground.API where
 
-import           Control.Arrow              (left)
-import           Control.Lens               (over, _2)
-import           Control.Monad.Trans.Class  (lift)
-import           Control.Monad.Trans.State  (StateT, evalStateT, get, put)
-import           Control.Newtype.Generics   (Newtype)
-import           Data.Aeson                 (FromJSON (parseJSON), ToJSON (toJSON), Value, withText)
-import qualified Data.Aeson                 as JSON
-import           Data.Bifunctor             (second)
-import qualified Data.ByteString.Base64     as Base64
-import           Data.ByteString.Lazy       (fromStrict, toStrict)
-import qualified Data.HashMap.Strict.InsOrd as HM
-import           Data.Map                   (Map)
-import           Data.Maybe                 (catMaybes, fromJust, fromMaybe)
-import           Data.Monoid                ((<>))
-import           Data.Swagger               (ParamSchema (ParamSchema), Referenced (Inline, Ref), Schema (Schema),
-                                             SwaggerType (SwaggerInteger, SwaggerObject, SwaggerString))
-import qualified Data.Swagger               as Swagger
-import           Data.Text                  (Text)
-import qualified Data.Text                  as Text
-import           Data.Text.Encoding         (decodeUtf8, decodeUtf8', encodeUtf8)
-import           GHC.Generics               (Generic)
-import qualified Language.Haskell.TH.Syntax as TH
-import           Network.HTTP.Media         ((//), (/:))
-import           Servant.API                ((:<|>), (:>), Accept (contentType), Capture, JSON, MimeRender (mimeRender),
-                                             MimeUnrender (mimeUnrender), NoContent, Post, ReqBody)
-import           Text.Read                  (readMaybe)
-import           Wallet.Emulator.Types      (Wallet)
-import           Wallet.UTXO.Types          (Blockchain)
+import           Control.Arrow                (left)
+import           Control.Lens                 (over, _2)
+import           Control.Monad.Trans.Class    (lift)
+import           Control.Monad.Trans.State    (StateT, evalStateT, get, put)
+import           Control.Newtype.Generics     (Newtype)
+import           Data.Aeson                   (FromJSON (parseJSON), ToJSON (toJSON), Value, withText)
+import qualified Data.Aeson                   as JSON
+import           Data.Bifunctor               (second)
+import qualified Data.ByteString.Base64       as Base64
+import           Data.ByteString.Lazy         (fromStrict, toStrict)
+import qualified Data.HashMap.Strict.InsOrd   as HM
+import           Data.Map                     (Map)
+import           Data.Maybe                   (catMaybes, fromJust, fromMaybe)
+import           Data.Monoid                  ((<>))
+import           Data.Swagger                 (ParamSchema (ParamSchema), Referenced (Inline, Ref), Schema (Schema),
+                                               SwaggerType (SwaggerInteger, SwaggerObject, SwaggerString))
+import qualified Data.Swagger                 as Swagger
+import           Data.Text                    (Text)
+import qualified Data.Text                    as Text
+import           Data.Text.Encoding           (decodeUtf8, decodeUtf8', encodeUtf8)
+import           GHC.Generics                 (Generic)
+import qualified Language.Haskell.Interpreter as Hint
+import qualified Language.Haskell.TH.Syntax   as TH
+import           Network.HTTP.Media           ((//), (/:))
+import           Servant.API                  ((:<|>), (:>), Accept (contentType), Capture, JSON,
+                                               MimeRender (mimeRender), MimeUnrender (mimeUnrender), NoContent, Post,
+                                               ReqBody)
+import           Text.Read                    (readMaybe)
+import           Wallet.Emulator.Types        (Wallet)
+import           Wallet.UTXO.Types            (Blockchain)
 
 type API
    = "contract" :> ReqBody '[ JSON] SourceCode :> Post '[ JSON] (Either [CompilationError] [FunctionSchema SimpleArgumentSchema])
@@ -56,12 +58,14 @@ newtype Fn = Fn Text
   deriving stock (Show, Generic, TH.Lift)
   deriving newtype (ToJSON, FromJSON)
 
-data Expression = Expression
-  { function  :: Fn
-  , wallet    :: Wallet
-  , arguments :: [Value]
-  }
-  deriving (Generic, ToJSON, FromJSON)
+data Expression
+  = Action
+    { function  :: Fn
+    , wallet    :: Wallet
+    , arguments :: [Value]
+    }
+  | Wait { blocks :: Int }
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 type Program = [Expression]
 
@@ -114,6 +118,13 @@ data CompilationError
                      , text     :: ![Text] }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (ToJSON)
+
+data PlaygroundError
+  = CompilationErrors [CompilationError]
+  | InterpreterError Hint.InterpreterError
+  | FunctionSchemaError
+  | DecodeJsonTypeError String String
+  deriving stock (Show, Generic)
 
 parseErrorText :: Text -> CompilationError
 parseErrorText input =
