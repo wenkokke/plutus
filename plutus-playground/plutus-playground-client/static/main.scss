@@ -69,10 +69,22 @@ h1, h2, h3, h4, h5, h6 {
 
 .actions {
     text-align: center;
-    width:100%;
     .action {
         text-align: left;
     }
+}
+
+.action {
+  input {
+    background: $input-bg;
+    border: $input-border-color;
+    outline:none;
+    border-bottom:1px solid $purple05;
+    &.error {
+      color: $red;
+      border-bottom:1px solid $red;
+    }
+  }
 }
 
 .wallet-id {
@@ -115,7 +127,7 @@ h1, h2, h3, h4, h5, h6 {
   padding:0.25rem 1.75rem 0.25rem 1.5rem;
   width:2rem;
   display: inline-block;
-  background:$primary;
+  background:$lightPurple;
   border-radius:1.5rem;
   color:#1e1f30;
   position:absolute;

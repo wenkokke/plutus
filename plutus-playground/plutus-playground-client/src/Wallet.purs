@@ -37,7 +37,6 @@ walletPane schemas index mockWallet =
         [ card_
             [ cardBody_
                 [
-                  div [class_ $ ClassName "badgePrimary"] [text "1"],
                   button
                     [ classes [ btn, pullRight ]
                     , onClick $ input_ $ RemoveWallet index

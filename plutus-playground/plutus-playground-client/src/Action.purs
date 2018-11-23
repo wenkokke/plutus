@@ -45,7 +45,9 @@ actionPane index action =
     [ div [ class_ $ ClassName "action" ]
       [ div [ classes [ card, textWhite, bgInfo ] ]
         [ cardBody_
-          [ button
+          [ 
+            div [class_ $ ClassName "badgePrimary"] [text "1"]
+            , button
               [ classes [ btn, btnInfo, pullRight ]
               , onClick $ input_ $ RemoveAction index
               ]
@@ -91,11 +93,13 @@ actionArgumentForm Unknowable =
 
 evaluateActionsPane :: forall p. RemoteData AjaxError Blockchain -> HTML p Query
 evaluateActionsPane evaluationResult =
-  button
-    [ classes [ btn, btnClass, btnSmall ]
-    , onClick $ input_ EvaluateActions
-    ]
-    [ btnText ]
+  div 
+    [class_ $ ClassName "col"] 
+    [button
+      [ classes [ btn, btnClass, btnSmall ]
+      , onClick $ input_ EvaluateActions
+      ]
+      [ btnText ]]
   where
     btnClass = case evaluationResult of
                  Success _ -> btnSuccess
