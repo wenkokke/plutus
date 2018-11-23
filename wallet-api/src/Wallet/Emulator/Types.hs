@@ -32,6 +32,7 @@ module Wallet.Emulator.Types(
     walletsNotifyBlock,
     blockchainActions,
     addBlocks,
+    addBlocksAndNotify,
     assertion,
     assertOwnFundsEq,
     -- * Emulator internals
@@ -359,6 +360,12 @@ blockchainActions = Op.singleton BlockchainActions
 --   `blockchainActions` @n@ times.
 addBlocks :: Int -> Trace m [Block]
 addBlocks i = traverse (const blockchainActions) [1..i]
+
+addBlocksAndNotify :: [Wallet] -> Int -> Trace m [Tx]
+addBlocksAndNotify wallets i = do
+  blocks <- addBlocks i
+  traverse_ (walletsNotifyBlock wallets) blocks
+  pure []
 
 -- | Make an assertion about the emulator state
 assertion :: Assertion -> Trace m ()

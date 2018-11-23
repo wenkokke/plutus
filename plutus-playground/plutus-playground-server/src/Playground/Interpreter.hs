@@ -127,7 +127,8 @@ walletActionExpr allWallets (Action (Fn f) wallet args) =
   ") (" <>
   mkApplyExpr (Text.unpack f) (fmap (show . getJsonString) args) <>
   "))"
-walletActionExpr allWallets (Wait blocks) = "(addBlocks " <> show blocks <> ")"
+walletActionExpr allWallets (Wait blocks) =
+  "addBlocksAndNotify (" <> show allWallets <> ") " <> show blocks
 
 mkApplyExpr :: String -> [String] -> String
 mkApplyExpr functionName [] = functionName
