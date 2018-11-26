@@ -22,6 +22,7 @@ import Types (Action, FormEvent(..), Query(EvaluateActions, PopulateAction, Remo
 import Wallet (walletIdPane)
 
 actionsPane :: forall p. Array Action -> RemoteData AjaxError Blockchain -> HTML p Query
+<<<<<<< Updated upstream
 actionsPane actions evaluationResult =
   div_
     [ h3_ [ text "Actions" ]
@@ -37,6 +38,25 @@ actionsPane actions evaluationResult =
             )
     , div [ classes [ row ] ] [ evaluateActionsPane evaluationResult ]
     , div_ [ small_ [ text "Run this set of actions against a simulated blockchain." ] ]
+=======
+actionsPane actions evaluationResult = 
+  div_ [ classes [$ ClassName "actions row"] ] [
+    [ h3_ [ text "Actions" ]
+      , if Array.length actions == zero
+        then
+          alertInfo_ [ text "Select some actions to run against the blockchain. First choose a wallet from the list on the left, then click one the actions below it to add it to the stack." ]
+        else
+          div_
+              (
+                intercalate
+                  [ ]
+                  (mapWithIndex (\index -> pure <<< actionPane index) actions)
+              )
+          , br_
+          , evaluateActionsPane evaluationResult
+          , div_ [ small_ [ text "Run this set of actions against a simulated blockchain." ] ]
+      ]
+>>>>>>> Stashed changes
     ]
 
 actionPane :: forall p. Int -> Action -> HTML p Query
