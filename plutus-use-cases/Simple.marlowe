@@ -1,0 +1,5 @@
+contract Simple {
+    when not true and false
+        or 20 Ada >= 2 Ada * 3 Ada + 1 Ada
+        and now < block 1000 before block 128 then end
+}

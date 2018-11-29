@@ -26,6 +26,8 @@ library
     bytestring -any,
     containers -any,
     mtl -any,
+    megaparsec >= 6.0.0,
+    text,
     template-haskell -any,
     plutus-tx -any,
     plutus-tx-plugin -any,
@@ -44,6 +46,7 @@ library
     Language.PlutusTx.Coordination.Contracts.Vesting
     Language.PlutusTx.Coordination.Contracts.Swap
     Language.Marlowe.Compiler
+    Language.Marlowe.Parser
     Language.Marlowe.Escrow
   ghc-options:
     -Wall -Wnoncanonical-monad-instances
@@ -61,12 +64,17 @@ test-suite plutus-use-cases-test
       Spec.Game
       Spec.Vesting
       Spec.Marlowe
+      Spec.MarloweLang
     build-depends:
         base >=4.9 && <5,
         containers -any,
         hedgehog -any,
         tasty -any,
+        tasty-hunit,
         tasty-hedgehog >=0.2.0.0,
+        tasty-golden,
+        bytestring,
+        megaparsec >= 6.0.0,
         text -any,
         wallet-api -any,
         plutus-use-cases,

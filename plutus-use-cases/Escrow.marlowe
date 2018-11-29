@@ -1,0 +1,16 @@
+contract Escrow {
+    Alice = 0x1
+    Bob = 0x2
+    Carol = 0x3
+
+    Alice commits 450 Ada before block 10 timeout block 100 as escrow {
+        when Alice chose as AliceVote and
+            (Bob chose as BobVote or Carol chose as CarolVote) before block 90 then {
+
+            if   (AliceVote is 1 and (BobVote is 1 or CarolVote is 1))
+              or (BobVote is 1 and CarolVote is 1) then {
+                Alice pays Bob 450 Ada before block 100
+            } else redeem escrow
+        } else redeem escrow
+    }
+}

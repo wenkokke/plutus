@@ -371,16 +371,16 @@ they are unique.
 
 \begin{code}
 newtype IdentCC = IdentCC Int
-               deriving (Eq, Ord)
+               deriving (Eq, Ord, Show)
 makeLift ''IdentCC
 
 
 newtype IdentChoice = IdentChoice Int
-               deriving (Eq, Ord)
+               deriving (Eq, Ord, Show)
 makeLift ''IdentChoice
 
 newtype IdentPay = IdentPay Int
-               deriving (Eq, Ord)
+               deriving (Eq, Ord, Show)
 makeLift ''IdentPay
 
 type ConcreteChoice = Int
@@ -448,7 +448,7 @@ data Value  = Committed IdentCC
             | DivValue Value Value Value  -- divident, divisor, default value (when divisor evaluates to 0)
             | ValueFromChoice IdentChoice Person Value
             | ValueFromOracle PubKey Value -- Oracle PubKey, default value when no Oracle Value provided
-                    deriving (Eq)
+                    deriving (Eq, Show)
 
 makeLift ''Value
 \end{code}
@@ -468,7 +468,7 @@ data Observation = BelowTimeout Int -- are we still on time for something that e
                 | ValueGE Value Value  -- is first amount is greater or equal than the second?
                 | TrueObs
                 | FalseObs
-                deriving (Eq)
+                deriving (Eq, Show)
 makeLift ''Observation
 \end{code}
 
@@ -482,7 +482,7 @@ data Contract = Null
               | Both Contract Contract
               | Choice Observation Contract Contract
               | When Observation Timeout Contract Contract
-                deriving (Eq)
+                deriving (Eq, Show)
 
 makeLift ''Contract
 
