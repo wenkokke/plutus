@@ -51,6 +51,10 @@ module.exports = {
                 use: ['style-loader', 'css-loader']
             },
             {
+                test: /\.scss$/,
+                use: ['style-loader', 'css-loader', 'sass-loader']
+            },
+            {
                 test: /\.(gif|png|jpe?g|svg)$/i,
                 use: 'url-loader'
             }
@@ -61,6 +65,8 @@ module.exports = {
         symlinks: false,
         modules: [
             'node_modules',
+            'deps',
+            'static',
         ],
         extensions: [ '.js']
     },
