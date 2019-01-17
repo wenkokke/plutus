@@ -1,7 +1,7 @@
 'use strict';
 
-const ExtractTextPlugin = require("extract-text-webpack-plugin");
-const HtmlWebpackPlugin = require('html-webpack-plugin');
+const ExtractTextPlugin = require("./node_modules/extract-text-webpack-plugin");
+const HtmlWebpackPlugin = require('./node_modules/html-webpack-plugin');
 const path = require('path');
 const webpack = require('webpack');
 
@@ -26,7 +26,6 @@ module.exports = {
         contentBase: path.join(__dirname, "dist"),
         compress: true,
         port: 8009,
-        https: true,
         proxy: {
             "/api": {
                 target: 'http://localhost:8080'
@@ -34,7 +33,7 @@ module.exports = {
         }
     },
 
-    entry: './entry.js',
+    entry: './entry-bazel.js',
 
     output: {
         path: path.join(__dirname, 'dist'),
@@ -46,25 +45,6 @@ module.exports = {
         rules: [
             { test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/, loader: "url-loader?limit=10000&mimetype=application/font-woff" },
             { test: /\.(ttf|eot|svg)(\?v=[0-9]\.[0-9]\.[0-9])?$/, loader: "file-loader" },
-            {
-                test: /\.purs$/,
-                use: [
-                    {
-                        loader: 'purs-loader',
-                        options: {
-                            src: [
-                                'bower_components/purescript-*/src/**/*.purs',
-                                'src/**/*.purs',
-                                'generated/**/*.purs'
-                            ],
-                            bundle: true,
-                            psc: 'psa',
-                            watch: isWebpackDevServer || isWatch,
-                            pscIde: false
-                        }
-                    }
-                ]
-            },
             {
                 test: /\.css$/,
                 use: ['style-loader', 'css-loader']
@@ -81,11 +61,13 @@ module.exports = {
     },
 
     resolve: {
+        symlinks: false,
         modules: [
             'node_modules',
-            'bower_components'
+            'deps',
+            'static',
         ],
-        extensions: [ '.purs', '.js']
+        extensions: [ '.js']
     },
 
     plugins: [
