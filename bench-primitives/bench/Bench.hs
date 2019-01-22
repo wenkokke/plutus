@@ -1,25 +1,66 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main (main) where
 
+import           Control.DeepSeq              (NFData)
 import           Criterion.Main
+import           Data.ByteString.Lazy         (ByteString)
+import qualified Data.ByteString.Lazy         as BSL
+import           Data.ByteString.Lazy.Hash
+import           Math.NumberTheory.Logarithms
 
-benchAdd :: Integer -> Benchmark
-benchAdd = benchOp (+)
+benchOp :: (NFData a) => (Integer -> Integer -> a) -> Integer -> Benchmark
+benchOp op n = bench (show (integerLog10 n)) $ nf (`op` n) n
 
-benchMul :: Integer -> Benchmark
-benchMul = benchOp (*)
+benchBSOp :: NFData a => (ByteString -> ByteString -> a) -> ByteString -> Benchmark
+benchBSOp op n = bench (show (BSL.length n)) $ nf (`op` n) n
 
--- FIXME: this doesn't do anything
-benchOp :: (Integer -> Integer -> Integer) -> Integer -> Benchmark
-benchOp op n = bench (show n) $ nf (`op` n) n
+benchHash :: (ByteString -> ByteString) -> ByteString -> Benchmark
+benchHash hash str = bench (show (BSL.length str)) $ nf hash str
+
+integers :: [Integer]
+integers = [ 1
+           , 10 ^ (100 :: Int)
+           , 10 ^ (10000 :: Int)
+           ]
+
+bytestrings :: [ByteString]
+bytestrings = [ "a"
+              , "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              , "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              , "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              ]
 
 main :: IO ()
 main =
     defaultMain [ bgroup "Integer Addition" $
-                      benchAdd <$> [ 10000
-                                   , 10000000000000000000000
-                                   ]
+                      benchOp (+) <$> integers
                 , bgroup "Integer Multiplication" $
-                      benchMul <$> [ 1000
-                                   , 10000000000000000000000
-                                   ]
+                      benchOp (*) <$> integers
+                , bgroup "Integer Subtraction" $
+                      benchOp (-) <$> integers
+                , bgroup "Integer Division" $
+                      benchOp div <$> integers
+                , bgroup "Integer Quotient" $
+                      benchOp quot <$> integers
+                , bgroup "Integer Remainder" $
+                      benchOp rem <$> integers
+                , bgroup "Integer Modulo" $
+                      benchOp mod <$> integers
+                , bgroup "Integer ≤" $
+                      benchOp (<=) <$> integers
+                , bgroup "Integer <" $
+                      benchOp (<) <$> integers
+                , bgroup "Integer >" $
+                      benchOp (>) <$> integers
+                , bgroup "Integer ≥" $
+                      benchOp (>=) <$> integers
+                , bgroup "Integer =" $
+                      benchOp (==) <$> integers
+                , bgroup "SHA256_2" $
+                      benchHash sha2 <$> bytestrings
+                , bgroup "SHA256_3" $
+                      benchHash sha3 <$> bytestrings
+                , bgroup "Bytestring =" $
+                      benchBSOp (==) <$> bytestrings
                 ]
