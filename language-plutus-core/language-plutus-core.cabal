@@ -39,6 +39,7 @@ library
         Language.PlutusCore.Evaluation.CkMachine
         Language.PlutusCore.Evaluation.MachineException
         Language.PlutusCore.Evaluation.Result
+        Language.PlutusCore.Check.ValueRestriction
         Language.PlutusCore.CBOR
         Language.PlutusCore.Constant
         Language.PlutusCore.Constant.Dynamic
@@ -47,6 +48,7 @@ library
         Language.PlutusCore.View
         Language.PlutusCore.Subst
         Language.PlutusCore.Name
+        Language.PlutusCore.DeBruijn
         Language.PlutusCore.Check.Uniques
         Language.PlutusCore.FsTree
         Language.PlutusCore.StdLib.Data.Bool
@@ -122,6 +124,7 @@ library
         bytestring -any,
         cryptonite -any,
         containers -any,
+        bimap -any,
         array -any,
         mtl -any,
         transformers -any,
