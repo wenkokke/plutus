@@ -53,7 +53,7 @@ PlutusTx.makeLift ''CampaignAction
 contributionScript :: Campaign -> ValidatorScript
 contributionScript cmp  = ValidatorScript val where
     val = Ledger.applyScript mkValidator (Ledger.lifted cmp)
-    mkValidator = Ledger.fromCompiledCode $$(PlutusTx.compile [||
+    mkValidator = $$(Ledger.compileScript [||
 
         -- The validator script is a function of four arguments:
         -- 1. The 'Campaign' definition. This argument is provided by the Plutus client, using 'Ledger.applyScript'.
@@ -143,7 +143,7 @@ campaignAddress = Ledger.scriptAddress . contributionScript
 
 -- | Contribute funds to the campaign (contributor)
 --
-contribute :: Campaign -> Value -> MockWallet ()
+contribute :: MonadWallet m => Campaign -> Value -> m ()
 contribute cmp value = do
     _ <- if value <= 0 then throwOtherError "Must contribute a positive value" else pure ()
     keyPair <- myKeyPair
@@ -174,7 +174,7 @@ contribute cmp value = do
 
 -- | Register a [[EventHandler]] to collect all the funds of a campaign
 --
-scheduleCollection :: Campaign -> MockWallet ()
+scheduleCollection :: MonadWallet m => Campaign -> m ()
 scheduleCollection cmp = do
     keyPair <- myKeyPair
     let sig = signature keyPair
@@ -197,7 +197,7 @@ collectFundsTrigger c = andT
     (slotRangeT (collectionRange c))
 
 -- | Claim a refund of our campaign contribution
-refundHandler :: TxId -> Signature -> Campaign -> EventHandler MockWallet
+refundHandler :: MonadWallet m => TxId -> Signature -> Campaign -> EventHandler m
 refundHandler txid signature cmp = EventHandler (\_ -> do
     logMsg "Claiming refund"
     let validatorScript = contributionScript cmp
