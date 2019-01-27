@@ -6,6 +6,7 @@ import           Control.DeepSeq              (NFData)
 import           Criterion.Main
 import           Data.ByteString.Lazy         (ByteString)
 import qualified Data.ByteString.Lazy         as BSL
+import qualified Data.ByteString.Lazy.Char8   as ASCII
 import           Data.ByteString.Lazy.Hash
 import           Math.NumberTheory.Logarithms
 
@@ -25,10 +26,10 @@ integers = [ 1
            ]
 
 bytestrings :: [ByteString]
-bytestrings = [ "a"
-              , "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-              , "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-              , "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+bytestrings = [ ASCII.replicate 1 'a'
+              , ASCII.replicate 10 'a'
+              , ASCII.replicate 100 'a'
+              , ASCII.replicate 1000 'a'
               ]
 
 main :: IO ()
