@@ -43,7 +43,7 @@ let
   isPlutus = name: builtins.elem name plutusPkgList;
 
   regeneratePackages = iohkNix.stack2nix.regeneratePackages { hackageSnapshot = "2019-01-29T09:58:14Z"; };
-  bazelNixpkgs = import (iohkNix.fetchNixpkgs ./plutus-playground/plutus-playground-client/bazel-nixpkgs-src.json) {};
+  bazelNixpkgs = import (iohkNix.fetchNixpkgs ./bazel-nixpkgs-src.json) {};
   withDevTools = env: env.overrideAttrs (attrs: { nativeBuildInputs = attrs.nativeBuildInputs ++ [ pkgs.cabal-install pkgs.haskellPackages.ghcid bazelNixpkgs.bazel]; });
   comp = f: g: (v: f(g v));
 in lib // {
