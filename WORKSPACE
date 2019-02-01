@@ -102,20 +102,12 @@ new_local_repository(
   build_file_content = local_pkg,
 )
 
-new_local_repository(
-  name = "purescript",
-  path = "./tools/purescript",
-  build_file_content = '''
-package(default_visibility = ["//visibility:public"])
-
-filegroup(
-    name = "purescript",
-    srcs = glob(["bin/*"]),
+register_toolchains(
+    "//:ghc",
+    "//plutus-playground/plutus-playground-client:purs_darwin_bindist",
+    "//plutus-playground/plutus-playground-client:purs_linux_bindist",
+    "//plutus-playground/plutus-playground-client:purs_linux_nixpkgs",
 )
-''',
-)
-
-register_toolchains("//:ghc")
 
 ############################################################ Font End Stuff ######################################################3
 
@@ -124,6 +116,7 @@ local_repository(
     name = "bazel_rules_purescript",
     path = "plutus-playground/plutus-playground-client/rules_purescript-master"
 )
+
 
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
@@ -134,7 +127,10 @@ git_repository(
 )
 
 # load the purescript rules and functions:
-load("@bazel_rules_purescript//purescript:purescript.bzl", "purescript_toolchain", "purescript_dep")
+load("@bazel_rules_purescript//purescript:purescript.bzl",
+     "purescript_toolchain", "purescript_dep", "purescript_distributions")
+
+purescript_distributions(path="./tools/purescript")
 
 http_archive(
     name = "io_bazel_rules_sass",
@@ -199,8 +195,6 @@ http_archive(
     build_file_content = BOOTSTRAP_SCSS_BUILD_FILE,
 )
 
-# downloads the `purs` command:
-purescript_toolchain()
 
 # hand-added
 purescript_dep(name = "purescript-ace-halogen"
