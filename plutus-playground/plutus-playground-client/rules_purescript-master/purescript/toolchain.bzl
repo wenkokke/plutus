@@ -39,7 +39,7 @@ purs_toolchain = rule(
 purs_bindist_buildfile = '''
 package(default_visibility = ["//visibility:public"])
 filegroup(
-   name = "purs",
+   name = "purs_bindist_filegroup",
    srcs = glob(["*"]),
 )'''
 
@@ -67,7 +67,7 @@ def purescript_distributions(path=None, name = "purs"):
 package(default_visibility = ["//visibility:public"])
 
 filegroup(
-   name = "purs",
+   name = "purs_bindist_filegroup",
    srcs = glob(["bin/*"]),
 )''')
 
@@ -85,17 +85,17 @@ def purescript_toolchain():
     """
     purs_toolchain(
         name = "purs_darwin_bindist",
-        tools = "@purs_bindist_darwin//:purs",
+        tools = "@purs_bindist_darwin//:purs_bindist_filegroup",
     )
 
     purs_toolchain(
         name = "purs_linux_bindist",
-        tools = "@purs_bindist_linux//:purs",
+        tools = "@purs_bindist_linux//:purs_bindist_filegroup",
     )
 
     purs_toolchain(
         name = "purs_linux_nixpkgs",
-        tools = "@purs_nixpkgs_linux//:purs",
+        tools = "@purs_nixpkgs_linux//:purs_bindist_filegroup",
     )
 
     native.toolchain(
