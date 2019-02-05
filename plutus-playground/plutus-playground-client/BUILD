@@ -1,4 +1,4 @@
-load("@bazel_rules_purescript//purescript:purescript.bzl", "purescript_bundle", "purescript_library", "purescript_test", "purescript_toolchain", "purs_toolchain")
+load("@io_bazel_rules_purescript//purescript:purescript.bzl", "purescript_bundle", "purescript_library", "purescript_test", "purescript_toolchain", "purs_toolchain")
 load("@build_bazel_rules_nodejs//:defs.bzl", "nodejs_binary")
 package(default_visibility = ["//visibility:public"])
 

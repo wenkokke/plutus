@@ -24,7 +24,13 @@ def _purs_toolchain_impl(ctx):
         if "purs" == paths.split_extension(file.basename)[0]:
             purescript_binaries["purs"] = file
     purs = purescript_binaries["purs"]
-    return [platform_common.ToolchainInfo(purs_info = PursInfo(purs_path = purs))]
+    purs_info = PursInfo(
+        purs_path = purs,
+    )
+    return [platform_common.ToolchainInfo(
+        name = "darwin_nixpkgs",
+        purs_info = PursInfo(purs_path = purs)
+        )]
 
 purs_toolchain = rule(
     implementation = _purs_toolchain_impl,
@@ -109,32 +115,32 @@ def purescript_toolchain():
             "@bazel_tools//platforms:x86_64",
         ],
         toolchain = ":purs_linux_bindist",
-        toolchain_type = ":toolchain_type",
+        toolchain_type = "@io_bazel_rules_purescript//purescript:toolchain_type",
     )
 
     native.toolchain(
         name = "purs_linux_nixpkgs_toolchain",
         # TODO Create appropriate platform
         exec_compatible_with = [
-            "//platforms:linux_x86_64_nixpkgs",
+            "@io_bazel_rules_purescript//purescript/platforms:linux_x86_64_nixpkgs",
         ],
         target_compatible_with = [
-            "//platforms:linux_x86_64_nixpkgs",
+            "@io_bazel_rules_purescript//purescript/platforms:linux_x86_64_nixpkgs",
         ],
         toolchain = ":purs_linux_nixpkgs",
-        toolchain_type = ":toolchain_type",
+        toolchain_type = "@io_bazel_rules_purescript//purescript:toolchain_type",
     )
 
     native.toolchain(
         name = "purs_darwin_bindist_toolchain",
         exec_compatible_with = [
-            "@bazel_tools//platforms:darwin",
+            "@bazel_tools//platforms:osx",
             "@bazel_tools//platforms:x86_64",
         ],
         target_compatible_with = [
-            "@bazel_tools//platforms:darwin",
+            "@bazel_tools//platforms:osx",
             "@bazel_tools//platforms:x86_64",
         ],
         toolchain = ":purs_darwin_bindist",
-        toolchain_type = ":toolchain_type",
+        toolchain_type = "@io_bazel_rules_purescript//purescript:toolchain_type",
     )

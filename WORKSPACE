@@ -104,16 +104,16 @@ new_local_repository(
 
 register_toolchains(
     "//:ghc",
-    "//plutus-playground/plutus-playground-client:purs_darwin_bindist",
-    "//plutus-playground/plutus-playground-client:purs_linux_bindist",
-    "//plutus-playground/plutus-playground-client:purs_linux_nixpkgs",
+    "//plutus-playground/plutus-playground-client:purs_darwin_bindist_toolchain",
+    "//plutus-playground/plutus-playground-client:purs_linux_bindist_toolchain",
+    "//plutus-playground/plutus-playground-client:purs_linux_nixpkgs_toolchain",
 )
 
 ############################################################ Font End Stuff ######################################################3
 
 # download the archive:
 local_repository(
-    name = "bazel_rules_purescript",
+    name = "io_bazel_rules_purescript",
     path = "plutus-playground/plutus-playground-client/rules_purescript-master"
 )
 
@@ -127,7 +127,7 @@ git_repository(
 )
 
 # load the purescript rules and functions:
-load("@bazel_rules_purescript//purescript:purescript.bzl",
+load("@io_bazel_rules_purescript//purescript:purescript.bzl",
      "purescript_toolchain", "purescript_dep", "purescript_distributions")
 
 purescript_distributions(path="./tools/purescript")
