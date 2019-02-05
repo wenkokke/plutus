@@ -8,9 +8,9 @@ copyright: Copyright: (c) 2018 Input Output
 maintainer: jann.mueller@iohk.io
 stability: experimental
 author: Manuel M T Chakravarty, Jann Müller
-synopsis: 
+synopsis:
   Collection of smart contracts to develop the plutus/wallet interface
-description: 
+description:
   Collection of smart contracts to develop the plutus/wallet interface.
 category: Language
 extra-doc-files: README.md
@@ -62,6 +62,7 @@ test-suite plutus-use-cases-test
         containers -any,
         hedgehog -any,
         tasty -any,
+        tasty-hunit -any,
         tasty-hedgehog >=0.2.0.0,
         text -any,
         wallet-api -any,
