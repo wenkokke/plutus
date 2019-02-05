@@ -212,7 +212,7 @@ def _run_test(target_path, entry_module, entry_function):
 
 _purescript_dep_build_content = """
 package(default_visibility = ["//visibility:public"])
-load("@bazel_rules_purescript//purescript:purescript.bzl", "purescript_library")
+load("@io_bazel_rules_purescript//purescript:purescript.bzl", "purescript_library")
 
 purescript_library(
     name = "pkg",
@@ -371,7 +371,7 @@ purescript_library = rule(
         ),
         "_zipper": attr.label(executable=True, cfg="host", default=Label("@bazel_tools//tools/zip:zipper"), allow_files=True)
     },
-    toolchains = ["@io_bazel_rules_purescript//toolchain:toolchain_type"]
+    toolchains = ["@io_bazel_rules_purescript//purescript:toolchain_type"]
 )
 
 def _trim_package_node_modules(package_name):
@@ -452,7 +452,7 @@ purescript_bundle = rule(
     ),
     "_zipper": attr.label(executable=True, cfg="host", default=Label("@bazel_tools//tools/zip:zipper"), allow_files=True)
   },
-  toolchains = ["@io_bazel_rules_purescript//toolchain:toolchain_type"]
+  toolchains = ["@io_bazel_rules_purescript//purescript:toolchain_type"]
 )
 
 def _purescript_test(ctx):
@@ -577,5 +577,5 @@ purescript_test = rule(
         ),
     },
     test = True,
-    toolchains = ["@io_bazel_rules_purescript//toolchain:toolchain_type"],
+    toolchains = ["@io_bazel_rules_purescript//purescript:toolchain_type"],
 )

@@ -107,12 +107,12 @@ def purescript_toolchain():
     native.toolchain(
         name = "purs_linux_bindist_toolchain",
         exec_compatible_with = [
-            "@bazel_tools//platforms:linux",
             "@bazel_tools//platforms:x86_64",
+            "@bazel_tools//platforms:linux",
         ],
         target_compatible_with = [
-            "@bazel_tools//platforms:linux",
             "@bazel_tools//platforms:x86_64",
+            "@bazel_tools//platforms:linux",
         ],
         toolchain = ":purs_linux_bindist",
         toolchain_type = "@io_bazel_rules_purescript//purescript:toolchain_type",
@@ -121,10 +121,14 @@ def purescript_toolchain():
     native.toolchain(
         name = "purs_linux_nixpkgs_toolchain",
         exec_compatible_with = [
-            "@io_bazel_rules_purescript//purescript/platforms:linux_x86_64_nixpkgs",
+            "@bazel_tools//platforms:x86_64",
+            "@bazel_tools//platforms:linux",
+            "@io_bazel_rules_purescript//purescript/platforms:nixpkgs",
         ],
         target_compatible_with = [
-            "@io_bazel_rules_purescript//purescript/platforms:linux_x86_64_nixpkgs",
+            "@bazel_tools//platforms:x86_64",
+            "@bazel_tools//platforms:linux",
+            "@io_bazel_rules_purescript//purescript/platforms:nixpkgs",
         ],
         toolchain = ":purs_linux_nixpkgs",
         toolchain_type = "@io_bazel_rules_purescript//purescript:toolchain_type",

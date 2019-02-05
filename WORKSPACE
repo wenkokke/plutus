@@ -102,20 +102,7 @@ new_local_repository(
   build_file_content = local_pkg,
 )
 
-register_toolchains(
-    "//:ghc",
-    "//plutus-playground/plutus-playground-client:purs_darwin_bindist_toolchain",
-    "//plutus-playground/plutus-playground-client:purs_linux_bindist_toolchain",
-    "//plutus-playground/plutus-playground-client:purs_linux_nixpkgs_toolchain",
-)
-
 ############################################################ Font End Stuff ######################################################3
-
-# download the archive:
-local_repository(
-    name = "io_bazel_rules_purescript",
-    path = "plutus-playground/plutus-playground-client/rules_purescript-master"
-)
 
 
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
@@ -124,6 +111,19 @@ git_repository(
     name = "bazel_skylib",
     remote = "https://github.com/bazelbuild/bazel-skylib.git",
     tag = "0.6.0"
+)
+
+# download the archive:
+local_repository(
+    name = "io_bazel_rules_purescript",
+    path = "plutus-playground/plutus-playground-client/rules_purescript-master"
+)
+
+register_toolchains(
+    "//:ghc",
+    "//:purs_darwin_bindist_toolchain",
+    "//:purs_linux_bindist_toolchain",
+    "//:purs_linux_nixpkgs_toolchain",
 )
 
 # load the purescript rules and functions:
