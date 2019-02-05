@@ -9510,6 +9510,37 @@ description = "Command-line benchmark tool";
 license = stdenv.lib.licenses.bsd3;
 
 }) {};
+"bench-primitives" = callPackage
+({
+  mkDerivation
+, base
+, bytestring
+, criterion
+, deepseq
+, integer-logarithms
+, language-plutus-core
+, stdenv
+}:
+mkDerivation {
+
+pname = "bench-primitives";
+version = "0.1.0.0";
+src = .././bench-primitives;
+isLibrary = false;
+isExecutable = false;
+benchmarkHaskellDepends = [
+base
+bytestring
+criterion
+deepseq
+integer-logarithms
+language-plutus-core
+];
+doHaddock = false;
+description = "Benchmarks for Plutus Core builtins";
+license = stdenv.lib.licenses.bsd3;
+
+}) {};
 "bencode" = callPackage
 ({
   mkDerivation
