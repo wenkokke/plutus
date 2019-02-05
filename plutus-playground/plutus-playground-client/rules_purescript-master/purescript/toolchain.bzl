@@ -120,7 +120,6 @@ def purescript_toolchain():
 
     native.toolchain(
         name = "purs_linux_nixpkgs_toolchain",
-        # TODO Create appropriate platform
         exec_compatible_with = [
             "@io_bazel_rules_purescript//purescript/platforms:linux_x86_64_nixpkgs",
         ],
