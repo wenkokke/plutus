@@ -16,7 +16,6 @@ import qualified Data.Text                                  as T
 import           Data.Text.Encoding                         (encodeUtf8)
 import           Evaluation.CkMachine
 import           Evaluation.Constant.All
-import           Generators
 import           Hedgehog                                   hiding (Var)
 import qualified Hedgehog.Gen                               as Gen
 import qualified Hedgehog.Range                             as Range
@@ -24,6 +23,7 @@ import           Language.PlutusCore
 import           Language.PlutusCore.Constant
 import           Language.PlutusCore.DeBruijn
 import           Language.PlutusCore.Generators
+import           Language.PlutusCore.Generators.AST
 import           Language.PlutusCore.Generators.Interesting
 import           Language.PlutusCore.Pretty
 import           Normalization.Type
@@ -42,7 +42,7 @@ main = do
     mr <-
         E.catch
             (Just <$> Runfiles.create)
-            (\(e :: E.SomeException) -> pure Nothing)
+            (\(_ :: E.SomeException) -> pure Nothing)
     let testDir =
             case mr of
                 Just r  -> Runfiles.rlocation r "plutus/language-plutus-core/"
@@ -53,7 +53,7 @@ main = do
     typeNormalizeFiles <-
         findByExtension [".plc"] (testDir </> "test/normalize-types")
     typeErrorFiles <- findByExtension [".plc"] (testDir </> "test/type-errors")
-    prettyFiles <- findByExtension [".plc"] (testDir </> "test/Pretty")
+    -- prettyFiles <- findByExtension [".plc"] (testDir </> "test/Pretty")
     defaultMain
         (allTests testDir plcFiles rwFiles typeFiles typeNormalizeFiles typeErrorFiles)
 
