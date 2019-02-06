@@ -1,4 +1,4 @@
-load("@io_bazel_rules_purescript//purescript:purescript.bzl", "purescript_bundle", "purescript_library", "purescript_test", "purescript_toolchain", "purs_toolchain")
+load("@io_tweag_rules_purescript//purescript:purescript.bzl", "purescript_bundle", "purescript_library", "purescript_test", "purescript_toolchain", "purs_toolchain")
 load("@build_bazel_rules_nodejs//:defs.bzl", "nodejs_binary")
 package(default_visibility = ["//visibility:public"])
 
@@ -25,7 +25,6 @@ genrule(
 purescript_toolchain()
 
 purescript_library(
-    purs = "@purescript",
     name = "playground_purs",
     srcs = glob(["src/**/*.purs"]) + glob(["src/**/*.js"]) + glob(["generated/**/*.purs"]) + generated_files,
     deps = [

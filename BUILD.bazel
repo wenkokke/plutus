@@ -8,7 +8,7 @@ sh_library(
     ],
 )
 
-load("@io_bazel_rules_purescript//purescript:purescript.bzl", "purescript_toolchain")
+load("@io_tweag_rules_purescript//purescript:purescript.bzl", "purescript_toolchain")
 
 purescript_toolchain()
 

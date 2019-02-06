@@ -78,30 +78,6 @@ new_local_repository(
   build_file_content = local_pkg,
 )
 
-new_local_repository(
-  name = "nodejs",
-  path = "./tools/nodejs",
-  build_file_content = '''
-package(default_visibility = ["//visibility:public"])
-
-filegroup(
-    name = "bin",
-    srcs = glob(["bin/*"]),
-)
-
-filegroup(
-    name = "node",
-    srcs = ["bin/node"],
-)
-''',
-)
-
-new_local_repository(
-  name = "yarn",
-  path = "./tools/yarn",
-  build_file_content = local_pkg,
-)
-
 ############################################################ Font End Stuff ######################################################3
 
 
@@ -115,8 +91,8 @@ git_repository(
 
 # download the archive:
 local_repository(
-    name = "io_bazel_rules_purescript",
-    path = "plutus-playground/plutus-playground-client/rules_purescript-master"
+    name = "io_tweag_rules_purescript",
+    path = "/Users/davidsmith/tweag/rules_purescript"
 )
 
 register_toolchains(
@@ -127,7 +103,7 @@ register_toolchains(
 )
 
 # load the purescript rules and functions:
-load("@io_bazel_rules_purescript//purescript:purescript.bzl",
+load("@io_tweag_rules_purescript//purescript:purescript.bzl",
      "purescript_toolchain", "purescript_dep", "purescript_distributions")
 
 purescript_distributions(path="./tools/purescript")
@@ -161,8 +137,8 @@ rules_nodejs_dependencies()
 load("@build_bazel_rules_nodejs//:defs.bzl", "node_repositories", "yarn_install")
 
 node_repositories(
-    vendored_node = "@nodejs",
-    vendored_yarn = "@yarn",
+    vendored_node = "@plutus//:node-nix",
+    vendored_yarn = "@plutus//:yarn-nix",
     package_json = ["//plutus-playground/plutus-playground-client:package.json"],
 )
 
