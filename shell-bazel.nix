@@ -53,8 +53,10 @@ let
   ghc = haskellPackages.ghcWithPackages (ps: haskellInputs);
   happy = haskellPackages.happy;
   alex = haskellPackages.alex;
-  nodejs = pkgs.nodejs;
-  yarn = pkgs.yarn;
+  # We need a specific version of bazel
+  bazelNixpkgs = import (localLib.iohkNix.fetchNixpkgs ./nixpkgs-bazel-src.json) {};
+  nodejs = bazelNixpkgs.nodejs;
+  yarn = bazelNixpkgs.yarn;
   purescript = (import (localLib.iohkNix.fetchNixpkgs ./plutus-playground/plutus-playground-client/nixpkgs-src.json) {}).purescript;
   mkBazelScript = {name, script}: pkgs.stdenv.mkDerivation {
           name = name;
@@ -75,8 +77,6 @@ let
   shellcheckScript = mkBazelScript { name = "shellcheckScript";
                                      script = import localLib.iohkNix.tests.shellcheckScript {inherit pkgs;};
                                    };
-  # We need a specific version of bazel
-  bazelNixpkgs = import (localLib.iohkNix.fetchNixpkgs ./nixpkgs-bazel-src.json) {};
 in
 pkgs.mkShell {
   # XXX: hack for macosX, this flag disables bazel usage of xcode
@@ -124,13 +124,14 @@ pkgs.mkShell {
     ln -nfs ${yarn} ./tools/yarn
     ln -nfs ${stylishHaskellScript} ./tools/stylish-haskell
     ln -nfs ${shellcheckScript} ./tools/shellcheck
-    ln -nfs ${purescript} ./tools/purescript
+    mkdir -p yarn-nix/bin
+    ln -nfs ${nodejs} ./node-nix
+    ln -nfs ${yarn}/bin/yarn ./yarn-nix/bin/yarn.js
     # Dirty hack: yarn_install is looking for yarn at ./tools/nodejs/bin/yarn
     # regardless whether yarn is vendored in the node_repositories rule.
     # We are creating this env by hand.
     mkdir -p tools/nodejs/bin
     ln -nfs ${nodejs}/bin/* ./tools/nodejs/bin/
     ln -nfs ${yarn}/bin/* ./tools/nodejs/bin/
-    ln -nfs ${purescript}/bin/* ./tools/nodejs/bin/
   '';
 }
