@@ -261,7 +261,8 @@ def _path_above_dir(path, dir):
   return "/".join(topParts)
 
 def _purescript_library(ctx):
-    purs = ctx.executable.purs
+    ctx.toolchains["//bar_tools:toolchain_type"].pursInfo.purs_path
+    purs = ctx.executable.purs_path
     srcs = ctx.files.srcs
     deps = ctx.attr.deps
     zipper = ctx.executable._zipper
@@ -357,12 +358,6 @@ def _purescript_library(ctx):
 purescript_library = rule(
     implementation = _purescript_library,
     attrs = {
-        "purs": attr.label(
-            allow_single_file = True,
-            executable = True,
-            cfg = "host",
-            default = "@purs",
-        ),
         "srcs": attr.label_list(
             allow_files = True,
         ),
