@@ -56444,15 +56444,19 @@ license = stdenv.lib.licenses.bsd3;
 , algebraic-graphs
 , base
 , bazel-runfiles
+, bytestring
 , containers
+, hedgehog
 , language-plutus-core
 , lens
+, megaparsec
 , mmorph
 , mtl
 , prettyprinter
 , serialise
 , stdenv
 , tasty
+, tasty-hedgehog
 , text
 , transformers
 }:
@@ -56464,9 +56468,12 @@ src = .././plutus-ir;
 libraryHaskellDepends = [
 algebraic-graphs
 base
+bytestring
 containers
+hedgehog
 language-plutus-core
 lens
+megaparsec
 mmorph
 mtl
 prettyprinter
@@ -56477,12 +56484,16 @@ transformers
 testHaskellDepends = [
 base
 bazel-runfiles
+bytestring
+hedgehog
 language-plutus-core
+megaparsec
 mmorph
 mtl
 prettyprinter
 serialise
 tasty
+tasty-hedgehog
 ];
 doHaddock = false;
 description = "Plutus IR language";
@@ -56634,6 +56645,7 @@ cookie
 directory
 exceptions
 file-embed
+filepath
 generics-sop
 http-client
 http-client-tls
@@ -56797,6 +56809,7 @@ doctest
 ];
 testHaskellDepends = [
 base
+bazel-runfiles
 bytestring
 language-plutus-core
 mtl

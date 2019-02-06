@@ -71,10 +71,10 @@ runscript ::
 runscript handle file script = liftIO $ do
     Text.hPutStr handle script
     hFlush handle
-    workspace <- fromMaybe "" <$> lookupEnv "BUILD_WORKSPACE_DIRECTORY"
-    runghc <- lookupRunghc workspace
+    mWorkspace <- lookupEnv "BUILD_WORKSPACE_DIRECTORY"
+    runghc <- lookupRunghc mWorkspace
     let cp = proc runghc (runghcOpts <> [file])
-    readCreateProcessWithExitCode (cp { cwd = Just workspace }) ""
+    readCreateProcessWithExitCode (cp { cwd = mWorkspace }) ""
 
 compile ::
        (MonadMask m, MonadIO m, MonadError PlaygroundError m)
@@ -161,11 +161,13 @@ runghcOpts =
     , "-package plutus-tx"
     ]
 
-lookupRunghc :: FilePath -> IO String
-lookupRunghc workspace = do
+lookupRunghc :: Maybe FilePath -> IO String
+lookupRunghc mWorkspace = do
     mBinDir <- lookupEnv "GHC_BIN_DIR"
     case mBinDir of
-        Nothing  -> pure $ workspace </> "bazel-out/darwin-fastbuild/bin/plutus-playground/plutus-playground-server/runghc-plutus-playground-server"
+        Nothing  -> pure $ case mWorkspace of
+          Nothing -> "runghc"
+          Just workspace -> workspace </> "bazel-out/darwin-fastbuild/bin/plutus-playground/plutus-playground-server/runghc-plutus-playground-server"
         Just val -> pure $ val </> "runghc"
 
 -- ignoringIOErrors and withSystemTempFile are clones of the functions
