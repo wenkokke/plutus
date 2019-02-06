@@ -53,6 +53,8 @@ let
   ghc = haskellPackages.ghcWithPackages (ps: haskellInputs);
   happy = haskellPackages.happy;
   alex = haskellPackages.alex;
+  hlint = haskellPackages.hlint;
+  stylishHaskell = haskellPackages.stylish-haskell;
   # We need a specific version of bazel
   bazelNixpkgs = import (localLib.iohkNix.fetchNixpkgs ./nixpkgs-bazel-src.json) {};
   nodejs = bazelNixpkgs.nodejs;
@@ -68,15 +70,6 @@ let
             cp ${script} $out/bin/run.sh
           '';
         };
-  hlintScript = mkBazelScript { name = "hlintScript";
-                                script = import localLib.iohkNix.tests.hlintScript {inherit pkgs;};
-                              };
-  stylishHaskellScript = mkBazelScript { name = "stylishHaskellScript";
-                                         script = import localLib.iohkNix.tests.stylishHaskellScript {inherit pkgs;};
-                                       };
-  shellcheckScript = mkBazelScript { name = "shellcheckScript";
-                                     script = import localLib.iohkNix.tests.shellcheckScript {inherit pkgs;};
-                                   };
 in
 pkgs.mkShell {
   # XXX: hack for macosX, this flag disables bazel usage of xcode
@@ -120,18 +113,10 @@ pkgs.mkShell {
     ln -nfs ${ghc} ./tools/ghc
     ln -nfs ${happy} ./tools/happy
     ln -nfs ${alex} ./tools/alex
-    ln -nfs ${hlintScript} ./tools/hlint
-    ln -nfs ${yarn} ./tools/yarn
-    ln -nfs ${stylishHaskellScript} ./tools/stylish-haskell
-    ln -nfs ${shellcheckScript} ./tools/shellcheck
+    ln -nfs ${hlint} ./tools/hlint
+    ln -nfs ${stylishHaskell} ./tools/stylish-haskell
     mkdir -p yarn-nix/bin
     ln -nfs ${nodejs} ./node-nix
     ln -nfs ${yarn}/bin/yarn ./yarn-nix/bin/yarn.js
-    # Dirty hack: yarn_install is looking for yarn at ./tools/nodejs/bin/yarn
-    # regardless whether yarn is vendored in the node_repositories rule.
-    # We are creating this env by hand.
-    mkdir -p tools/nodejs/bin
-    ln -nfs ${nodejs}/bin/* ./tools/nodejs/bin/
-    ln -nfs ${yarn}/bin/* ./tools/nodejs/bin/
   '';
 }

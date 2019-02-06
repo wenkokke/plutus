@@ -9308,37 +9308,6 @@ description = "An enhanced core prelude; a common foundation for alternate prelu
 license = stdenv.lib.licenses.mit;
 
 }) {};
-"bazel-runfiles" = callPackage
-({
-  mkDerivation
-, base
-, directory
-, filepath
-, stdenv
-}:
-mkDerivation {
-
-pname = "bazel-runfiles";
-version = "0.7.0.1";
-sha256 = "4d217f74a7eee5dced014d74ac8a3be886d9d0c5ce8e556d8ef16535bde40a00";
-isLibrary = true;
-isExecutable = true;
-libraryHaskellDepends = [
-base
-directory
-filepath
-];
-executableHaskellDepends = [
-base
-filepath
-];
-doHaddock = false;
-doCheck = false;
-homepage = "https://github.com/tweag/rules_haskell#readme";
-description = "Locate Bazel runfiles location";
-license = stdenv.lib.licenses.asl20;
-
-}) {};
 "bbdb" = callPackage
 ({
   mkDerivation
@@ -34537,8 +34506,8 @@ license = stdenv.lib.licenses.bsd3;
 mkDerivation {
 
 pname = "hint";
-version = "0.9.0";
-sha256 = "7425af412a66d22f254608b4e9f552d65fd96c6cc5885af7b2ed0af62923f8bc";
+version = "0.8.0";
+sha256 = "2e702d62c8f56b799d767f3d3707bec12597bc529a051ad90bd5840581551c41";
 libraryHaskellDepends = [
 base
 directory
@@ -34554,7 +34523,7 @@ unix
 ];
 doHaddock = false;
 doCheck = false;
-homepage = "https://github.com/haskell-hint/hint";
+homepage = "https://github.com/mvdan/hint";
 description = "Runtime Haskell interpreter (GHC API wrapper)";
 license = stdenv.lib.licenses.bsd3;
 
@@ -56441,16 +56410,19 @@ license = stdenv.lib.licenses.bsd3;
   mkDerivation
 , algebraic-graphs
 , base
-, bazel-runfiles
+, bytestring
 , containers
+, hedgehog
 , language-plutus-core
 , lens
+, megaparsec
 , mmorph
 , mtl
 , prettyprinter
 , serialise
 , stdenv
 , tasty
+, tasty-hedgehog
 , text
 , transformers
 }:
@@ -56462,9 +56434,12 @@ src = .././plutus-ir;
 libraryHaskellDepends = [
 algebraic-graphs
 base
+bytestring
 containers
+hedgehog
 language-plutus-core
 lens
+megaparsec
 mmorph
 mtl
 prettyprinter
@@ -56474,13 +56449,16 @@ transformers
 ];
 testHaskellDepends = [
 base
-bazel-runfiles
+bytestring
+hedgehog
 language-plutus-core
+megaparsec
 mmorph
 mtl
 prettyprinter
 serialise
 tasty
+tasty-hedgehog
 ];
 doHaddock = false;
 description = "Plutus IR language";
@@ -56496,7 +56474,6 @@ license = stdenv.lib.licenses.bsd3;
 , bytestring
 , containers
 , hedgehog
-, hint
 , http-media
 , insert-ordered-containers
 , lens
@@ -56528,7 +56505,6 @@ base
 base64-bytestring
 bytestring
 containers
-hint
 http-media
 insert-ordered-containers
 lens
@@ -56748,11 +56724,9 @@ license = stdenv.lib.licenses.bsd3;
 ({
   mkDerivation
 , base
-, bazel-runfiles
 , bytestring
 , containers
 , doctest
-, filepath
 , ghc
 , language-plutus-core
 , lens
@@ -56775,10 +56749,8 @@ version = "0.1.0.0";
 src = .././plutus-tx;
 libraryHaskellDepends = [
 base
-bazel-runfiles
 bytestring
 containers
-filepath
 ghc
 language-plutus-core
 lens

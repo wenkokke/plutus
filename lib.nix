@@ -47,5 +47,5 @@ let
   withDevTools = env: env.overrideAttrs (attrs: { nativeBuildInputs = attrs.nativeBuildInputs ++ [ pkgs.cabal-install pkgs.haskellPackages.ghcid bazelNixpkgs.bazel]; });
   comp = f: g: (v: f(g v));
 in lib // {
-  inherit getPackages iohkNix isPlutus plutusHaskellPkgList plutusPkgList regeneratePackages pkgs nixpkgs comp;
+  inherit getPackages iohkNix isPlutus plutusHaskellPkgList plutusPkgList withDevTools regeneratePackages pkgs nixpkgs comp;
 }
