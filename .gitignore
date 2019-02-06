@@ -42,3 +42,5 @@ gh-pages
 /bazel-*
 BUILD
 /tools
+/yarn-nix
+/node-nix
