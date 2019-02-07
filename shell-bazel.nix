@@ -72,13 +72,13 @@ let
           '';
         };
   hlintScript = mkBazelScript { name = "hlintScript";
-                                script = import ./tools/hlint-script.nix {inherit pkgs haskellPackages;};
+                                script = import ./test-scripts/hlint-script.nix {inherit pkgs haskellPackages;};
                                 };
   stylishHaskellScript = mkBazelScript { name = "stylishHaskellScript";
-                                         script = import ./tools/stylish-haskell-script.nix {inherit pkgs haskellPackages;};
+                                         script = import ./test-scripts/stylish-haskell-script.nix {inherit pkgs haskellPackages;};
                                          };
   shellcheckScript = mkBazelScript { name = "shellcheckScript";
-                                     script = import ./tools/shellcheck-script.nix {inherit pkgs;};
+                                     script = import ./test-scripts/shellcheck-script.nix {inherit pkgs;};
                                      };
 in
 pkgs.mkShell {
