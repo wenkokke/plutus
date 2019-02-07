@@ -2,7 +2,6 @@
 {-# LANGUAGE DerivingStrategies     #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE OverloadedStrings      #-}
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE TypeFamilies           #-}
@@ -63,9 +62,9 @@ data ValueRestrictionError tyname a
 makeClassyPrisms ''ValueRestrictionError
 
 data UniqueError a
-    = MultiplyDefined Unique a a
-    | IncoherentUsage Unique a a
-    | FreeVariable Unique a
+    = MultiplyDefined T.Text a a
+    | IncoherentUsage T.Text a a
+    | FreeVariable T.Text a
     deriving (Show, Eq, Generic, NFData)
 makeClassyPrisms ''UniqueError
 
@@ -141,12 +140,12 @@ instance (Pretty a, PrettyBy config (tyname a)) => PrettyBy config (ValueRestric
         "after the binding for this name:" <+> prettyBy config name
 
 instance Pretty a => Pretty (UniqueError a) where
-    pretty (MultiplyDefined u def redef) =
-        "Variable" <+> pretty u <+> "defined at" <+> pretty def <+> "is redefined at" <+> pretty redef
-    pretty (IncoherentUsage u def use) =
-        "Variable" <+> pretty u <+> "defined at" <+> pretty def <+> "is used in a different scope at" <+> pretty use
-    pretty (FreeVariable u use) =
-        "Variable" <+> pretty u <+> "is free at" <+> pretty use
+    pretty (MultiplyDefined n def redef) =
+        "Variable" <+> pretty n <+> "defined at" <+> pretty def <+> "is redefined at" <+> pretty redef
+    pretty (IncoherentUsage n def use) =
+        "Variable" <+> pretty n <+> "defined at" <+> pretty def <+> "is used in a different scope at" <+> pretty use
+    pretty (FreeVariable n use) =
+        "Variable" <+> pretty n <+> "is free at" <+> pretty use
 
 instance (Pretty a, PrettyBy config (Type tyname a), PrettyBy config (Term tyname name a)) =>
         PrettyBy config (NormalizationError tyname name a) where
