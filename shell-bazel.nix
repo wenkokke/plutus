@@ -60,7 +60,9 @@ let
   bazelNixpkgs = import (localLib.iohkNix.fetchNixpkgs ./nixpkgs-bazel-src.json) {};
   nodejs = bazelNixpkgs.nodejs;
   yarn = bazelNixpkgs.yarn;
-  purescript = (import (localLib.iohkNix.fetchNixpkgs ./plutus-playground/plutus-playground-client/nixpkgs-src.json) {}).purescript;
+  purescript = if pkgs.stdenv.isDarwin
+    then pkgs.writeTextFile {name = "purescript"; text = ""; destination = "/bin/purs"; }
+    else (import (localLib.iohkNix.fetchNixpkgs ./plutus-playground/plutus-playground-client/nixpkgs-src.json) {}).purescript;
   mkBazelScript = {name, script}: pkgs.stdenv.mkDerivation {
           name = name;
           unpackPhase = "true";
@@ -127,6 +129,7 @@ pkgs.mkShell {
     ln -nfs ${hlintScript} ./tools/hlint
     ln -nfs ${stylishHaskellScript} ./tools/stylish-haskell
     ln -nfs ${shellcheckScript} ./tools/shellcheck
+    ln -nfs ${purescript} ./tools/purescript
     mkdir -p yarn-nix/bin
     ln -nfs ${nodejs} ./node-nix
     ln -nfs ${yarn}/bin/yarn ./yarn-nix/bin/yarn.js
