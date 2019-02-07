@@ -111,7 +111,8 @@ pkgs.mkShell {
       echo ""
       echo "[!] It looks like you are using a ''${ARCH} nix-based system. In order to build this project, you probably need to add the two following host_platform entries to your .bazelrc.local file."
       echo ""
-      echo "common --host_platform=@bazel_rules_purescript//purescript/platforms:''${ARCH}_x86_64_nixpkgs"
+      echo "common --host_platform=@io_tweag_rules_purescript//purescript/platforms:''${ARCH}_x86_64_nixpkgs"
+      echo "common --platforms=@io_tweag_rules_purescript//purescript/platforms:''${ARCH}_x86_64_nixpkgs"
 
     fi
 
