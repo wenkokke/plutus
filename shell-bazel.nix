@@ -23,11 +23,12 @@ let
       filter = localLib.isPlutus;
     };
   customOverlays = with localLib.pkgs.lib; optional forceError errorOverlay;
+  pkgsGenerated = import ./pkgs { inherit pkgs; };
   in localLib.pkgs.callPackage localLib.iohkNix.haskellPackages {
     inherit forceDontCheck enableProfiling enablePhaseMetrics
     enableHaddockHydra enableBenchmarks fasterBuild enableDebugging
-    enableSplitCheck customOverlays;
-    pkgsGenerated = ./pkgs/default.nix;
+    enableSplitCheck customOverlays pkgsGenerated;
+    inherit (pkgsGenerated) ghc;
     filter = localLib.isPlutus;
     filterOverrides = {
       splitCheck = let
@@ -70,6 +71,15 @@ let
             cp ${script} $out/bin/run.sh
           '';
         };
+  hlintScript = mkBazelScript { name = "hlintScript";
+                                script = import ./tools/hlint-script.nix {inherit pkgs haskellPackages;};
+                                };
+  stylishHaskellScript = mkBazelScript { name = "stylishHaskellScript";
+                                         script = import ./tools/stylish-haskell-script.nix {inherit pkgs haskellPackages;};
+                                         };
+  shellcheckScript = mkBazelScript { name = "shellcheckScript";
+                                     script = import ./tools/shellcheck-script.nix {inherit pkgs;};
+                                     };
 in
 pkgs.mkShell {
   # XXX: hack for macosX, this flag disables bazel usage of xcode
@@ -113,8 +123,9 @@ pkgs.mkShell {
     ln -nfs ${ghc} ./tools/ghc
     ln -nfs ${happy} ./tools/happy
     ln -nfs ${alex} ./tools/alex
-    ln -nfs ${hlint} ./tools/hlint
-    ln -nfs ${stylishHaskell} ./tools/stylish-haskell
+    ln -nfs ${hlintScript} ./tools/hlint
+    ln -nfs ${stylishHaskellScript} ./tools/stylish-haskell
+    ln -nfs ${shellcheckScript} ./tools/shellcheck
     mkdir -p yarn-nix/bin
     ln -nfs ${nodejs} ./node-nix
     ln -nfs ${yarn}/bin/yarn ./yarn-nix/bin/yarn.js

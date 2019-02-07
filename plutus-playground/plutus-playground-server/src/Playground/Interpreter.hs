@@ -158,7 +158,7 @@ runghcOpts =
     , "-XScopedTypeVariables"
     , "-O0"
     -- FIXME: workaround for https://ghc.haskell.org/trac/ghc/ticket/16228
-    , "-package plutus-tx"
+    --, "-package plutus-tx"
     ]
 
 lookupRunghc :: Maybe FilePath -> IO String

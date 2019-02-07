@@ -8,6 +8,7 @@ binary_packages = [
     "base",
     "bytestring",
     "text",
+    "lens",
     "mtl",
     "optparse-applicative",
     "prettyprinter",

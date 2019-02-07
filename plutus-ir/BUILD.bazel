@@ -7,8 +7,11 @@ load(
 
 haskell_packages = [
     "base",
+    "bytestring",
     "containers",
+    "hedgehog",
     "lens",
+    "megaparsec",
     "mtl",
     "mmorph",
     "prettyprinter",
@@ -20,11 +23,15 @@ haskell_packages = [
 
 test_packages = [
     "bazel-runfiles",
+    "bytestring",
+    "hedgehog",
+    "megaparsec",
     "mmorph",
     "mtl",
     "prettyprinter",
     "serialise",
     "tasty",
+    "tasty-hedgehog",
     "base",
 ]
 

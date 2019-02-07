@@ -1,13 +1,13 @@
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Main (main) where
 
 import qualified Bazel.Runfiles                       as Runfiles
-import qualified Control.Exception                    as E
 import           Common
+import qualified Control.Exception                    as E
 import           PlcTestUtils
 import           TestLib
 

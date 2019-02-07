@@ -6,12 +6,13 @@ module Auth.TypesSpec
   ( spec
   ) where
 
-import           Auth.Types                     (OAuthToken (OAuthToken), Token (Token), TokenProvider (Github),
-                                                 oAuthTokenAccessToken, oAuthTokenScope, oAuthTokenTokenType)
-import           Data.Aeson                     (eitherDecode)
-import qualified Data.ByteString.Lazy           as LBS
-import           Paths_plutus_playground_server (getDataFileName)
-import           Test.Hspec                     (Spec, describe, it, shouldBe)
+import           Auth.Types           (OAuthToken (OAuthToken), Token (Token), TokenProvider (Github),
+                                       oAuthTokenAccessToken, oAuthTokenScope, oAuthTokenTokenType)
+import qualified Bazel.Runfiles       as Runfiles
+import qualified Control.Exception    as E
+import           Data.Aeson           (eitherDecode)
+import qualified Data.ByteString.Lazy as LBS
+import           Test.Hspec           (Spec, describe, it, shouldBe)
 
 spec :: Spec
 spec = oAuthTokenJsonHandlingSpec
@@ -20,7 +21,8 @@ oAuthTokenJsonHandlingSpec :: Spec
 oAuthTokenJsonHandlingSpec =
   describe "OAuthToken JSON handling" $
   it "should be able to parse a github response" $ do
-    input1 <- LBS.readFile =<< getDataFileName "test/oAuthToken1.json"
+    file <- dataFile
+    input1 <- LBS.readFile file
     let decoded :: Either String (OAuthToken 'Github) = eitherDecode input1
     decoded `shouldBe`
       Right
@@ -30,3 +32,13 @@ oAuthTokenJsonHandlingSpec =
            , oAuthTokenScope = "gist"
            , oAuthTokenTokenType = "bearer"
            })
+
+dataFile :: IO String
+dataFile = do
+   mr <-
+       E.catch
+           (Just <$> Runfiles.create)
+           (\(_ :: E.SomeException) -> pure Nothing)
+   case mr of
+       Just r  -> pure $ Runfiles.rlocation r "plutus/plutus-playground/plutus-playground-server/test/oAuthToken1.json"
+       Nothing -> pure "test/oAuthToken1.json"

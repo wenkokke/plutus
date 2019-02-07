@@ -6,12 +6,16 @@ generated_files = [
     "Ledger/Index.purs",
     "Ledger/Types.purs",
     "Ledger/Interval.purs",
+    "Ledger/Value/TH.purs",
+    "Ledger/Ada/TH.purs",
     "Playground/Usecases.purs",
     "Playground/API.purs",
     "Playground/Server.purs",
     "Wallet/Graph.purs",
     "Wallet/API.purs",
     "Wallet/Emulator/Types.purs",
+    "Gist.purs",
+    "Auth.purs",
 ]
 
 genrule(
