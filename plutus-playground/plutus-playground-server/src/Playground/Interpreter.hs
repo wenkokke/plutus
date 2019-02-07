@@ -167,7 +167,7 @@ lookupRunghc mWorkspace = do
     case mBinDir of
         Nothing  -> pure $ case mWorkspace of
           Nothing -> "runghc"
-          Just workspace -> workspace </> "bazel-out/darwin-fastbuild/bin/plutus-playground/plutus-playground-server/runghc-plutus-playground-server"
+          Just workspace -> workspace </> "bazel-bin/plutus-playground/plutus-playground-server/runghc-plutus-playground-server"
         Just val -> pure $ val </> "runghc"
 
 -- ignoringIOErrors and withSystemTempFile are clones of the functions
