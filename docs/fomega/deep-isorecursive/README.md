@@ -2,7 +2,7 @@
 
 This document provides a high-level view on the problem of higher-kinded `fix` and possible solutions to it.
 
-For the final solution (and all the implementation details), that we settled on, jump straight to [the docs in the code itself](https://github.com/input-output-hk/plutus/blob/f551aa864df1104b06cb5a0460f751e1b86d2481/language-plutus-core/stdlib/Language/PlutusCore/StdLib/Type.hs) (TODO: change the link once the PR is merged). The docs there are self-contained.
+For the final solution (and all the implementation details), that we settled on, jump straight to [the docs in the code itself](https://github.com/input-output-hk/plutus/blob/f551aa864df1104b06cb5a0460f751e1b86d2481/language-plutus-core/src/Language/PlutusCore/StdLib/Type.hs) (TODO: change the link once the PR is merged). The docs there are self-contained.
 
 For the story about how we arrived at that solution, see below.
 

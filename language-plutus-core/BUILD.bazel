@@ -100,11 +100,6 @@ haskell_library(
     name = "language-plutus-core",
     srcs = glob([
         "src/**/*.hs",
-        "prelude/PlutusPrelude.hs",
-        "stdlib/**/*.hs",
-        "generators/**/*.hs",
-        "common/**/*.hs",
-        "examples/**/*.hs",
     ]) + [
         "src/Language/PlutusCore/Parser.hs",
         "src/Language/PlutusCore/Lexer.hs",
