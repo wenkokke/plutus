@@ -89,10 +89,10 @@ git_repository(
     tag = "0.6.0"
 )
 
-# download the archive:
-local_repository(
+git_repository(
     name = "io_tweag_rules_purescript",
-    path = "/Users/davidsmith/tweag/rules_purescript"
+    remote = "https://github.com/tweag/rules_purescript.git",
+    commit = "2798d3c2ba995c68c9c10cafc3658ddae85fd272",
 )
 
 register_toolchains(
