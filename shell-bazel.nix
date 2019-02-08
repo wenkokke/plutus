@@ -92,6 +92,8 @@ pkgs.mkShell {
 
   buildInputs = [
     ghc
+    pkgs.git
+    pkgs.cacert
     bazelNixpkgs.bazel
   ];
 
