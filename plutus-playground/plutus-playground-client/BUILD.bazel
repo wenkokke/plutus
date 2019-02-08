@@ -65,6 +65,7 @@ purescript_bundle(
 # // just to get the dependencies!
 purescript_test(
     name = "playground_test",
+    size = "small",
     srcs = glob(["test/**/*.purs"]) + glob(["test/**/*.js"]) + glob(["test/**/*.json"]),
     runtime_deps = ["@npm//ace-builds", "@npm//echarts"],
     main_module = "test/Test/Main.purs",

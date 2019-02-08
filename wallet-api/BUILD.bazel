@@ -93,6 +93,7 @@ haskell_binary(
 
 haskell_test(
     name = "wallet-api-test",
+    size = "small",
     srcs = glob([
         "test/*.hs",
     ]),
@@ -107,6 +108,7 @@ haskell_test(
 
 sh_test(
     name = "hlint",
+    size = "small",
     srcs = ["@hlint//:bin/run.sh"],
     args = ["."],
     deps = ["//:hlint_lib"],
@@ -115,6 +117,7 @@ sh_test(
 
 sh_test(
     name = "stylish",
+    size = "small",
     srcs = ["@stylish_haskell//:bin/run.sh"],
     args = ["wallet-api"],
     deps = ["//:stylish_haskell_lib"],

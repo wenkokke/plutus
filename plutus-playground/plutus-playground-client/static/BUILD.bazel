@@ -1,0 +1,7 @@
+load("@io_bazel_rules_sass//:defs.bzl", "sass_binary", "sass_library")
+
+filegroup(
+  name = "static_files",
+  srcs = glob(["*.html", "*.ico", "*.scss"]),
+  visibility = ["//visibility:public"],
+)

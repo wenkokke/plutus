@@ -1,0 +1,3 @@
+{
+  plutus = import ../bazel.nix {};
+}

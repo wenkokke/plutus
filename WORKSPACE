@@ -98,8 +98,8 @@ git_repository(
 register_toolchains(
     "//:ghc",
     "//:purs_darwin_bindist_toolchain",
-    "//:purs_linux_bindist_toolchain",
     "//:purs_linux_nixpkgs_toolchain",
+    "//:purs_linux_bindist_toolchain",
 )
 
 # load the purescript rules and functions:

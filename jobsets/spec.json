@@ -1,0 +1,19 @@
+{
+  "enabled": 1,
+  "hidden": false,
+  "description": "Jobsets",
+  "nixexprinput": "declInput",
+  "nixexprpath": "jobsets/default.nix",
+  "checkinterval": 300,
+  "schedulingshares": 500,
+  "enableemail": true,
+  "emailoverride": "",
+  "keepnr": 3,
+  "inputs": {
+    "nixpkgs": {
+      "type": "git",
+      "value": "https://github.com/NixOS/nixpkgs-channels.git 38be383a6f5c377c94973177c071077bc42a11c9",
+      "emailresponsible": false
+    }
+  }
+}
