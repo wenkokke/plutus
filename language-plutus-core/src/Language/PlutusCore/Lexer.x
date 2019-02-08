@@ -94,8 +94,6 @@ tokens :-
     <0> "sha2_256"               { mkBuiltin SHA2 }
     <0> "sha3_256"               { mkBuiltin SHA3 }
     <0> verifySignature          { mkBuiltin VerifySignature }
-    <0> txhash                   { mkBuiltin TxHash }
-    <0> blocknum                 { mkBuiltin BlockNum }
     <0> sizeOfInteger            { mkBuiltin SizeOfInteger }
 
     -- Various special characters
@@ -117,7 +115,7 @@ tokens :-
     <0> @integer                 { tok (\p s -> alex $ LexInt p (readBSL $ stripPlus s)) }
 
     -- Identifiers
-    <0> @identifier              { tok handle_identifier }
+    <0> @identifier              { tok (\p s -> handle_identifier p (T.decodeUtf8 (BSL.toStrict s))) }
 
 {
 
@@ -189,12 +187,12 @@ mkBuiltin = constructor LexBuiltin
 
 mkKeyword = constructor LexKeyword
 
-handle_identifier :: AlexPosn -> BSL.ByteString -> Alex (Token AlexPosn)
+handle_identifier :: AlexPosn -> T.Text -> Alex (Token AlexPosn)
 handle_identifier p str = do
     s1 <- gets alex_ust
     let (u, s2) = runState (newIdentifier str) s1
     modify (\s -> s { alex_ust = s2})
-    pure $ LexName p (T.decodeUtf8 $ BSL.toStrict str) u
+    pure $ LexName p str u
 
 -- this conversion is safe because we only lex digits
 readBSL :: (Read a) => BSL.ByteString -> a
