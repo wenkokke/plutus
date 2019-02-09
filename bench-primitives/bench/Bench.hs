@@ -1,9 +1,12 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main (main) where
 
 import           Control.DeepSeq              (NFData)
 import           Criterion.Main
+import           Crypto.ECC.Ed25519Donna
+import           Crypto.Error
 import           Data.ByteString.Lazy         (ByteString)
 import qualified Data.ByteString.Lazy         as BSL
 import qualified Data.ByteString.Lazy.Char8   as ASCII
@@ -31,6 +34,28 @@ bytestrings = [ ASCII.replicate 1 'a'
               , ASCII.replicate 100 'a'
               , ASCII.replicate 1000 'a'
               ]
+
+-- signature size: 64 bytes
+-- b = 256 bits
+-- Based on: Ed25519
+
+emptySig :: BSL.ByteString
+emptySig = BSL.replicate 512 0
+
+emptyPubKey :: BSL.ByteString
+emptyPubKey = BSL.replicate 256 0
+
+packSig :: BSL.ByteString -> CryptoFailable Signature
+packSig = signature . BSL.toStrict
+
+packPubKey :: BSL.ByteString -> CryptoFailable PublicKey
+packPubKey = publicKey . BSL.toStrict
+
+signatureByteString :: BSL.ByteString -- ^ Public key
+                    -> BSL.ByteString -- ^ Message
+                    -> BSL.ByteString -- ^ Signature
+                    -> CryptoFailable Bool
+signatureByteString pubKey msg sig = verify <$> packPubKey pubKey <*> pure (BSL.toStrict msg) <*> packSig sig
 
 main :: IO ()
 main =
