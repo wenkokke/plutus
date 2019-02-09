@@ -35,15 +35,17 @@ bytestrings = [ ASCII.replicate 1 'a'
               , ASCII.replicate 1000 'a'
               ]
 
--- signature size: 64 bytes
--- b = 256 bits
--- Based on: Ed25519
+-- first line of https://ed25519.cr.yp.to/python/sign.input
+-- see https://ed25519.cr.yp.to/python/sign.py for how to read input data
 
-emptySig :: BSL.ByteString
-emptySig = BSL.replicate 512 0
+sampleSig :: BSL.ByteString
+sampleSig = "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b"
 
-emptyPubKey :: BSL.ByteString
-emptyPubKey = BSL.replicate 256 0
+samplePubKey :: BSL.ByteString
+samplePubKey = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
+
+sampleMsg :: BSL.ByteString
+sampleMsg = mempty
 
 packSig :: BSL.ByteString -> CryptoFailable Signature
 packSig = signature . BSL.toStrict
@@ -54,8 +56,8 @@ packPubKey = publicKey . BSL.toStrict
 signatureByteString :: BSL.ByteString -- ^ Public key
                     -> BSL.ByteString -- ^ Message
                     -> BSL.ByteString -- ^ Signature
-                    -> CryptoFailable Bool
-signatureByteString pubKey msg sig = verify <$> packPubKey pubKey <*> pure (BSL.toStrict msg) <*> packSig sig
+                    -> Maybe Bool
+signatureByteString pubKey msg sig = maybeCryptoError (verify <$> packPubKey pubKey <*> pure (BSL.toStrict msg) <*> packSig sig)
 
 main :: IO ()
 main =
@@ -89,4 +91,6 @@ main =
                       benchHash sha3 <$> bytestrings
                 , bgroup "Bytestring =" $
                       benchBSOp (==) <$> bytestrings
+                , bgroup "Ed25519"
+                      [ bench "0" $ nf (signatureByteString samplePubKey sampleMsg) sampleSig ]
                 ]
