@@ -57,7 +57,6 @@ hexParse = BSL.pack . asBytes . BSL.unpack
 -- sample data from first line of https://ed25519.cr.yp.to/python/sign.input
 -- see https://ed25519.cr.yp.to/python/sign.py for how to read input data
 
-
 sampleSig :: BSL.ByteString
 sampleSig = hexParse "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b"
 
@@ -112,5 +111,5 @@ main =
                 , bgroup "Bytestring =" $
                       benchBSOp (==) <$> bytestrings
                 , bgroup "Ed25519"
-                      [ bench "0" $ nf (signatureByteString samplePubKey sampleMsg) sampleSig ]
+                      [ bench (show $ BSL.length sampleMsg) $ nf (signatureByteString samplePubKey sampleMsg) sampleSig ]
                 ]
