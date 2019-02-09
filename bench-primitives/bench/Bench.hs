@@ -11,6 +11,7 @@ import           Data.ByteString.Lazy         (ByteString)
 import qualified Data.ByteString.Lazy         as BSL
 import qualified Data.ByteString.Lazy.Char8   as ASCII
 import           Data.ByteString.Lazy.Hash
+import           Data.Word                    (Word8)
 import           Math.NumberTheory.Logarithms
 
 benchOp :: (NFData a) => (Integer -> Integer -> a) -> Integer -> Benchmark
@@ -35,14 +36,33 @@ bytestrings = [ ASCII.replicate 1 'a'
               , ASCII.replicate 1000 'a'
               ]
 
--- first line of https://ed25519.cr.yp.to/python/sign.input
+hexParse :: BSL.ByteString -> BSL.ByteString
+hexParse = BSL.pack . asBytes . BSL.unpack
+    where
+        asBytes :: [Word8] -> [Word8]
+        asBytes []        = mempty
+        asBytes (c:c':cs) = handlePair c c' : asBytes cs
+        asBytes _         = undefined --
+
+        -- Turns a pair of bytes written in hexadecimal such as @a6@ into a single Word8
+        handlePair :: Word8 -> Word8 -> Word8
+        handlePair c c' = 16 * handleChar c + handleChar c'
+
+        handleChar :: Word8 -> Word8
+        handleChar x
+            | x >= 48 && x <= 57 = x - 48 -- hexits 0-9
+            | x >= 97 && x <= 102 = x - 87 -- hexits a-f
+            | otherwise = error "Must be a hexit"
+
+-- sample data from first line of https://ed25519.cr.yp.to/python/sign.input
 -- see https://ed25519.cr.yp.to/python/sign.py for how to read input data
 
+
 sampleSig :: BSL.ByteString
-sampleSig = "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b"
+sampleSig = hexParse "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b"
 
 samplePubKey :: BSL.ByteString
-samplePubKey = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
+samplePubKey = hexParse "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
 
 sampleMsg :: BSL.ByteString
 sampleMsg = mempty
