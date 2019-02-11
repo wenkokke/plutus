@@ -5,6 +5,7 @@ load(
     "haskell_library",
     "haskell_test",
 )
+load("@ai_formation_hazel//:hazel.bzl", "hazel_library")
 
 haskell_packages = [
     "array",
@@ -77,7 +78,7 @@ bench_packages = [
 
 [
     haskell_import(name = name)
-    for name in (list(depset(haskell_packages + binary_packages + test_packages + bench_packages)))
+    for name in (list(depset(binary_packages + test_packages + bench_packages)))
 ]
 
 genrule(
@@ -118,7 +119,7 @@ haskell_library(
     ],
     src_strip_prefix = "src",
     visibility = ["//visibility:public"],
-    deps = [":" + name for name in haskell_packages] + [],
+    deps = [hazel_library(name) for name in haskell_packages] + [],
 )
 
 haskell_binary(
@@ -126,7 +127,7 @@ haskell_binary(
     srcs = ["generate-evaluation-test/Main.hs"],
     src_strip_prefix = "generate-evaluation-test",
     visibility = ["//visibility:public"],
-    deps = [":" + name for name in binary_packages] + [
+    deps = [hazel_library(name) for name in binary_packages] + [
         ":language-plutus-core",
     ],
     linkstatic = True,

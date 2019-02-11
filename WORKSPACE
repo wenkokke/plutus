@@ -9,6 +9,11 @@ git_repository(
     commit = "7de23828da90f15453d155890adc47de3538fb5c",
 )
 
+local_repository(
+    name = "ai_formation_hazel",
+    path = "/Users/davidsmith/tweag/hazel-da",
+)
+
 # rules_nixpkgs needs to go but it seems it is used by rules_haskell at the moment
 http_archive(
     name = "io_tweag_rules_nixpkgs",
@@ -41,11 +46,24 @@ filegroup(
 
 # To avoid recursive nix we import tools from the environment
 # use `nix-shell shell-bazel.nix` to ensure these are the correct tools
+new_local_repository(
+  name = "glib_locales",
+  path = "./tools/glibc-locales",
+  build_file_content = """
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+  name = "locale-archive",
+  srcs = ["lib/locale/locale-archive"],
+)
+"""
+)
 
 new_local_repository(
   name = "ghc",
   path = "./tools/ghc",
-  build_file_content = local_pkg,
+  # build_file_content = local_pkg,
+  build_file = "BUILD.ghc",
 )
 
 new_local_repository(
@@ -100,6 +118,15 @@ register_toolchains(
     "//:purs_darwin_bindist_toolchain",
     "//:purs_linux_nixpkgs_toolchain",
     "//:purs_linux_bindist_toolchain",
+)
+
+load("@ai_formation_hazel//:hazel.bzl", "hazel_repositories")
+load("//:haskell_packages.bzl", "core_packages", "packages")
+load("//:haskell_packages_extra.bzl", "extra_packages")
+
+hazel_repositories(
+    core_packages = core_packages,
+    packages = (packages + extra_packages),
 )
 
 # load the purescript rules and functions:

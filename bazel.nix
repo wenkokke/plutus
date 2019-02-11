@@ -52,18 +52,21 @@ let
     (input: localLib.pkgs.lib.all (p: input.outPath != p.outPath) selected)
     (localLib.pkgs.lib.concatMap (p: p.haskellBuildInputs) packageInputs);
   # These are tools that will be used by bazel
-  ghc = haskellPackages.ghcWithPackages (ps: haskellInputs);
+  # We need a specific version of bazel
+  bazelNixpkgs = import (localLib.iohkNix.fetchNixpkgs ./nixpkgs-bazel-src.json) {};
+  ghc = bazelNixpkgs.haskell.packages.ghc844.ghc;
   happy = haskellPackages.happy;
   alex = haskellPackages.alex;
   hlint = haskellPackages.hlint;
   stylishHaskell = haskellPackages.stylish-haskell;
-  # We need a specific version of bazel
-  bazelNixpkgs = import (localLib.iohkNix.fetchNixpkgs ./nixpkgs-bazel-src.json) {};
   nodejs = bazelNixpkgs.nodejs;
   yarn = bazelNixpkgs.yarn;
   purescript = if pkgs.stdenv.isDarwin
     then pkgs.writeTextFile {name = "purescript"; text = ""; destination = "/bin/purs"; }
     else (import (localLib.iohkNix.fetchNixpkgs ./plutus-playground/plutus-playground-client/nixpkgs-src.json) {}).purescript;
+  glibcLocales = if pkgs.stdenv.isDarwin
+    then pkgs.writeTextFile {name = "glibcLocales"; text = ""; destination = "/lib/locale/locale-archive"; }
+    else pkgs.glibcLocales;
   mkBazelScript = {name, script}: pkgs.stdenv.mkDerivation {
           name = name;
           unpackPhase = "true";
@@ -83,6 +86,36 @@ let
   shellcheckScript = mkBazelScript { name = "shellcheckScript";
                                      script = import ./test-scripts/shellcheck-script.nix {inherit pkgs;};
                                      };
+  /* with pkgs; */
+  /* with darwin.apple_sdk.frameworks; */
+  # XXX On Darwin, workaround
+  # https://github.com/NixOS/nixpkgs/issues/42059. See also
+  # https://github.com/NixOS/nixpkgs/pull/41589.
+  cc = with pkgs; with darwin.apple_sdk.frameworks; runCommand "cc-wrapper-bazel" {
+      buildInputs = [ stdenv.cc makeWrapper libiconv ];
+    }
+    ''
+      mkdir -p $out/bin
+      # Copy the content of stdenv.cc
+      for i in ${stdenv.cc}/bin/*
+      do
+        ln -sf $i $out/bin
+      done
+      # Override clang
+      rm $out/bin/clang
+      makeWrapper ${stdenv.cc}/bin/clang $out/bin/clang \
+        --add-flags "-isystem ${llvmPackages.libcxx}/include/c++/v1 \
+                     -F${CoreFoundation}/Library/Frameworks \
+                     -F${CoreServices}/Library/Frameworks \
+                     -F${Security}/Library/Frameworks \
+                     -F${Foundation}/Library/Frameworks \
+                     -L${libcxx}/lib \
+                     -L${libiconv}/lib \
+                     -L${darwin.libobjc}/lib"
+   '';
+  mkShell = pkgs.mkShell.override {
+     stdenv = with pkgs; if stdenv.isDarwin then overrideCC stdenv cc else stdenv;
+  };
 in
 pkgs.stdenv.mkDerivation {
   name = "plutus-all";
@@ -104,6 +137,7 @@ pkgs.stdenv.mkDerivation {
     pkgs.perl
     pkgs.file
     bazelNixpkgs.bazel
+    pkgs.libiconv
   ];
 
   configurePhase = ''
@@ -149,6 +183,7 @@ pkgs.stdenv.mkDerivation {
     ln -nfs ${stylishHaskellScript} ./tools/stylish-haskell
     ln -nfs ${shellcheckScript} ./tools/shellcheck
     ln -nfs ${purescript} ./tools/purescript
+    ln -nfs ${glibcLocales} ./tools/glibc-locales
     mkdir -p yarn-nix/bin
     ln -nfs ${nodejs} ./node-nix
     ln -nfs ${yarn}/bin/yarn ./yarn-nix/bin/yarn.js
