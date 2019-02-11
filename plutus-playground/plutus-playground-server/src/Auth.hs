@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE ConstraintKinds     #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DeriveAnyClass      #-}
@@ -103,7 +104,8 @@ data AuthRole
 
 newtype AuthStatus = AuthStatus
   { _authStatusAuthRole :: AuthRole
-  } deriving (Show, Eq, Generic, FromJSON, ToJSON)
+  } deriving stock (Show, Eq, Generic)
+    deriving anyclass (FromJSON, ToJSON)
 
 data GithubEndpoints = GithubEndpoints
   { _githubEndpointsAuthLocation        :: !Request

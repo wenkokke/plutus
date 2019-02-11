@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -98,11 +99,13 @@ instance ToJSON NewGist where
 data NewGistFile = NewGistFile
   { _newGistFilename    :: !Text
   , _newGistFileContent :: !Text
-  } deriving (Show, Eq, Generic, FromJSON)
+  } deriving stock (Show, Eq, Generic)
+    deriving anyclass (FromJSON)
 
 newtype GistId =
   GistId Text
-  deriving (Show, Eq, Generic, FromJSON, ToJSON)
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON)
 
 instance ToHttpApiData GistId where
   toQueryParam (GistId gistId) = gistId
