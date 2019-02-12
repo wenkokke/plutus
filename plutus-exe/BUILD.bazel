@@ -3,6 +3,7 @@ load(
     "haskell_binary",
     "haskell_import",
 )
+load("@ai_formation_hazel//:hazel.bzl", "hazel_library")
 
 binary_packages = [
     "base",
@@ -25,7 +26,7 @@ haskell_binary(
     srcs = ["src/Main.hs"],
     src_strip_prefix = "src",
     visibility = ["//visibility:public"],
-    deps = [":" + name for name in binary_packages] + [
+    deps = [hazel_library(name) for name in binary_packages] + [
         "//plutus-core-interpreter:plutus-core-interpreter",
         "//language-plutus-core:language-plutus-core",
     ],

@@ -1,0 +1,69 @@
+package(default_visibility = ["//visibility:public"])
+
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+load("@ai_formation_hazel//:hazel.bzl", "hazel_library")
+
+config_setting(
+    name = "linux",
+    constraint_values = [
+        "@bazel_tools//platforms:linux",
+    ]
+)
+config_setting(
+    name = "osx",
+    constraint_values = [
+        "@bazel_tools//platforms:osx",
+    ]
+)
+config_setting(
+    name = "windows",
+    constraint_values = [
+        "@bazel_tools//platforms:windows",
+    ]
+)
+
+cc_library(
+  name = "cbits-osx",
+  srcs = ["cbits/hs_clock_darwin.c"],
+  hdrs = ["cbits/hs_clock_darwin.c"],
+  strip_include_prefix = "cbits",
+)
+
+cc_library(
+  name = "cbits-windows",
+  srcs = ["cbits/hs_clock_win32.c"],
+  hdrs = ["cbits/hs_clock_win32.c"],
+  strip_include_prefix = "cbits",
+)
+
+cc_library(
+  name = "clock-cbits",
+  deps = select({
+    ":osx": [":cbits-osx"],
+    ":windows": [":cbits-windows"],
+    ":linux": [],
+  }),
+)
+
+haskell_library(
+  name = "clock",
+  srcs = [
+    "System/Clock.hsc",
+  ],
+  extra_srcs = [
+    ":cbits",
+  ],
+  compiler_flags = [
+    "-XCPP",
+    "-DUseGHC",
+    "-XDeriveGeneric",
+    "-XDeriveDataTypeable",
+    "-XForeignFunctionInterface",
+    "-XScopedTypeVariables",
+    "-XViewPatterns",
+  ],
+  deps = [
+    hazel_library("base"),
+    ":clock-cbits",
+  ],
+)

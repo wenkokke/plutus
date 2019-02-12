@@ -147,7 +147,7 @@ haskell_test(
         "-XFlexibleContexts",
     ],
     visibility = ["//visibility:public"],
-    deps = [":" + name for name in test_packages] + [
+    deps = [hazel_library(name) for name in test_packages] + [
         ":language-plutus-core",
     ],
 )
@@ -156,7 +156,7 @@ load("//:benchmark.bzl", "haskell_benchmark")
 
 haskell_benchmark(
     name = "language-plutus-core-bench",
-    deps = [":" + name for name in bench_packages] + [
+    deps = [hazel_library(name) for name in bench_packages] + [
         ":language-plutus-core",
     ],
     srcs = glob([

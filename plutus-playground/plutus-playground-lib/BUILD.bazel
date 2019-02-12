@@ -4,6 +4,7 @@ load(
     "haskell_library",
     "haskell_test",
 )
+load("@ai_formation_hazel//:hazel.bzl", "hazel_library")
 
 haskell_packages = [
     "aeson",
@@ -37,7 +38,6 @@ test_packages = [
     "tasty-hunit",
     "template-haskell",
     "text",
-    "wallet-api",
 ]
 
 [
@@ -64,7 +64,7 @@ haskell_library(
     ],
     visibility = ["//visibility:public"],
     src_strip_prefix = "src",
-    deps = [":" + name for name in haskell_packages] + [
+    deps = [hazel_library(name) for name in haskell_packages] + [
         "//plutus-tx:plutus-tx",
         "//plutus-use-cases:plutus-use-cases",
         "//wallet-api:wallet-api",
@@ -82,8 +82,9 @@ haskell_test(
       "tests/**/*",
     ]),
     visibility = ["//visibility:public"],
-    deps = [":" + name for name in test_packages] + [
+    deps = [hazel_library(name) for name in test_packages] + [
         ":plutus-playground-lib",
+        "//wallet-api:wallet-api",
     ],
 )
 

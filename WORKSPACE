@@ -4,16 +4,29 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 git_repository(
+    name = "bazel_skylib",
+    remote = "https://github.com/bazelbuild/bazel-skylib.git",
+    tag = "0.6.0"
+)
+git_repository(
+    name = "io_tweag_rules_purescript",
+    remote = "https://github.com/tweag/rules_purescript.git",
+    commit = "2798d3c2ba995c68c9c10cafc3658ddae85fd272",
+)
+git_repository(
     name = "io_tweag_rules_haskell",
     remote = "https://github.com/tweag/rules_haskell.git",
     commit = "7de23828da90f15453d155890adc47de3538fb5c",
 )
-
 local_repository(
     name = "ai_formation_hazel",
     path = "/Users/davidsmith/tweag/hazel-da",
 )
-
+git_repository(
+    name = "build_bazel_rules_nodejs",
+    remote = "https://github.com/bazelbuild/rules_nodejs.git",
+    tag = "0.16.5", # check for the latest tag when you install
+)
 # rules_nixpkgs needs to go but it seems it is used by rules_haskell at the moment
 http_archive(
     name = "io_tweag_rules_nixpkgs",
@@ -21,10 +34,43 @@ http_archive(
     urls = ["https://github.com/tweag/rules_nixpkgs/archive/v0.5.1.tar.gz"],
 )
 
+load("@ai_formation_hazel//:hazel.bzl", "hazel_custom_package_hackage", "hazel_custom_package_github")
+load("@ai_formation_hazel//:hazel.bzl", "hazel_repositories")
 load(
     "@io_tweag_rules_nixpkgs//nixpkgs:nixpkgs.bzl",
     "nixpkgs_package",
 )
+load("@io_tweag_rules_purescript//purescript:purescript.bzl",
+     "purescript_toolchain", "purescript_dep", "purescript_distributions")
+
+hazel_custom_package_hackage(
+  package_name = "clock",
+  version = "0.7.2",
+  sha256 = "886601978898d3a91412fef895e864576a7125d661e1f8abc49a2a08840e691f",
+)
+
+hazel_custom_package_hackage(
+  package_name = "zlib",
+  version = "0.6.2",
+  sha256 = "0dcc7d925769bdbeb323f83b66884101084167501f11d74d21eb9bc515707fed",
+)
+
+# currently this fork is required for bazel due to fileEmbed paths
+hazel_custom_package_github(
+  package_name = "wai-app-static",
+  github_user = "FormationAI",
+  github_repo = "wai",
+  strip_prefix = "wai-app-static",
+  repo_sha = "9217512fae1d6c2317447b257f478005efb55ef7",
+)
+
+hazel_custom_package_github(
+  package_name = "servant-purescript",
+  github_user = "shmish111",
+  github_repo = "servant-purescript",
+  repo_sha = "18e1b61bf0aa3792285c6d8ecd0e4a72d76e34f5",
+)
+
 
 local_pkg = """
 package(default_visibility = ["//visibility:public"])
@@ -98,21 +144,6 @@ new_local_repository(
 
 ############################################################ Font End Stuff ######################################################3
 
-
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
-
-git_repository(
-    name = "bazel_skylib",
-    remote = "https://github.com/bazelbuild/bazel-skylib.git",
-    tag = "0.6.0"
-)
-
-git_repository(
-    name = "io_tweag_rules_purescript",
-    remote = "https://github.com/tweag/rules_purescript.git",
-    commit = "2798d3c2ba995c68c9c10cafc3658ddae85fd272",
-)
-
 register_toolchains(
     "//:ghc",
     "//:purs_darwin_bindist_toolchain",
@@ -120,21 +151,17 @@ register_toolchains(
     "//:purs_linux_bindist_toolchain",
 )
 
-load("@ai_formation_hazel//:hazel.bzl", "hazel_repositories")
 load("//:haskell_packages.bzl", "core_packages", "packages")
 load("//:haskell_packages_extra.bzl", "extra_packages")
-
 hazel_repositories(
     core_packages = core_packages,
     packages = (packages + extra_packages),
 )
 
 # load the purescript rules and functions:
-load("@io_tweag_rules_purescript//purescript:purescript.bzl",
-     "purescript_toolchain", "purescript_dep", "purescript_distributions")
-
 purescript_distributions(path="./tools/purescript")
 
+# TODO: I don't think we use sass at the moment
 http_archive(
     name = "io_bazel_rules_sass",
     # Make sure to check for the latest version when you install
@@ -151,12 +178,6 @@ rules_sass_dependencies()
 # Setup repositories which are needed for the Sass rules.
 load("@io_bazel_rules_sass//:defs.bzl", "sass_repositories")
 sass_repositories()
-
-git_repository(
-    name = "build_bazel_rules_nodejs",
-    remote = "https://github.com/bazelbuild/rules_nodejs.git",
-    tag = "0.16.5", # check for the latest tag when you install
-)
 
 load("@build_bazel_rules_nodejs//:package.bzl", "rules_nodejs_dependencies")
 rules_nodejs_dependencies()

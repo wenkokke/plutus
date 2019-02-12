@@ -1,0 +1,34 @@
+package(default_visibility = ["//visibility:public"])
+
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+load("@ai_formation_hazel//:hazel.bzl", "hazel_library")
+
+haskell_library(
+  name = "servant-purescript",
+  srcs = glob([
+    "src/**/*.hs",
+  ]),
+  deps = [
+    hazel_library("base"),
+    hazel_library("aeson"),
+    hazel_library("bytestring"),
+    hazel_library("containers"),
+    hazel_library("directory"),
+    hazel_library("filepath"),
+    hazel_library("http-types"),
+    hazel_library("lens"),
+    hazel_library("mainland-pretty"),
+    hazel_library("purescript-bridge"),
+    hazel_library("servant"),
+    hazel_library("servant-foreign"),
+    hazel_library("servant-server"),
+    hazel_library("servant-subscriber"),
+    hazel_library("text"),
+      ],
+  version = "0.9.0.2",
+)
+
+cc_import(
+    name = "servant-purescript-cbits",
+    visibility = ["//visibility:public"],
+)

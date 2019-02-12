@@ -4,6 +4,7 @@ load(
     "haskell_library",
     "haskell_test",
 )
+load("@ai_formation_hazel//:hazel.bzl", "hazel_library")
 
 haskell_packages = [
     "base",
@@ -47,7 +48,7 @@ haskell_library(
     ],
     src_strip_prefix = "src",
     visibility = ["//visibility:public"],
-    deps = [":" + name for name in haskell_packages] + [
+    deps = [hazel_library(name) for name in haskell_packages] + [
         "//language-plutus-core:language-plutus-core",
     ],
 )
@@ -63,7 +64,7 @@ haskell_test(
     ],
     src_strip_prefix = "test",
     visibility = ["//visibility:public"],
-    deps = [":" + name for name in test_packages] + [
+    deps = [hazel_library(name) for name in test_packages] + [
         ":plutus-core-interpreter",
         "//language-plutus-core:language-plutus-core",
     ],
