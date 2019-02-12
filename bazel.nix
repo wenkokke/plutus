@@ -7,60 +7,17 @@
 
 let
   localLib = import ./lib.nix { inherit config system; };
-  forceDontCheck = false;
-  enableProfiling = false;
-  enableSplitCheck = true;
-  enableDebugging = false;
-  enableBenchmarks = true;
-  enablePhaseMetrics = true;
-  enableHaddockHydra = true;
-  fasterBuild = false;
-  forceError = true;
-  # This is the stackage LTS plus overrides, plus the plutus
-  # packages.
-  haskellPackages = let
-    errorOverlay = import ./nix/overlays/force-error.nix {
-      pkgs = localLib.pkgs;
-      filter = localLib.isPlutus;
-    };
-  customOverlays = with localLib.pkgs.lib; optional forceError errorOverlay;
-  pkgsGenerated = import ./pkgs { inherit pkgs; };
-  in localLib.pkgs.callPackage localLib.iohkNix.haskellPackages {
-    inherit forceDontCheck enableProfiling enablePhaseMetrics
-    enableHaddockHydra enableBenchmarks fasterBuild enableDebugging
-    enableSplitCheck customOverlays pkgsGenerated;
-    inherit (pkgsGenerated) ghc;
-    filter = localLib.isPlutus;
-    filterOverrides = {
-      splitCheck = let
-        dontSplit = [
-          # Broken for things with test tool dependencies
-          "wallet-api"
-          "plutus-tx"
-          # Broken for things which pick up other files at test runtime
-          "plutus-playground-server"
-        ];
-        # Split only local packages not in the don't split list
-        doSplit = builtins.filter (name: !(builtins.elem name dontSplit)) localLib.plutusPkgList;
-        in name: builtins.elem name doSplit;
-    };
-    requiredOverlay = ./nix/overlays/required.nix;
-  };
-  selected = localLib.pkgs.lib.attrValues (localLib.pkgs.lib.filterAttrs (n: v: localLib.isPlutus n) haskellPackages);
-  packageInputs = map localLib.pkgs.haskell.lib.getBuildInputs selected;
-  haskellInputs = localLib.pkgs.lib.filter
-    (input: localLib.pkgs.lib.all (p: input.outPath != p.outPath) selected)
-    (localLib.pkgs.lib.concatMap (p: p.haskellBuildInputs) packageInputs);
+  pkgs = import (localLib.iohkNix.fetchNixpkgs ./nixpkgs-bazel-src.json) {};
   # These are tools that will be used by bazel
   # We need a specific version of bazel
-  bazelNixpkgs = import (localLib.iohkNix.fetchNixpkgs ./nixpkgs-bazel-src.json) {};
-  ghc = bazelNixpkgs.haskell.packages.ghc844.ghc;
-  happy = haskellPackages.happy;
-  alex = haskellPackages.alex;
-  hlint = haskellPackages.hlint;
-  stylishHaskell = haskellPackages.stylish-haskell;
-  nodejs = bazelNixpkgs.nodejs;
-  yarn = bazelNixpkgs.yarn;
+  haskellPackages = pkgs.haskellPackages;
+  ghc = pkgs.haskell.packages.ghc844.ghc;
+  happy = pkgs.haskellPackages.happy;
+  alex = pkgs.haskellPackages.alex;
+  hlint = pkgs.haskellPackages.hlint;
+  stylishHaskell = pkgs.haskellPackages.stylish-haskell;
+  nodejs = pkgs.nodejs;
+  yarn = pkgs.yarn;
   purescript = if pkgs.stdenv.isDarwin
     then pkgs.writeTextFile {name = "purescript"; text = ""; destination = "/bin/purs"; }
     else (import (localLib.iohkNix.fetchNixpkgs ./plutus-playground/plutus-playground-client/nixpkgs-src.json) {}).purescript;
@@ -136,7 +93,7 @@ pkgs.stdenv.mkDerivation {
     pkgs.unzip
     pkgs.perl
     pkgs.file
-    bazelNixpkgs.bazel
+    pkgs.bazel
     pkgs.libiconv
   ];
 
