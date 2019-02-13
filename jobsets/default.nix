@@ -1,7 +1,10 @@
 { nixpkgs ? <nixpkgs>
-, declInput ? { rev = "bazel-nix-hydra"; }
+, plutusPrsJSON ? ./simple-pr-dummy.json
+, declInput ? { rev = "bazel-nix"; }
 }:
 let
+    plutusPrs = builtins.fromJSON (builtins.readFile plutusPrsJSON );
+
     plutusURI = "git@github.com:input-output-hk/plutus.git";
     mkFetchGithub = value: {
       inherit value;
@@ -19,6 +22,7 @@ let
       checkinterval = 90;
       inputs = {
         nixpkgs   = mkFetchGithub "https://github.com/NixOS/nixpkgs.git ${nixpkgs-src.rev}";
+        jobsetSrc = mkFetchGithub "${declInput.uri} ${declInput.rev}";
       } // extraInputs;
       enableemail = false;
       emailoverride = "";
@@ -30,7 +34,7 @@ let
       emailresponsible = false;
     };
 
-    mkJob = { name, description, nixexprinput, nixexprpath, extraInputs ? {} }: {
+    mkJob = { name, description, nixexprinput ? "jobsetSrc", nixexprpath, extraInputs ? {} }: {
       inherit name;
       value = (defaultSettings extraInputs) // {
         inherit description nixexprinput nixexprpath;
@@ -45,7 +49,6 @@ let
       mkJob {
         inherit name description;
         nixexprpath = "jobsets/release.nix";
-        nixexprinput = "plutusSrc";
         extraInputs = {
           plutusSrc = mkFetchGithub "${plutusURI} ${plutusBranch}";
         };
@@ -59,6 +62,18 @@ let
           plutusBranch = "bazel-nix-hydra";
         })
       ]
+      ++
+      (pkgs.lib.mapAttrsToList
+        (
+          num:
+          info: mkPlutus {
+            name = "plutus-PR-${num}";
+            description = info.title;
+            plutusBranch = info.head.sha;
+          }
+        )
+        plutusPrs
+      )
     );
 
     jobsetDefinition = plutusJobsetDefinition;
