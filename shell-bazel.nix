@@ -2,13 +2,11 @@
 , config ? {}
 , localPackages ? import ./. { inherit config system; }
 , pkgs ? localPackages.pkgs
-, plutusSrc ? ./.
 }:
 
 let
   localLib = import ./lib.nix { inherit config system; };
   pkgs = import (localLib.iohkNix.fetchNixpkgs ./nixpkgs-bazel-src.json) {};
-  # These are tools that will be used by bazel
   haskellPackages = pkgs.haskellPackages;
   ghc = pkgs.haskell.packages.ghc844.ghc;
   happy = haskellPackages.happy;
@@ -69,36 +67,29 @@ let
                      -L${libiconv}/lib \
                      -L${darwin.libobjc}/lib"
    '';
-   stdenv = if pkgs.stdenv.isDarwin then pkgs.overrideCC pkgs.stdenv pkgs.cc else pkgs.stdenv;
+  mkShell = pkgs.mkShell.override {
+     stdenv = with pkgs; if stdenv.isDarwin then overrideCC stdenv cc else stdenv;
+  };
 in
-stdenv.mkDerivation {
-  name = "plutus-all";
-
+mkShell {
   # XXX: hack for macosX, this flag disables bazel usage of xcode
   # Note: this is set even for linux so any regression introduced by this flag
   # will be caught earlier
   # See: https://github.com/bazelbuild/bazel/issues/4231
   BAZEL_USE_CPP_ONLY_TOOLCHAIN=1;
 
-  src = plutusSrc;
-
   buildInputs = [
     ghc
     pkgs.git
     pkgs.cacert
-    pkgs.libcxx
-    pkgs.unzip
-    pkgs.perl
-    pkgs.file
     pkgs.bazel
     pkgs.libiconv
   ];
 
-  configurePhase = ''
-    export HOME="$NIX_BUILD_TOP"
-
-    # Add nix config flags to .bazelrc.
-    BAZELRC_LOCAL="$HOME/.bazelrc"
+  shellHook = ''
+    # Add nix config flags to .bazelrc.local.
+    #
+    BAZELRC_LOCAL=".bazelrc.local"
     if [ ! -e "$BAZELRC_LOCAL" ]
     then
       ARCH=""
@@ -107,26 +98,19 @@ stdenv.mkDerivation {
       elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
         ARCH="linux"
       fi
+      echo "To get started try running"
+      echo ""
+      echo 'bazel test --test_env BUILD_WORKSPACE_DIRECTORY=$(pwd) //...'
+      echo ""
+      echo "[!] It looks like you are using a ''${ARCH} nix-based system. In order to build this project, you probably need to add the two following host_platform entries to your .bazelrc.local file."
+      echo ""
+      echo "common --host_platform=@io_tweag_rules_purescript//purescript/platforms:''${ARCH}_x86_64_nixpkgs"
+      echo "common --platforms=@io_tweag_rules_purescript//purescript/platforms:''${ARCH}_x86_64_nixpkgs"
+      echo "libcxx: ${cc}"
     fi
 
-    if [ "$ARCH" == "linux" ]
-    then
-      (
-        echo "common --host_platform=@io_tweag_rules_purescript//purescript/platforms:linux_x86_64_nixpkgs"
-        echo "common --platforms=@io_tweag_rules_purescript//purescript/platforms:linux_x86_64_nixpkgs"
-      ) >> $BAZELRC_LOCAL
-    fi
-
-    (
-      echo "common --remote_http_cache=http://34.243.81.23:80"
-      echo "common --verbose_failures"
-      echo "test --test_output=errors"
-      echo "test --test_verbose_timeout_warnings"
-      echo "test --test_env=PATH"
-      echo "test --test_env=BUILD_WORKSPACE_DIRECTORY"
-    ) >> $BAZELRC_LOCAL
-
-    export BUILD_WORKSPACE_DIRECTORY=$PWD
+    # source bazel bash completion
+    source ${pkgs.bazel}/share/bash-completion/completions/bazel
 
     # link the tools bazel will import to predictable locations
     mkdir -p tools
@@ -141,18 +125,5 @@ stdenv.mkDerivation {
     mkdir -p yarn-nix/bin
     ln -nfs ${nodejs} ./node-nix
     ln -nfs ${yarn}/bin/yarn ./yarn-nix/bin/yarn.js
-  '';
-
-  shellHook = ''
-    # source bazel bash completion
-    source ${pkgs.bazel}/share/bash-completion/completions/bazel
-  '';
-
-  buildPhase = "bazel test //...";
-
-  installPhase = ''
-    mkdir -p $out/bin
-    unzip bazel-bin/plutus-playground/plutus-playground-client/dist.zip -d $out/plutus-playground-client/
-    cp bazel-bin/plutus-playground/plutus-playground-server/plutus-playground-server-app $out/bin/
   '';
 }

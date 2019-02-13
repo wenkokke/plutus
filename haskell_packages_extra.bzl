@@ -23,4 +23,10 @@ extra_packages = (
       sha256 =
         "e6df19c3e7f548faf727381fb5738e682bd62df0fa29d559e26e64b88b66263e",
     ),
+  "jwt":
+    struct(
+      version = "0.9.0",
+      sha256 =
+        "258dd220368d869902232af2166e628abfd75c5112f860342107cb71a15293be",
+    ),
 })

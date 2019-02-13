@@ -13,14 +13,19 @@ git_repository(
     remote = "https://github.com/tweag/rules_purescript.git",
     commit = "2798d3c2ba995c68c9c10cafc3658ddae85fd272",
 )
-git_repository(
+# git_repository(
+#     name = "io_tweag_rules_haskell",
+#     remote = "https://github.com/tweag/rules_haskell.git",
+#     commit = "e08bb91ef379b2215808f0cc60b6dfee30c09ac2",
+# )
+local_repository(
     name = "io_tweag_rules_haskell",
-    remote = "https://github.com/tweag/rules_haskell.git",
-    commit = "7de23828da90f15453d155890adc47de3538fb5c",
+    path = "/Users/davidsmith/tweag/rules_haskell",
 )
+
 local_repository(
     name = "ai_formation_hazel",
-    path = "/Users/davidsmith/tweag/hazel-da",
+    path = "/Users/davidsmith/tweag/hazel",
 )
 git_repository(
     name = "build_bazel_rules_nodejs",
@@ -64,6 +69,7 @@ hazel_custom_package_github(
   repo_sha = "9217512fae1d6c2317447b257f478005efb55ef7",
 )
 
+# Needs some patches, but upstream seems to be fairly dead (no activity in > 1 year)
 hazel_custom_package_github(
   package_name = "servant-purescript",
   github_user = "shmish111",
@@ -142,8 +148,6 @@ new_local_repository(
   build_file_content = local_pkg,
 )
 
-############################################################ Font End Stuff ######################################################3
-
 register_toolchains(
     "//:ghc",
     "//:purs_darwin_bindist_toolchain",
@@ -157,6 +161,8 @@ hazel_repositories(
     core_packages = core_packages,
     packages = (packages + extra_packages),
 )
+
+############################################################ Font End Stuff ######################################################3
 
 # load the purescript rules and functions:
 purescript_distributions(path="./tools/purescript")
