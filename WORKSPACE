@@ -13,19 +13,15 @@ git_repository(
     remote = "https://github.com/tweag/rules_purescript.git",
     commit = "2798d3c2ba995c68c9c10cafc3658ddae85fd272",
 )
-# git_repository(
-#     name = "io_tweag_rules_haskell",
-#     remote = "https://github.com/tweag/rules_haskell.git",
-#     commit = "e08bb91ef379b2215808f0cc60b6dfee30c09ac2",
-# )
-local_repository(
+git_repository(
     name = "io_tweag_rules_haskell",
-    path = "/Users/davidsmith/tweag/rules_haskell",
+    remote = "https://github.com/tweag/rules_haskell.git",
+    commit = "59d7c72fe8f195a63571b39d785e4b753529694d",
 )
-
-local_repository(
+git_repository(
     name = "ai_formation_hazel",
-    path = "/Users/davidsmith/tweag/hazel",
+    remote = "https://github.com/FormationAI/hazel.git",
+    commit = "4684266e14e4a4ebb5973c1036f701f7f287d3fa",
 )
 git_repository(
     name = "build_bazel_rules_nodejs",
