@@ -69,9 +69,9 @@ let
                      -L${libiconv}/lib \
                      -L${darwin.libobjc}/lib"
    '';
-   stdenv = if pkgs.stdenv.isDarwin then pkgs.overrideCC pkgs.stdenv pkgs.cc else pkgs.stdenv;
+  patchedStdenv = with pkgs; if stdenv.isDarwin then overrideCC stdenv cc else stdenv;
 in
-stdenv.mkDerivation {
+patchedStdenv.mkDerivation {
   name = "plutus-all";
 
   # XXX: hack for macosX, this flag disables bazel usage of xcode
