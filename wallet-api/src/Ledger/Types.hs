@@ -92,41 +92,42 @@ module Ledger.Types(
     validRange
     ) where
 
-import qualified Codec.CBOR.Write                         as Write
-import           Codec.Serialise                          (deserialise, deserialiseOrFail, serialise)
-import           Codec.Serialise.Class                    (Serialise, decode, encode)
-import           Control.Lens                             hiding (lifted)
-import           Control.Monad                            (join)
-import           Control.Newtype.Generics     (Newtype)
-import           Crypto.Hash                              (Digest, SHA256, digestFromByteString, hash)
-import           Data.Aeson                               (FromJSON (parseJSON), ToJSON (toJSON), withText)
-import qualified Data.Aeson                               as JSON
-import           Data.Bifunctor                           (first)
-import qualified Data.ByteArray                           as BA
-import qualified Data.ByteString                          as BSS
-import qualified Data.ByteString.Base64                   as Base64
-import qualified Data.ByteString.Char8                    as BS8
-import qualified Data.ByteString.Lazy                     as BSL
-import           Data.Map                                 (Map)
-import qualified Data.Map                                 as Map
-import           Data.Maybe                               (isJust, listToMaybe)
-import           Data.Proxy                               (Proxy(Proxy))
-import qualified Data.Set                                 as Set
-import qualified Data.Text.Encoding                       as TE
-import           GHC.Generics                             (Generic)
-import           Data.Swagger.Internal.Schema             (ToSchema(declareNamedSchema), plain, paramSchemaToSchema)
-import qualified Language.Haskell.TH                      as TH
-import qualified Language.PlutusCore                      as PLC
-import           Language.PlutusTx.Evaluation             (evaluateCekTrace)
+import qualified Codec.CBOR.Write                      as Write
+import           Codec.Serialise                       (deserialise, deserialiseOrFail, serialise)
+import           Codec.Serialise.Class                 (Serialise, decode, encode)
+import           Control.Lens                          hiding (lifted)
+import           Control.Monad                         (join)
+import           Control.Newtype.Generics              (Newtype)
+import           Crypto.Hash                           (Digest, SHA256, digestFromByteString, hash)
+import           Data.Aeson                            (FromJSON (parseJSON), ToJSON (toJSON), withText)
+import qualified Data.Aeson                            as JSON
+import           Data.Bifunctor                        (first)
+import qualified Data.ByteArray                        as BA
+import qualified Data.ByteString                       as BSS
+import qualified Data.ByteString.Base64                as Base64
+import qualified Data.ByteString.Base64.Lazy.Type      as BSL64
+import qualified Data.ByteString.Char8                 as BS8
+import qualified Data.ByteString.Lazy                  as BSL
+import           Data.Map                              (Map)
+import qualified Data.Map                              as Map
+import           Data.Maybe                            (isJust, listToMaybe)
+import           Data.Proxy                            (Proxy (Proxy))
+import qualified Data.Set                              as Set
+import           Data.Swagger.Internal.Schema          (ToSchema (declareNamedSchema), paramSchemaToSchema, plain)
+import qualified Data.Text.Encoding                    as TE
+import           GHC.Generics                          (Generic)
+import qualified Language.Haskell.TH                   as TH
+import qualified Language.PlutusCore                   as PLC
 import           Language.PlutusCore.Evaluation.Result
-import           Language.PlutusTx.Lift                   (makeLift, unsafeLiftProgram)
-import           Language.PlutusTx.Lift.Class             (Lift)
-import           Language.PlutusTx.TH                     (CompiledCode, compile, getSerializedPlc)
+import           Language.PlutusTx.Evaluation          (evaluateCekTrace)
+import           Language.PlutusTx.Lift                (makeLift, unsafeLiftProgram)
+import           Language.PlutusTx.Lift.Class          (Lift)
+import           Language.PlutusTx.TH                  (CompiledCode, compile, getSerializedPlc)
 
-import           Ledger.Interval                          (Slot(..), SlotRange)
-import           Ledger.Ada                               (Ada)
-import           Ledger.Value                             (Value)
-import qualified Ledger.Value.TH                          as V
+import           Ledger.Ada                            (Ada)
+import           Ledger.Interval                       (Slot (..), SlotRange)
+import           Ledger.Value                          (Value)
+import qualified Ledger.Value.TH                       as V
 
 {- Note [Serialisation and hashing]
 
@@ -152,18 +153,18 @@ especially because we only need one direction (to binary).
 -}
 
 -- | Public key
-newtype PubKey = PubKey { getPubKey :: Int }
+newtype PubKey = PubKey { getPubKey :: BSL64.ByteString64 }
     deriving (Eq, Ord, Show)
     deriving stock (Generic)
-    deriving anyclass (ToSchema, ToJSON, FromJSON, Newtype)
+    deriving anyclass (ToJSON, FromJSON, Newtype)
     deriving newtype (Serialise)
 
 makeLift ''PubKey
 
-newtype Signature = Signature { getSignature :: Int }
+newtype Signature = Signature { getSignature :: BSL64.ByteString64 }
     deriving (Eq, Ord, Show)
     deriving stock (Generic)
-    deriving anyclass (ToSchema, ToJSON, FromJSON)
+    deriving anyclass (ToJSON, FromJSON)
     deriving newtype (Serialise)
 
 makeLift ''Signature
@@ -184,7 +185,6 @@ type TxId = TxIdOf (Digest SHA256)
 deriving newtype instance Serialise TxId
 deriving anyclass instance ToJSON a => ToJSON (TxIdOf a)
 deriving anyclass instance FromJSON a => FromJSON (TxIdOf a)
-deriving anyclass instance ToSchema a => ToSchema (TxIdOf a)
 
 instance Serialise (Digest SHA256) where
   encode = encode . BA.unpack
@@ -427,7 +427,6 @@ type TxOutRef = TxOutRefOf (Digest SHA256)
 deriving instance Serialise TxOutRef
 deriving instance ToJSON TxOutRef
 deriving instance FromJSON TxOutRef
-deriving instance ToSchema TxOutRef
 
 -- | A list of a transaction's outputs paired with their [[TxOutRef]]s
 txOutRefs :: Tx -> [(TxOut, TxOutRef)]

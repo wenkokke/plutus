@@ -85,6 +85,7 @@ library plutus-tx-compiler
     build-depends:
         base >=4.9 && <5,
         bytestring -any,
+        base64-bytestring-type,
         containers -any,
         ghc <8.5,
         language-plutus-core -any,

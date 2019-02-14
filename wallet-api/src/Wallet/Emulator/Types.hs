@@ -63,39 +63,40 @@ module Wallet.Emulator.Types(
     selectCoin
     ) where
 
-import           Control.Lens               hiding (index)
+import           Control.Lens                     hiding (index)
 import           Control.Monad.Except
-import           Control.Monad.Operational  as Op hiding (view)
+import           Control.Monad.Operational        as Op hiding (view)
 import           Control.Monad.State
 import           Control.Monad.Writer
-import           Control.Newtype.Generics   (Newtype)
-import           Data.Aeson                 (FromJSON, ToJSON, ToJSONKey)
-import           Data.Bifunctor             (Bifunctor (..))
-import           Data.Foldable              (foldl', traverse_)
-import           Data.List                  (partition)
-import           Data.Map                   (Map)
-import qualified Data.Map                   as Map
+import           Control.Newtype.Generics         (Newtype)
+import           Data.Aeson                       (FromJSON, ToJSON, ToJSONKey)
+import           Data.Bifunctor                   (Bifunctor (..))
+import qualified Data.ByteString.Base64.URL.Lazy.Type as BSLURL64
+import           Data.Foldable                    (foldl', traverse_)
+import           Data.List                        (partition)
+import           Data.Map                         (Map)
+import qualified Data.Map                         as Map
 import           Data.Maybe
-import qualified Data.Set                   as Set
-import qualified Data.Text                  as T
-import           GHC.Generics               (Generic)
-import           Prelude                    as P
-import           Servant.API                (FromHttpApiData, ToHttpApiData)
+import qualified Data.Set                         as Set
+import qualified Data.Text                        as T
+import           GHC.Generics                     (Generic)
+import           Prelude                          as P
+import           Servant.API                      (FromHttpApiData, ToHttpApiData)
 
-import           Data.Hashable              (Hashable)
-import           Ledger                     (Address, Block, Blockchain, Slot, Tx (..), TxId, TxOut, TxOutOf (..),
-                                             TxOutRef, Value, hashTx, lastSlot, pubKeyAddress, pubKeyTxIn, pubKeyTxOut,
-                                             txOutAddress)
-import qualified Ledger.Index               as Index
-import qualified Ledger.Interval            as Interval
-import qualified Ledger.Value               as Value
-import           Wallet.API                 (EventHandler (..), EventTrigger, KeyPair (..), WalletAPI (..),
-                                             WalletAPIError (..), WalletDiagnostics (..), WalletLog (..), addresses,
-                                             annTruthValue, getAnnot, keyPair, pubKey, signature)
-import qualified Wallet.Emulator.AddressMap as AM
+import           Data.Hashable                    (Hashable)
+import           Ledger                           (Address, Block, Blockchain, Slot, Tx (..), TxId, TxOut, TxOutOf (..),
+                                                   TxOutRef, Value, hashTx, lastSlot, pubKeyAddress, pubKeyTxIn,
+                                                   pubKeyTxOut, txOutAddress)
+import qualified Ledger.Index                     as Index
+import qualified Ledger.Interval                  as Interval
+import qualified Ledger.Value                     as Value
+import           Wallet.API                       (EventHandler (..), EventTrigger, KeyPair (..), WalletAPI (..),
+                                                   WalletAPIError (..), WalletDiagnostics (..), WalletLog (..),
+                                                   addresses, annTruthValue, getAnnot, keyPair, pubKey, signature)
+import qualified Wallet.Emulator.AddressMap       as AM
 
 -- agents/wallets
-newtype Wallet = Wallet { getWallet :: Int }
+newtype Wallet = Wallet { getWallet :: BSLURL64.ByteString64 }
     deriving (Show, Eq, Ord, Generic)
     deriving newtype (ToHttpApiData, FromHttpApiData, Hashable)
     deriving anyclass (Newtype, ToJSON, FromJSON, ToJSONKey)

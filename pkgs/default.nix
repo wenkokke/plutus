@@ -9193,8 +9193,10 @@ license = stdenv.lib.licenses.bsd3;
 , bytestring
 , cereal
 , deepseq
+, fetchgit
 , hashable
 , QuickCheck
+, serialise
 , stdenv
 , text
 }:
@@ -9202,9 +9204,16 @@ mkDerivation {
 
 pname = "base64-bytestring-type";
 version = "1";
-sha256 = "74019bd11f8012ae5ccc88c206bc5a8024f7605130099aabbac012073160e440";
+src = fetchgit {
+
+url = "https://github.com/input-output-hk/base64-bytestring-type.git";
+sha256 = "1lpf0s3v1waqwabs6ib1s0bczpgxpq16f1kspi67vbvkpcbdzrrh";
+rev = "95f0887bccaba1d3ec6fdb134b9e2c4b9ed39279";
+fetchSubmodules = true;
+
+};
 revision = "4";
-editedCabalFile = "0yfhy4a9n67l9w3amqrzzy79q47yyj6qbv5i5lqym5z7ygwmlzn6";
+editedCabalFile = "0gksm22rpwcy6aa7z68pqhv6pyxldyf4fh0hz5jsq4y8fy8l578l";
 libraryHaskellDepends = [
 aeson
 base
@@ -9216,6 +9225,7 @@ cereal
 deepseq
 hashable
 QuickCheck
+serialise
 text
 ];
 doHaddock = false;
@@ -46801,10 +46811,8 @@ license = "GPL";
 ({
   mkDerivation
 , base
-, bytestring
 , containers
 , hedgehog
-, lens
 , mtl
 , plutus-tx
 , stdenv
@@ -46822,9 +46830,7 @@ version = "0.1.0.0";
 src = .././marlowe;
 libraryHaskellDepends = [
 base
-bytestring
 containers
-lens
 mtl
 plutus-tx
 template-haskell
@@ -56385,7 +56391,6 @@ license = stdenv.lib.licenses.mit;
 , hedgehog
 , language-plutus-core
 , lens
-, mmorph
 , mtl
 , stdenv
 , tasty
@@ -56402,7 +56407,6 @@ base
 containers
 language-plutus-core
 lens
-mmorph
 mtl
 ];
 testHaskellDepends = [
@@ -56500,7 +56504,6 @@ transformers
 ];
 testHaskellDepends = [
 base
-bytestring
 hedgehog
 language-plutus-core
 megaparsec
@@ -56522,22 +56525,15 @@ license = stdenv.lib.licenses.bsd3;
   mkDerivation
 , aeson
 , base
-, base64-bytestring
 , bytestring
 , containers
 , hedgehog
-, hint
-, http-media
 , insert-ordered-containers
 , lens
 , memory
 , mtl
-, network
 , newtype-generics
-, plutus-tx
-, plutus-use-cases
 , servant
-, split
 , stdenv
 , swagger2
 , tasty
@@ -56555,21 +56551,14 @@ src = .././plutus-playground/plutus-playground-lib;
 libraryHaskellDepends = [
 aeson
 base
-base64-bytestring
 bytestring
 containers
-hint
-http-media
 insert-ordered-containers
 lens
 memory
 mtl
-network
 newtype-generics
-plutus-tx
-plutus-use-cases
 servant
-split
 swagger2
 template-haskell
 text
@@ -56607,7 +56596,6 @@ license = stdenv.lib.licenses.bsd3;
 , exceptions
 , file-embed
 , filepath
-, generics-sop
 , gitrev
 , hspec
 , hspec-discover
@@ -56625,7 +56613,6 @@ license = stdenv.lib.licenses.bsd3;
 , plutus-playground-lib
 , process
 , purescript-bridge
-, QuickCheck
 , regex-compat
 , servant
 , servant-client
@@ -56664,7 +56651,6 @@ cookie
 directory
 exceptions
 file-embed
-generics-sop
 http-client
 http-client-tls
 http-conduit
@@ -56725,7 +56711,6 @@ hspec
 insert-ordered-containers
 mtl
 plutus-playground-lib
-QuickCheck
 swagger2
 text
 transformers
@@ -56743,7 +56728,6 @@ license = stdenv.lib.licenses.bsd3;
 ({
   mkDerivation
 , base
-, bytestring
 , doctest
 , language-plutus-core
 , markdown-unlit
@@ -56759,7 +56743,6 @@ version = "0.1.0.0";
 src = .././plutus-tutorial;
 libraryHaskellDepends = [
 base
-bytestring
 language-plutus-core
 plutus-tx
 template-haskell
@@ -79045,6 +79028,7 @@ license = stdenv.lib.licenses.mit;
 , aeson
 , base
 , base64-bytestring
+, base64-bytestring-type
 , bytestring
 , cborg
 , containers
@@ -79052,7 +79036,6 @@ license = stdenv.lib.licenses.mit;
 , deriving-compat
 , hashable
 , hedgehog
-, http-media
 , language-plutus-core
 , lens
 , memory
@@ -79087,6 +79070,7 @@ libraryHaskellDepends = [
 aeson
 base
 base64-bytestring
+base64-bytestring-type
 bytestring
 cborg
 containers
@@ -79094,7 +79078,6 @@ cryptonite
 deriving-compat
 hashable
 hedgehog
-http-media
 language-plutus-core
 lens
 memory

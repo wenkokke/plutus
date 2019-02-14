@@ -74,6 +74,9 @@ import           Control.Lens               hiding (contains)
 import           Control.Monad              (void)
 import           Control.Monad.Error.Class  (MonadError (..))
 import           Data.Aeson                 (FromJSON, ToJSON)
+import qualified Data.ByteString.Base64.Lazy.Type as BSL64
+import           Data.ByteString.Base64.Lazy.Type (makeByteString64)
+import qualified Data.ByteString.Lazy       as BSL
 import           Data.Eq.Deriving           (deriveEq1)
 import           Data.Functor.Compose       (Compose (..))
 import           Data.Functor.Foldable      (Corecursive (..), Fix (..), Recursive (..), unfix)
@@ -95,7 +98,7 @@ import           Wallet.Emulator.AddressMap (AddressMap)
 
 import           Prelude                    hiding (Ordering (..))
 
-newtype PrivateKey = PrivateKey { getPrivateKey :: Int }
+newtype PrivateKey = PrivateKey { getPrivateKey :: BSL64.ByteString64 }
     deriving (Eq, Ord, Show)
     deriving newtype (FromJSON, ToJSON)
 
@@ -108,8 +111,8 @@ pubKey :: KeyPair -> PubKey
 pubKey = snd . getKeyPair
 
 -- | Create a [[KeyPair]] given a "private key"
-keyPair :: Int -> KeyPair
-keyPair i = KeyPair (PrivateKey i, PubKey i)
+keyPair :: BSL.ByteString -> KeyPair
+keyPair i = KeyPair (PrivateKey (makeByteString64 i), PubKey (makeByteString64 i))
 
 -- | Create a [[Signature]] signed by the private key of a
 --   [[KeyPair]]

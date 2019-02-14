@@ -84,6 +84,7 @@ library
         stm -any,
         swagger2 -any,
         template-haskell -any,
+        base64-bytestring-type,
         text -any,
         text -any,
         transformers -any,
