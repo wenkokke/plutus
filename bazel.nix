@@ -71,7 +71,7 @@ let
    '';
   patchedStdenv = with pkgs; if stdenv.isDarwin then overrideCC stdenv cc else stdenv;
 in
-patchedStdenv.mkDerivation {
+patchedStdenv.mkDerivation rec {
   name = "plutus-all";
 
   # XXX: hack for macosX, this flag disables bazel usage of xcode
@@ -93,6 +93,22 @@ patchedStdenv.mkDerivation {
     pkgs.bazel
     pkgs.libiconv
   ];
+
+  setupTools = ''
+    # link the tools bazel will import to predictable locations
+    mkdir -p tools
+    ln -nfs ${ghc} ./tools/ghc
+    ln -nfs ${happy} ./tools/happy
+    ln -nfs ${alex} ./tools/alex
+    ln -nfs ${hlintScript} ./tools/hlint
+    ln -nfs ${stylishHaskellScript} ./tools/stylish-haskell
+    ln -nfs ${shellcheckScript} ./tools/shellcheck
+    ln -nfs ${purescript} ./tools/purescript
+    ln -nfs ${glibcLocales} ./tools/glibc-locales
+    mkdir -p yarn-nix/bin
+    ln -nfs ${nodejs} ./node-nix
+    ln -nfs ${yarn}/bin/yarn ./yarn-nix/bin/yarn.js
+  '';
 
   configurePhase = ''
     export HOME="$NIX_BUILD_TOP"
@@ -128,22 +144,12 @@ patchedStdenv.mkDerivation {
 
     export BUILD_WORKSPACE_DIRECTORY=$PWD
 
-    # link the tools bazel will import to predictable locations
-    mkdir -p tools
-    ln -nfs ${ghc} ./tools/ghc
-    ln -nfs ${happy} ./tools/happy
-    ln -nfs ${alex} ./tools/alex
-    ln -nfs ${hlintScript} ./tools/hlint
-    ln -nfs ${stylishHaskellScript} ./tools/stylish-haskell
-    ln -nfs ${shellcheckScript} ./tools/shellcheck
-    ln -nfs ${purescript} ./tools/purescript
-    ln -nfs ${glibcLocales} ./tools/glibc-locales
-    mkdir -p yarn-nix/bin
-    ln -nfs ${nodejs} ./node-nix
-    ln -nfs ${yarn}/bin/yarn ./yarn-nix/bin/yarn.js
+    ${setupTools}
   '';
 
   shellHook = ''
+    ${setupTools}
+
     # source bazel bash completion
     source ${pkgs.bazel}/share/bash-completion/completions/bazel
   '';
