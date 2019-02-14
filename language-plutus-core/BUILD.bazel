@@ -134,7 +134,7 @@ haskell_binary(
 
 haskell_test(
     name = "language-plutus-core-test",
-    size = "small",
+    size = "medium",
     srcs = glob([
         "test/**/*.hs",
     ]),
