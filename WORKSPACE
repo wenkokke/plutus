@@ -20,8 +20,8 @@ git_repository(
 )
 git_repository(
     name = "ai_formation_hazel",
-    remote = "https://github.com/FormationAI/hazel.git",
-    commit = "4684266e14e4a4ebb5973c1036f701f7f287d3fa",
+    remote = "https://github.com/DACH-NY/hazel.git",
+    commit = "bc5bf5db3fc853ff27818ef0da39ce85d0de91f4",
 )
 git_repository(
     name = "build_bazel_rules_nodejs",
