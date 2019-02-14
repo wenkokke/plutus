@@ -84,7 +84,7 @@ let
                                      script = import ./test-scripts/shellcheck-script.nix {inherit pkgs;};
                                      };
 in
-pkgs.stdenv.mkDerivation {
+pkgs.stdenv.mkDerivation rec {
   name = "plutus-all";
 
   # XXX: hack for macosX, this flag disables bazel usage of xcode
@@ -105,6 +105,21 @@ pkgs.stdenv.mkDerivation {
     pkgs.file
     bazelNixpkgs.bazel
   ];
+
+  setupTools = ''
+    # link the tools bazel will import to predictable locations
+    mkdir -p tools
+    ln -nfs ${ghc} ./tools/ghc
+    ln -nfs ${happy} ./tools/happy
+    ln -nfs ${alex} ./tools/alex
+    ln -nfs ${hlintScript} ./tools/hlint
+    ln -nfs ${stylishHaskellScript} ./tools/stylish-haskell
+    ln -nfs ${shellcheckScript} ./tools/shellcheck
+    ln -nfs ${purescript} ./tools/purescript
+    mkdir -p yarn-nix/bin
+    ln -nfs ${nodejs} ./node-nix
+    ln -nfs ${yarn}/bin/yarn ./yarn-nix/bin/yarn.js
+  '';
 
   configurePhase = ''
     export HOME="$NIX_BUILD_TOP"
@@ -140,21 +155,12 @@ pkgs.stdenv.mkDerivation {
 
     export BUILD_WORKSPACE_DIRECTORY=$PWD
 
-    # link the tools bazel will import to predictable locations
-    mkdir -p tools
-    ln -nfs ${ghc} ./tools/ghc
-    ln -nfs ${happy} ./tools/happy
-    ln -nfs ${alex} ./tools/alex
-    ln -nfs ${hlintScript} ./tools/hlint
-    ln -nfs ${stylishHaskellScript} ./tools/stylish-haskell
-    ln -nfs ${shellcheckScript} ./tools/shellcheck
-    ln -nfs ${purescript} ./tools/purescript
-    mkdir -p yarn-nix/bin
-    ln -nfs ${nodejs} ./node-nix
-    ln -nfs ${yarn}/bin/yarn ./yarn-nix/bin/yarn.js
+    ${setupTools}
   '';
 
   shellHook = ''
+    ${setupTools}
+
     # source bazel bash completion
     source ${pkgs.bazel}/share/bash-completion/completions/bazel
   '';
