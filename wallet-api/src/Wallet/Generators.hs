@@ -60,11 +60,11 @@ generatorModel :: GeneratorModel
 generatorModel = 
     let vl = Ada.toValue $ Ada.fromInt 100000 in
     GeneratorModel 
-    { gmInitialBalance = Map.fromList $ first PubKey <$> zip pubKeys (repeat vl) -- [1..5] (repeat vl)
-    , gmPubKeys        = Set.fromList $ PubKey <$> pubKeys -- [1..5]
+    { gmInitialBalance = Map.fromList $ zip pubKeys (repeat vl) -- [1..5] (repeat vl)
+    , gmPubKeys        = Set.fromList $ pubKeys -- [1..5]
     }
     
-    where pubKeys :: [KeyBytes]
+    where pubKeys :: [PubKey]
           pubKeys = undefined
 
 -- | Estimate a transaction fee based on the number of its inputs and outputs.
