@@ -1,7 +1,6 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE KindSignatures    #-}
 {-# LANGUAGE PolyKinds         #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -14,8 +13,8 @@ import           Language.PlutusTx.Utils
 
 import           Language.PlutusIR
 
+import qualified Data.ByteString              as BS
 import qualified Data.ByteString.Lazy         as BSL
-import qualified Data.ByteString.Base64.Lazy.Type as BSL64
 import           Data.Proxy
 
 -- Derived instances
@@ -42,11 +41,11 @@ instance Typeable BSL.ByteString where
 instance Lift BSL.ByteString where
     lift bs = pure $ Constant () $ PLC.BuiltinBS () haskellBSSize bs
 
-instance Typeable BSL64.ByteString64 where
+instance Typeable BS.ByteString where
     typeRep _ = pure $ appSize haskellBSSize (TyBuiltin () PLC.TyByteString)
 
-instance Lift BSL64.ByteString64 where
-    lift bs = pure $ Constant () $ PLC.BuiltinBS () haskellBSSize (BSL64.getByteString64 bs)
+instance Lift BS.ByteString where
+    lift bs = pure $ Constant () $ PLC.BuiltinBS () haskellBSSize (BSL.fromStrict bs)
 
 -- Standard types
 -- These need to be in a separate file for TH staging reasons

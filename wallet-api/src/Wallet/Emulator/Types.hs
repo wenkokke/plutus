@@ -71,7 +71,6 @@ import           Control.Monad.Writer
 import           Control.Newtype.Generics         (Newtype)
 import           Data.Aeson                       (FromJSON, ToJSON, ToJSONKey)
 import           Data.Bifunctor                   (Bifunctor (..))
-import qualified Data.ByteString.Base64.URL.Lazy.Type as BSLURL64
 import           Data.Foldable                    (foldl', traverse_)
 import           Data.List                        (partition)
 import           Data.Map                         (Map)
@@ -94,9 +93,10 @@ import           Wallet.API                       (EventHandler (..), EventTrigg
                                                    WalletAPIError (..), WalletDiagnostics (..), WalletLog (..),
                                                    addresses, annTruthValue, getAnnot, keyPair, pubKey, signature)
 import qualified Wallet.Emulator.AddressMap       as AM
+import KeyBytes (KeyBytes)
 
 -- agents/wallets
-newtype Wallet = Wallet { getWallet :: BSLURL64.ByteString64 }
+newtype Wallet = Wallet { getWallet :: KeyBytes }
     deriving (Show, Eq, Ord, Generic)
     deriving newtype (ToHttpApiData, FromHttpApiData, Hashable)
     deriving anyclass (Newtype, ToJSON, FromJSON, ToJSONKey)

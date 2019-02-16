@@ -88,6 +88,9 @@ data ValidationError =
     -- ^ The current slot is not covered by the transaction's validity slot range.
     deriving (Eq, Ord, Show, Generic)
 
+instance ToJSON ValidationError where
+instance FromJSON ValidationError where
+
 newtype Validation a = Validation { _runValidation :: (ReaderT UtxoIndex (Either ValidationError)) a }
     deriving (Functor, Applicative, Monad, MonadReader UtxoIndex, MonadError ValidationError)
 

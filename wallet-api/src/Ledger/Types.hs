@@ -94,6 +94,7 @@ module Ledger.Types(
 
 import qualified Codec.CBOR.Write                      as Write
 import           Codec.Serialise                       (deserialise, deserialiseOrFail, serialise)
+import qualified Data.ByteString.Base64 as Base64
 import           Codec.Serialise.Class                 (Serialise, decode, encode)
 import           Control.Lens                          hiding (lifted)
 import           Control.Monad                         (join)
@@ -104,8 +105,6 @@ import qualified Data.Aeson                            as JSON
 import           Data.Bifunctor                        (first)
 import qualified Data.ByteArray                        as BA
 import qualified Data.ByteString                       as BSS
-import qualified Data.ByteString.Base64                as Base64
-import qualified Data.ByteString.Base64.Lazy.Type      as BSL64
 import qualified Data.ByteString.Char8                 as BS8
 import qualified Data.ByteString.Lazy                  as BSL
 import           Data.Map                              (Map)
@@ -123,6 +122,7 @@ import           Language.PlutusTx.Evaluation          (evaluateCekTrace)
 import           Language.PlutusTx.Lift                (makeLift, unsafeLiftProgram)
 import           Language.PlutusTx.Lift.Class          (Lift)
 import           Language.PlutusTx.TH                  (CompiledCode, compile, getSerializedPlc)
+import KeyBytes
 
 import           Ledger.Ada                            (Ada)
 import           Ledger.Interval                       (Slot (..), SlotRange)
@@ -153,7 +153,7 @@ especially because we only need one direction (to binary).
 -}
 
 -- | Public key
-newtype PubKey = PubKey { getPubKey :: BSL64.ByteString64 }
+newtype PubKey = PubKey { getPubKey :: KeyBytes }
     deriving (Eq, Ord, Show)
     deriving stock (Generic)
     deriving anyclass (ToJSON, FromJSON, Newtype)
@@ -161,7 +161,7 @@ newtype PubKey = PubKey { getPubKey :: BSL64.ByteString64 }
 
 makeLift ''PubKey
 
-newtype Signature = Signature { getSignature :: BSL64.ByteString64 }
+newtype Signature = Signature { getSignature :: KeyBytes }
     deriving (Eq, Ord, Show)
     deriving stock (Generic)
     deriving anyclass (ToJSON, FromJSON)

@@ -37,11 +37,6 @@ program-options
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/base64-bytestring-type.git
-  tag: 95f0887bccaba1d3ec6fdb134b9e2c4b9ed39279
-
-source-repository-package
-  type: git
   location: https://github.com/shmish111/servant-purescript.git
   tag: 315ccf5d720937c091c8cf3aca8adc8110766a23
 
