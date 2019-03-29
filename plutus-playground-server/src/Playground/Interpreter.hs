@@ -24,8 +24,7 @@ import           Ledger.Types                 (Blockchain)
 import           Playground.API               (CompilationResult (CompilationResult), Evaluation (sourceCode),
                                                Expression (Action, Wait), Fn (Fn),
                                                PlaygroundError (DecodeJsonTypeError, OtherError), SimulatorWallet,
-                                               Warning (Warning), program, simulatorWalletWallet,
-                                               toSimpleArgumentSchema, wallets)
+                                               Warning (Warning), program, simulatorWalletWallet, wallets)
 import qualified Playground.API               as API
 import           System.IO                    (Handle, hFlush)
 import           System.IO.Temp.Extras        (withSystemTempFile)
@@ -127,17 +126,12 @@ compile timeout source
                 throwError . CompilationErrors . pure . RawError $
                 "unable to decode compilation result" <> Text.pack err
             Right ([schema], currencies) ->
-                pure .
-                CompilationResult [toSimpleArgumentSchema <$> schema] currencies $
+                pure . CompilationResult [schema] currencies $
                 [ Warning
                       "It looks like you have not made any functions available, use `$(mkFunctions ['functionA, 'functionB])` to be able to use `functionA` and `functionB`"
                 ]
             Right (schemas, currencies) ->
-                pure $
-                CompilationResult
-                    (fmap toSimpleArgumentSchema <$> schemas)
-                    currencies
-                    []
+                pure $ CompilationResult schemas currencies []
 
 runFunction ::
        ( Show t

@@ -10,7 +10,6 @@ module Playground.Contract
     , mkFunction
     , mkKnownCurrencies
     , ToSchema
-    , Schema
     , ToJSON
     , FromJSON
     , FunctionSchema
@@ -37,8 +36,8 @@ import           Data.ByteString.Lazy        (ByteString)
 import qualified Data.ByteString.Lazy        as BSL
 import qualified Data.ByteString.Lazy.Char8  as LBC8
 import           Data.List.NonEmpty          (NonEmpty ((:|)))
-import           Data.Swagger                (Schema, ToSchema)
 import           GHC.Generics                (Generic)
+import           Ledger.Schema               (SimpleArgumentSchema, ToSchema)
 import           Ledger.Validation           (ValidatorHash (ValidatorHash))
 import           Playground.API              (FunctionSchema, KnownCurrency (KnownCurrency), TokenId (TokenId))
 import           Playground.Interpreter.Util
@@ -57,7 +56,8 @@ instance ByteArrayAccess ByteString where
 
 $(mkSingleFunction 'payToPublicKey_)
 
-printSchemas :: ([FunctionSchema Schema], [KnownCurrency]) -> IO ()
+printSchemas ::
+       ([FunctionSchema SimpleArgumentSchema], [KnownCurrency]) -> IO ()
 printSchemas (schemas, currencies) =
     LBC8.putStrLn . encode $ (schemas <> [payToPublicKey_Schema], currencies)
 

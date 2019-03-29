@@ -2,7 +2,7 @@ cabal-version: 2.2
 name: wallet-api
 version: 0.1.0.0
 license: Apache-2.0
-license-files: 
+license-files:
   LICENSE
   NOTICE
 maintainer: michael.peyton-jones@iohk.io
@@ -59,6 +59,7 @@ library
         Ledger.Validation
         Ledger.Index
         Ledger.Interval
+        Ledger.Schema
         Ledger.Value
         Ledger.Value.TH
     hs-source-dirs: src
@@ -84,7 +85,6 @@ library
         servant-client -any,
         servant-server -any,
         stm -any,
-        swagger2 -any,
         template-haskell -any,
         text -any,
         text -any,

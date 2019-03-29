@@ -1,8 +1,8 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE TemplateHaskell    #-}
 module Ledger.Value.TH(
       Value(..)
     , CurrencySymbol
@@ -26,14 +26,14 @@ module Ledger.Value.TH(
     , isZero
     ) where
 
-import           Codec.Serialise.Class        (Serialise)
-import           Data.Aeson                   (FromJSON, ToJSON)
-import           Data.Swagger.Internal.Schema (ToSchema)
-import           GHC.Generics                 (Generic)
-import           Language.PlutusTx.Lift       (makeLift)
-import qualified Language.PlutusTx.Prelude    as P
-import           Language.Haskell.TH          (Q, TExp)
-import           Prelude                      hiding (all, lookup, negate)
+import           Codec.Serialise.Class     (Serialise)
+import           Data.Aeson                (FromJSON, ToJSON)
+import           GHC.Generics              (Generic)
+import           Language.Haskell.TH       (Q, TExp)
+import           Language.PlutusTx.Lift    (makeLift)
+import qualified Language.PlutusTx.Prelude as P
+import           Ledger.Schema             (ToSchema)
+import           Prelude                   hiding (all, lookup, negate)
 
 data CurrencySymbol = CurrencySymbol Int
   deriving (Eq, Ord, Show)

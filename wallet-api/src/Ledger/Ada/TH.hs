@@ -28,7 +28,7 @@ module Ledger.Ada.TH(
 
 import           Codec.Serialise.Class        (Serialise)
 import           Data.Aeson                   (FromJSON, ToJSON)
-import           Data.Swagger.Internal.Schema (ToSchema)
+import           Ledger.Schema (ToSchema)
 import           GHC.Generics                 (Generic)
 import           Language.PlutusTx.Lift       (makeLift)
 import qualified Language.PlutusTx.Prelude    as P

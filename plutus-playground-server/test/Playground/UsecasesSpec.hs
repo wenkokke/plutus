@@ -11,18 +11,17 @@ import           Data.Aeson.Types             (object, (.=))
 import qualified Data.ByteString.Char8        as BSC
 import           Data.Either                  (isRight)
 import           Data.List.NonEmpty           (NonEmpty ((:|)))
-import           Data.Swagger                 ()
 import qualified Data.Text                    as Text
 import qualified Data.Text.Lazy               as TL
 import           Data.Time.Units              (Microsecond, fromMicroseconds)
 import           Language.Haskell.Interpreter (InterpreterError, SourceCode (SourceCode))
 import qualified Ledger.Ada                   as Ada
+import           Ledger.Schema                (SimpleArgumentSchema (SimpleArraySchema, SimpleIntSchema, SimpleObjectSchema, SimpleTupleSchema, SimpleTypeSchema))
 import           Ledger.Types                 (Blockchain)
 import           Ledger.Validation            (ValidatorHash (ValidatorHash))
 import           Playground.API               (CompilationResult (CompilationResult), Evaluation (Evaluation),
                                                Expression (Action, Wait), Fn (Fn), FunctionSchema (FunctionSchema),
                                                KnownCurrency (KnownCurrency), PlaygroundError,
-                                               SimpleArgumentSchema (SimpleArraySchema, SimpleIntSchema, SimpleObjectSchema, SimpleTupleSchema),
                                                SimulatorWallet (SimulatorWallet), TokenId (TokenId), argumentSchema,
                                                functionName, isSupportedByFrontend, simulatorWalletBalance,
                                                simulatorWalletWallet)
@@ -53,27 +52,35 @@ vestingSpec =
                       { functionName = Fn "vestFunds"
                       , argumentSchema =
                             [ SimpleObjectSchema
-                                  [ ( "vestingOwner"
+                                  "Vesting"
+                                  [ ( "vestingTranche1"
                                     , SimpleObjectSchema
-                                          [("getPubKey", SimpleIntSchema)])
+                                          "VestingTranche"
+                                          [ ( "vestingTrancheDate"
+                                            , SimpleObjectSchema
+                                                  "Slot"
+                                                  [("getSlot", SimpleIntSchema)])
+                                          , ( "vestingTrancheAmount"
+                                            , SimpleObjectSchema
+                                                  "Ada"
+                                                  [("getAda", SimpleIntSchema)])
+                                          ])
                                   , ( "vestingTranche2"
                                     , SimpleObjectSchema
-                                          [ ( "vestingTrancheAmount"
+                                          "VestingTranche"
+                                          [ ( "vestingTrancheDate"
                                             , SimpleObjectSchema
-                                                  [("getAda", SimpleIntSchema)])
-                                          , ( "vestingTrancheDate"
-                                            , SimpleObjectSchema
+                                                  "Slot"
                                                   [("getSlot", SimpleIntSchema)])
+                                          , ( "vestingTrancheAmount"
+                                            , SimpleObjectSchema
+                                                  "Ada"
+                                                  [("getAda", SimpleIntSchema)])
                                           ])
-                                  , ( "vestingTranche1"
+                                  , ( "vestingOwner"
                                     , SimpleObjectSchema
-                                          [ ( "vestingTrancheAmount"
-                                            , SimpleObjectSchema
-                                                  [("getAda", SimpleIntSchema)])
-                                          , ( "vestingTrancheDate"
-                                            , SimpleObjectSchema
-                                                  [("getSlot", SimpleIntSchema)])
-                                          ])
+                                          "PubKey"
+                                          [("getPubKey", SimpleIntSchema)])
                                   ]
                             ]
                       }
@@ -81,78 +88,109 @@ vestingSpec =
                       { functionName = Fn "registerVestingScheme"
                       , argumentSchema =
                             [ SimpleObjectSchema
-                                  [ ( "vestingOwner"
+                                  "Vesting"
+                                  [ ( "vestingTranche1"
                                     , SimpleObjectSchema
-                                          [("getPubKey", SimpleIntSchema)])
+                                          "VestingTranche"
+                                          [ ( "vestingTrancheDate"
+                                            , SimpleObjectSchema
+                                                  "Slot"
+                                                  [("getSlot", SimpleIntSchema)])
+                                          , ( "vestingTrancheAmount"
+                                            , SimpleObjectSchema
+                                                  "Ada"
+                                                  [("getAda", SimpleIntSchema)])
+                                          ])
                                   , ( "vestingTranche2"
                                     , SimpleObjectSchema
-                                          [ ( "vestingTrancheAmount"
+                                          "VestingTranche"
+                                          [ ( "vestingTrancheDate"
                                             , SimpleObjectSchema
-                                                  [("getAda", SimpleIntSchema)])
-                                          , ( "vestingTrancheDate"
-                                            , SimpleObjectSchema
+                                                  "Slot"
                                                   [("getSlot", SimpleIntSchema)])
+                                          , ( "vestingTrancheAmount"
+                                            , SimpleObjectSchema
+                                                  "Ada"
+                                                  [("getAda", SimpleIntSchema)])
                                           ])
-                                  , ( "vestingTranche1"
+                                  , ( "vestingOwner"
                                     , SimpleObjectSchema
-                                          [ ( "vestingTrancheAmount"
-                                            , SimpleObjectSchema
-                                                  [("getAda", SimpleIntSchema)])
-                                          , ( "vestingTrancheDate"
-                                            , SimpleObjectSchema
-                                                  [("getSlot", SimpleIntSchema)])
-                                          ])
+                                          "PubKey"
+                                          [("getPubKey", SimpleIntSchema)])
                                   ]
                             ]
                       }
-                  , FunctionSchema
-                        { functionName = Fn "withdraw"
-                        , argumentSchema =
-                              [ SimpleObjectSchema
-                                    [ ( "vestingOwner"
+                , FunctionSchema
+                      { functionName = Fn "withdraw"
+                      , argumentSchema =
+                            [ SimpleObjectSchema
+                                  "Vesting"
+                                  [ ( "vestingTranche1"
                                     , SimpleObjectSchema
+                                          "VestingTranche"
+                                          [ ( "vestingTrancheDate"
+                                            , SimpleObjectSchema
+                                                  "Slot"
+                                                  [("getSlot", SimpleIntSchema)])
+                                          , ( "vestingTrancheAmount"
+                                            , SimpleObjectSchema
+                                                  "Ada"
+                                                  [("getAda", SimpleIntSchema)])
+                                          ])
+                                  , ( "vestingTranche2"
+                                    , SimpleObjectSchema
+                                          "VestingTranche"
+                                          [ ( "vestingTrancheDate"
+                                            , SimpleObjectSchema
+                                                  "Slot"
+                                                  [("getSlot", SimpleIntSchema)])
+                                          , ( "vestingTrancheAmount"
+                                            , SimpleObjectSchema
+                                                  "Ada"
+                                                  [("getAda", SimpleIntSchema)])
+                                          ])
+                                  , ( "vestingOwner"
+                                    , SimpleObjectSchema
+                                          "PubKey"
                                           [("getPubKey", SimpleIntSchema)])
-                                    , ( "vestingTranche2"
-                                    , SimpleObjectSchema
-                                          [ ( "vestingTrancheAmount"
-                                                , SimpleObjectSchema
-                                                      [("getAda", SimpleIntSchema)])
-                                          , ( "vestingTrancheDate"
-                                                , SimpleObjectSchema
-                                                      [("getSlot", SimpleIntSchema)])
-                                          ])
-                                    , ( "vestingTranche1"
-                                    , SimpleObjectSchema
-                                          [ ( "vestingTrancheAmount"
-                                                , SimpleObjectSchema
-                                                      [("getAda", SimpleIntSchema)])
-                                          , ( "vestingTrancheDate"
-                                                , SimpleObjectSchema
-                                                      [("getSlot", SimpleIntSchema)])
-                                          ])
-                                    ]
-                              , SimpleObjectSchema [("getAda", SimpleIntSchema)]
-                              ]
-                        }
+                                  ]
+                            , SimpleObjectSchema
+                                  "Ada"
+                                  [("getAda", SimpleIntSchema)]
+                            ]
+                      }
                 , FunctionSchema
                       { functionName = Fn "payToPublicKey_"
                       , argumentSchema =
                             [ SimpleObjectSchema
-                                  [ ( "ivTo"
-                                    , SimpleObjectSchema
-                                          [("getSlot", SimpleIntSchema)])
-                                  , ( "ivFrom"
-                                    , SimpleObjectSchema
-                                          [("getSlot", SimpleIntSchema)])
+                                  "Interval"
+                                  [ ( "ivFrom"
+                                    , SimpleTypeSchema
+                                          "Maybe"
+                                          [ SimpleObjectSchema
+                                                "Slot"
+                                                [("getSlot", SimpleIntSchema)]
+                                          ])
+                                  , ( "ivTo"
+                                    , SimpleTypeSchema
+                                          "Maybe"
+                                          [ SimpleObjectSchema
+                                                "Slot"
+                                                [("getSlot", SimpleIntSchema)]
+                                          ])
                                   ]
                             , SimpleObjectSchema
+                                  "Value"
                                   [ ( "getValue"
                                     , SimpleArraySchema
                                           (SimpleTupleSchema
-                                               ( SimpleIntSchema
+                                               ( SimpleTypeSchema
+                                                     "CurrencySymbol"
+                                                     [SimpleIntSchema]
                                                , SimpleIntSchema)))
                                   ]
                             , SimpleObjectSchema
+                                  "PubKey"
                                   [("getPubKey", SimpleIntSchema)]
                             ]
                       }
@@ -211,11 +249,13 @@ gameSpec =
             (`shouldSatisfy` hasFundsDistribution
                                  [ SimulatorWallet
                                        { simulatorWalletWallet = Wallet 1
-                                       , simulatorWalletBalance = Ada.adaValueOf 12
+                                       , simulatorWalletBalance =
+                                             Ada.adaValueOf 12
                                        }
                                  , SimulatorWallet
                                        { simulatorWalletWallet = Wallet 2
-                                       , simulatorWalletBalance = Ada.adaValueOf 8
+                                       , simulatorWalletBalance =
+                                             Ada.adaValueOf 8
                                        }
                                  ])
         it "should keep the funds" $
@@ -227,7 +267,8 @@ gameSpec =
                                        }
                                  , SimulatorWallet
                                        { simulatorWalletWallet = Wallet 2
-                                       , simulatorWalletBalance = Ada.adaValueOf 8
+                                       , simulatorWalletBalance =
+                                             Ada.adaValueOf 8
                                        }
                                  ])
         it
@@ -350,15 +391,18 @@ crowdfundingSpec =
             (`shouldSatisfy` hasFundsDistribution
                                  [ SimulatorWallet
                                        { simulatorWalletWallet = Wallet 1
-                                       , simulatorWalletBalance = Ada.adaValueOf 26
+                                       , simulatorWalletBalance =
+                                             Ada.adaValueOf 26
                                        }
                                  , SimulatorWallet
                                        { simulatorWalletWallet = Wallet 2
-                                       , simulatorWalletBalance = Ada.adaValueOf 2
+                                       , simulatorWalletBalance =
+                                             Ada.adaValueOf 2
                                        }
                                  , SimulatorWallet
                                        { simulatorWalletWallet = Wallet 3
-                                       , simulatorWalletBalance = Ada.adaValueOf 2
+                                       , simulatorWalletBalance =
+                                             Ada.adaValueOf 2
                                        }
                                  ])
         it "should run failed campaign" $
@@ -439,28 +483,31 @@ crowdfundingSpec =
         TL.toStrict $ JSON.encodeToLazyText $ object ["getAda" .= mkI 8]
 
 knownCurrencySpec :: Spec
-knownCurrencySpec = describe "mkKnownCurrencies" $
-      it "should return registered known currencies" $
-            (runExceptT . PI.compile maxInterpretationTime) code >>= (`shouldSatisfy` hasKnownCurrency)
-      where
-            code = SourceCode $ Text.unlines
-                  [ "import Playground.Contract"
-                  , "import Data.List.NonEmpty (NonEmpty ((:|)))"
-                  , "import Ledger.Validation (ValidatorHash (..))"
-                  , "import Playground.API (KnownCurrency (..), TokenId (..))"
-                  , "myCurrency :: KnownCurrency"
-                  , "myCurrency = KnownCurrency (ValidatorHash \"\") \"MyCurrency\" (TokenId \"MyToken\" :| [])"
-                  , "$(mkKnownCurrencies ['myCurrency])"
-                  ]
-            hasKnownCurrency (Right (CompilationResult _ [KnownCurrency (ValidatorHash "") "MyCurrency" (TokenId "MyToken" :| [])] _)) = True
-            hasKnownCurrency _ = False
+knownCurrencySpec =
+    describe "mkKnownCurrencies" $
+    it "should return registered known currencies" $
+    (runExceptT . PI.compile maxInterpretationTime) code >>=
+    (`shouldSatisfy` hasKnownCurrency)
+  where
+    code =
+        SourceCode $
+        Text.unlines
+            [ "import Playground.Contract"
+            , "import Data.List.NonEmpty (NonEmpty ((:|)))"
+            , "import Ledger.Validation (ValidatorHash (..))"
+            , "import Playground.API (KnownCurrency (..), TokenId (..))"
+            , "myCurrency :: KnownCurrency"
+            , "myCurrency = KnownCurrency (ValidatorHash \"\") \"MyCurrency\" (TokenId \"MyToken\" :| [])"
+            , "$(mkKnownCurrencies ['myCurrency])"
+            ]
+    hasKnownCurrency (Right (CompilationResult _ [KnownCurrency (ValidatorHash "") "MyCurrency" (TokenId "MyToken" :| [])] _)) =
+        True
+    hasKnownCurrency _ = False
 
 sourceCode :: BSC.ByteString -> SourceCode
 sourceCode = SourceCode . Text.pack . BSC.unpack
 
-compile ::
-       BSC.ByteString
-    -> IO (Either InterpreterError CompilationResult)
+compile :: BSC.ByteString -> IO (Either InterpreterError CompilationResult)
 compile = runExceptT . PI.compile maxInterpretationTime . sourceCode
 
 evaluate ::
@@ -468,7 +515,8 @@ evaluate ::
     -> IO (Either PlaygroundError ( Blockchain
                                   , [EmulatorEvent]
                                   , [SimulatorWallet]))
-evaluate evaluation = runExceptT $ PI.runFunction maxInterpretationTime evaluation
+evaluate evaluation =
+    runExceptT $ PI.runFunction maxInterpretationTime evaluation
 
 compilationChecks :: BSC.ByteString -> Spec
 compilationChecks f = do

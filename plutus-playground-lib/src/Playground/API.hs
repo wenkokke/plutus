@@ -4,29 +4,25 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DeriveLift                 #-}
 {-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
 
 module Playground.API where
 
-import           Control.Lens                 (view)
 import           Control.Monad.Trans.Class    (lift)
 import           Control.Monad.Trans.State    (StateT, evalStateT, get, put)
 import           Control.Newtype.Generics     (pack, unpack)
 import           Data.Aeson                   (FromJSON, ToJSON, Value)
 import           Data.Bifunctor               (second)
-import qualified Data.HashMap.Strict.InsOrd   as HM
 import           Data.List.NonEmpty           (NonEmpty)
 import           Data.Maybe                   (fromMaybe)
-import           Data.Swagger                 (ParamSchema (ParamSchema), Referenced (Inline, Ref), Schema (Schema),
-                                               Schema (Schema), SwaggerItems (SwaggerItemsArray, SwaggerItemsObject),
-                                               SwaggerType (SwaggerArray, SwaggerInteger, SwaggerObject, SwaggerString))
-import qualified Data.Swagger                 as Swagger
-import           Data.Swagger.Lens            (items, maxItems, minItems, properties)
 import           Data.Text                    (Text)
 import qualified Data.Text                    as Text
 import           GHC.Generics                 (Generic)
@@ -34,6 +30,7 @@ import           Language.Haskell.Interpreter (CompilationError (CompilationErro
                                                filename, row, text)
 import qualified Language.Haskell.Interpreter as HI
 import qualified Language.Haskell.TH.Syntax   as TH
+import           Ledger.Schema                (SimpleArgumentSchema (SimpleArraySchema, SimpleIntSchema, SimpleObjectSchema, SimpleStringSchema, SimpleTupleSchema, SimpleTypeSchema, UnknownSchema))
 import           Ledger.Types                 (Blockchain, PubKey, Tx, TxId)
 import           Ledger.Validation            (ValidatorHash)
 import qualified Ledger.Value                 as V
@@ -130,53 +127,14 @@ data FunctionSchema a = FunctionSchema
 -- except for this particular field." Then there's some feedback for
 -- the user to change that field's type. Much more useful than
 -- rejecting the entire description.
-data SimpleArgumentSchema
-    = SimpleIntSchema
-    | SimpleStringSchema
-    | SimpleArraySchema SimpleArgumentSchema
-    | SimpleTupleSchema (SimpleArgumentSchema, SimpleArgumentSchema)
-    | SimpleObjectSchema [(Text, SimpleArgumentSchema)]
-    | UnknownSchema Text
-                      Text
-    deriving (Show, Eq, Generic, ToJSON)
-
-toSimpleArgumentSchema :: Schema -> SimpleArgumentSchema
-toSimpleArgumentSchema schema@Schema {..} =
-    case _schemaParamSchema of
-        ParamSchema {..} ->
-            case _paramSchemaType of
-                SwaggerInteger -> SimpleIntSchema
-                SwaggerString -> SimpleStringSchema
-                SwaggerArray ->
-                    case ( view minItems _schemaParamSchema
-                         , view maxItems _schemaParamSchema
-                         , view items schema) of
-                        (Nothing, Nothing, Just (SwaggerItemsObject x)) ->
-                            SimpleArraySchema $ extractReference x
-                        (Just 2, Just 2, Just (SwaggerItemsArray [x, y])) ->
-                            SimpleTupleSchema
-                                (extractReference x, extractReference y)
-                        _ ->
-                            UnknownSchema "While handling array." $
-                            Text.pack $ show schema
-                SwaggerObject ->
-                    SimpleObjectSchema $
-                    HM.toList $ extractReference <$> view properties schema
-                _ ->
-                    UnknownSchema "Unrecognised type." $
-                    Text.pack $ show schema
-  where
-    extractReference :: Referenced Schema -> SimpleArgumentSchema
-    extractReference (Inline v) = toSimpleArgumentSchema v
-    extractReference (Ref _) =
-        UnknownSchema "Cannot handle Ref types, online Inline ones." $
-        Text.pack $ show schema
 
 isSupportedByFrontend :: SimpleArgumentSchema -> Bool
 isSupportedByFrontend SimpleIntSchema = True
 isSupportedByFrontend SimpleStringSchema = True
-isSupportedByFrontend (SimpleObjectSchema subSchema) =
+isSupportedByFrontend (SimpleObjectSchema _ subSchema) =
     all isSupportedByFrontend (snd <$> subSchema)
+isSupportedByFrontend (SimpleTypeSchema _ subSchema) =
+    all isSupportedByFrontend subSchema
 isSupportedByFrontend (SimpleArraySchema subSchema) =
     isSupportedByFrontend subSchema
 isSupportedByFrontend (SimpleTupleSchema (subSchemaX, subSchemaY)) =

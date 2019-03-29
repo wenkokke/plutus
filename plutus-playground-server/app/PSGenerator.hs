@@ -38,13 +38,14 @@ import           Language.PureScript.Bridge.TypeParameters (A)
 import           Ledger.Ada                                (Ada)
 import           Ledger.Index                              (ValidationError)
 import           Ledger.Interval                           (Interval, Slot)
+import           Ledger.Schema                             (SimpleArgumentSchema)
 import           Ledger.Types                              (AddressOf, DataScript, PubKey, RedeemerScript, Signature,
                                                             Tx, TxIdOf, TxInOf, TxInType, TxOutOf, TxOutRefOf,
                                                             TxOutType, ValidatorScript)
 import           Ledger.Value.TH                           (CurrencySymbol, Value)
 import           Playground.API                            (CompilationResult, Evaluation, EvaluationResult, Expression,
-                                                            Fn, FunctionSchema, KnownCurrency, SimpleArgumentSchema,
-                                                            SimulatorWallet, TokenId, Warning)
+                                                            Fn, FunctionSchema, KnownCurrency, SimulatorWallet, TokenId,
+                                                            Warning)
 import qualified Playground.API                            as API
 import           Playground.Usecases                       (crowdfunding, game, messages, vesting)
 import           Servant                                   ((:<|>))
@@ -57,7 +58,9 @@ import           Wallet.Emulator.Types                     (EmulatorEvent, Walle
 import           Wallet.Graph                              (FlowGraph, FlowLink, TxRef, UtxOwner, UtxoLocation)
 
 psNonEmpty :: MonadReader BridgeData m => m PSType
-psNonEmpty = TypeInfo "purescript-lists" "Data.List.NonEmpty" "NonEmptyList" <$> psTypeParameters
+psNonEmpty =
+    TypeInfo "purescript-lists" "Data.List.NonEmpty" "NonEmptyList" <$>
+    psTypeParameters
 
 psJson :: PSType
 psJson = TypeInfo "" "Data.RawJson" "RawJson" []

@@ -72,7 +72,6 @@ library
         servant-client-core -any,
         servant-purescript -any,
         servant-server -any,
-        swagger2 -any,
         temporary -any,
         text -any,
         time -any,
@@ -129,7 +128,6 @@ test-suite plutus-playground-server-test
     build-tool-depends: hspec-discover:hspec-discover -any
     hs-source-dirs: test
     other-modules:
-        Playground.APISpec
         Playground.UsecasesSpec
         Paths_plutus_playground_server
         Auth.TypesSpec
@@ -148,7 +146,6 @@ test-suite plutus-playground-server-test
         mtl -any,
         plutus-playground-lib -any,
         plutus-playground-server -any,
-        swagger2 -any,
         text -any,
         time-units -any,
         transformers -any,

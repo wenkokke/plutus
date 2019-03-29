@@ -44,6 +44,7 @@ import qualified Ledger.Validation            as Validation
 import qualified Ledger.Value.TH              as V
 import qualified Ledger.Ada.TH                as Ada
 import           Ledger.Ada                   (Ada)
+import           Ledger.Schema                   (ToSchema)
 import qualified Wallet.API                   as W
 import           Wallet                       (EventHandler (..), EventTrigger, WalletAPI (..),
                                                WalletDiagnostics (..), andT, slotRangeT, fundsAtAddressT, throwOtherError,

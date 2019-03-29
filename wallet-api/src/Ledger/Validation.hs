@@ -55,8 +55,6 @@ import qualified Data.Aeson                   as JSON
 import qualified Data.Aeson.Extras            as JSON
 import qualified Data.ByteString.Lazy.Hash    as Hash
 import qualified Data.ByteString.Lazy         as BSL
-import           Data.Proxy                   (Proxy (Proxy))
-import           Data.Swagger.Internal.Schema (ToSchema (declareNamedSchema), paramSchemaToSchema, plain)
 import           GHC.Generics                 (Generic)
 import           Language.Haskell.TH          (Q, TExp)
 import           Language.PlutusTx.Lift       (makeLift)
@@ -64,6 +62,7 @@ import qualified Language.PlutusTx.Builtins   as Builtins
 import           Ledger.Interval              (SlotRange)
 import           Ledger.Types                 (Ada, PubKey (..), Signature (..), Value, Slot(..))
 import qualified Ledger.Types                 as Ledger
+import           Ledger.Schema                (ToSchema, SimpleArgumentSchema(SimpleStringSchema), toSchema)
 import qualified Ledger.Ada.TH                as Ada
 
 -- Ignore newtype warnings related to `Oracle` and `Signed` because it causes
@@ -182,7 +181,7 @@ instance Show ValidatorHash where
     show = show . JSON.encodeSerialise
 
 instance ToSchema ValidatorHash where
-    declareNamedSchema _ = plain . paramSchemaToSchema $ (Proxy :: Proxy String)
+    toSchema _ = SimpleStringSchema
 
 instance ToJSON ValidatorHash where
     toJSON = JSON.String . JSON.encodeSerialise
