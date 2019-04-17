@@ -773,7 +773,7 @@
                   (lam x (all out_Unit (type) (fun out_Unit out_Unit)) x)
                 ]
               )
-              (con )
+              (error (con string))
             ]
           )
           (builtin append)
