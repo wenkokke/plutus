@@ -37,6 +37,7 @@ import Language.PlutusCore.Constant.Make
 %nonassoc integer
 %nonassoc float
 %nonassoc bytestring
+%nonassoc string
 %nonassoc iwrap
 %nonassoc unwrap
 %nonassoc lam
@@ -55,6 +56,7 @@ import Language.PlutusCore.Constant.Make
     size { LexKeyword $$ KwSize }
     integer { LexKeyword $$ KwInteger }
     bytestring { LexKeyword $$ KwByteString }
+    string { LexKeyword $$ KwString }
     type { LexKeyword $$ KwType }
     program { LexKeyword $$ KwProgram }
     iwrap { LexKeyword $$ KwIWrap }
@@ -96,9 +98,9 @@ Program : openParen program Version Term closeParen { Program $2 $3 $4 }
 Version : naturalLit dot naturalLit dot naturalLit { Version (loc $1) (tkNat $1) (tkNat $3) (tkNat $5) }
 
 Constant : naturalLit exclamation integerLit {% handleInteger (loc $1) (tkNat $1) (tkInt $3) }
-        | naturalLit exclamation naturalLit {% handleInteger (loc $1) (tkNat $1) (fromIntegral (tkNat $3)) }
-        | naturalLit exclamation byteStringLit { BuiltinBS (loc $1) (tkNat $1) (tkBytestring $3) } -- this is kinda broken but I'm waiting for a new spec
-        | naturalLit { BuiltinSize (loc $1) (tkNat $1) }
+         | naturalLit exclamation naturalLit {% handleInteger (loc $1) (tkNat $1) (fromIntegral (tkNat $3)) }
+         | naturalLit exclamation byteStringLit { BuiltinBS (loc $1) (tkNat $1) (tkBytestring $3) } -- this is kinda broken but I'm waiting for a new spec
+         | naturalLit { BuiltinSize (loc $1) (tkNat $1) }
 
 Name : var { Name (loc $1) (name $1) (identifier $1) }
 
@@ -112,6 +114,7 @@ Term : Name { Var (nameAttribute $1) $1 }
      | openParen con Constant closeParen { Constant $2 $3 }
      | openParen iwrap Type Type Term closeParen { IWrap $2 $3 $4 $5 }
      | openParen builtin builtinVar closeParen { Builtin $2 (BuiltinName (loc $3) (tkBuiltin $3)) }
+     | openParen builtin var closeParen { Builtin $2 (DynBuiltinName (loc $3) (DynamicBuiltinName (name $3))) }
      | openParen unwrap Term closeParen { Unwrap $2 $3 }
      | openParen errorTerm Type closeParen { Error $2 $3 }
 
@@ -119,6 +122,7 @@ BuiltinType : size { TyBuiltin $1 TySize }
             | integer { TyBuiltin $1 TyInteger }
             | bytestring { TyBuiltin $1 TyByteString }
             | naturalLit { TyInt (loc $1) (tkNat $1) }
+            | string { TyBuiltin $1 TyString }
 
 Type : TyName { TyVar (nameAttribute (unTyName $1)) $1 }
      | openParen fun Type Type closeParen { TyFun $2 $3 $4 }

@@ -63,6 +63,7 @@ tokens :-
     <0> bytestring               { mkKeyword KwByteString }
     <0> integer                  { mkKeyword KwInteger }
     <0> size                     { mkKeyword KwSize }
+    <0> string                   { mkKeyword KwString }
     <0> type                     { mkKeyword KwType }
     <0> program                  { mkKeyword KwProgram }
     <0> con                      { mkKeyword KwCon }

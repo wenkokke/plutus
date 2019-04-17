@@ -24,7 +24,7 @@
                             (fun Unit (all out_Unit (type) (fun out_Unit out_Unit)))
                             [
                               (lam
-                                error
+                                error1
                                 (all a (type) (fun Unit a))
                                 [
                                   (lam
@@ -654,7 +654,7 @@
                                                                                       thunk
                                                                                       Unit
                                                                                       {
-                                                                                        error
+                                                                                        error1
                                                                                         Unit
                                                                                       }
                                                                                     )

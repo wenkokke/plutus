@@ -112,6 +112,7 @@ data Keyword = KwAbs
              | KwFun
              | KwAll
              | KwByteString
+             | KwString
              | KwInteger
              | KwSize
              | KwType
@@ -175,6 +176,7 @@ instance Pretty Keyword where
     pretty KwFun        = "fun"
     pretty KwAll        = "forall"
     pretty KwByteString = "bytestring"
+    pretty KwString     = "string"
     pretty KwInteger    = "integer"
     pretty KwSize       = "size"
     pretty KwType       = "type"
