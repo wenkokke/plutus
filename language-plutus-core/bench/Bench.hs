@@ -30,13 +30,13 @@ main =
                       , bench "bigFile" $ nf parse h
                       ]
 
-                , env largeTypeFiles $ \ ~(f, g, h, k) ->
+                , env largeTypeFiles $ \ ~(f, g, h, _) ->
                   let typeCheckConcrete :: Program TyName Name AlexPosn -> Either (Error AlexPosn) (Normalized (Type TyName ()))
                       typeCheckConcrete = runQuoteT . inferTypeOfProgram defOffChainConfig
                       mkBench = bench "typeCheck" . nf (typeCheckConcrete =<<) . runQuoteT . parseScoped
                   in
 
-                   bgroup "type-check" $ mkBench <$> [f, g, h, k]
+                   bgroup "type-check" $ mkBench <$> [f, g, h]
 
                 , env largeTypeFiles $ \ ~(f, g, h, k) ->
                    let mkBench = bench "check" . nf (fmap check) . parse
