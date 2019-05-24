@@ -23,6 +23,7 @@ module Language.PlutusTx.Coordination.Contracts.CrowdFunding (
     , mkCampaign
     , CampaignAction(..)
     , collectionRange
+    , refundRange
     ) where
 
 import           Prelude                     hiding ((&&))
