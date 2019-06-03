@@ -65,6 +65,7 @@ import           Language.PlutusTx.Lift       (makeLift)
 import           Language.PlutusTx.Prelude    ((&&))
 import qualified Language.PlutusTx.Prelude    as P
 import qualified Ledger.Map                   as Map
+import           Ledger.Map                   (These(..))
 import           Prelude                      hiding ((&&), (||), all, lookup, negate)
 import           LedgerBytes                  (LedgerBytes(LedgerBytes))
 import           Data.Function                ((&))
@@ -331,8 +332,9 @@ eq = checkBinRel P.eq
 --   @negate (fst (split a)) `plus` (snd (split a)) == a@
 --
 split :: Value -> (Value, Value)
-split (Value mp) = (Value pos, Value neg) where
-  (pos, neg) = Map.mapThese splitIntl mp
+split (Value mp) = (Value neg, Value pos) where
+  (neg, pos) = Map.mapThese splitIntl mp
 
-    splitIntl :: Map.
-    splitIntl 
+  splitIntl :: Map.Map TokenName Integer -> These (Map.Map TokenName Integer) (Map.Map TokenName Integer)
+  splitIntl mp' = These l r where
+    (l, r) = Map.mapThese (\i -> if i `P.leq` 0 then This i else That i) mp'
