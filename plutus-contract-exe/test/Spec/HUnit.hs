@@ -9,17 +9,18 @@ module Spec.HUnit(
     , assertTx
     ) where
 
-import           Data.Bifunctor                 (Bifunctor (..))
-import qualified Data.Map                       as Map
-import qualified Data.Set                       as Set
-import           Language.Plutus.Contract.Event (Step (..))
-import Language.Plutus.Contract.Transaction     (UnbalancedTx)
-import           Ledger.Ada                     (Ada)
-import qualified Ledger.Ada                     as Ada
-import           Ledger.Tx                      (Address, Tx)
-import qualified Test.Tasty.HUnit               as HUnit
-import           Wallet.Emulator                (AssertionError, EmulatorAction, EmulatorState, MonadEmulator, Wallet)
-import qualified Wallet.Emulator                as EM
+import           Data.Bifunctor                       (Bifunctor (..))
+import qualified Data.Map                             as Map
+import qualified Data.Set                             as Set
+import           Language.Plutus.Contract.Event       (Step (..))
+import           Language.Plutus.Contract.Transaction (UnbalancedTx)
+import           Ledger.Ada                           (Ada)
+import qualified Ledger.Ada                           as Ada
+import           Ledger.Tx                            (Address, Tx)
+import qualified Test.Tasty.HUnit                     as HUnit
+import           Wallet.Emulator                      (AssertionError, EmulatorAction, EmulatorState, MonadEmulator,
+                                                       Wallet)
+import qualified Wallet.Emulator                      as EM
 
 -- | Run an 'EmulatorAction' on a blockchain with the given initial distribution
 --   of funds to wallets.
@@ -35,7 +36,7 @@ run ws w = EM.processEmulated . EM.runWalletActionAndProcessPending ws w
 
 assertEndpoint :: (String -> IO ()) -> String -> Step -> HUnit.Assertion
 assertEndpoint lg nm stp =
-    if nm `Set.member` stepEndpoints stp
+    if nm `Map.member` stepEndpoints stp
     then pure ()
     else do
         lg (show stp)

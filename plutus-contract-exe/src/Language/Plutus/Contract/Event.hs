@@ -33,12 +33,16 @@ import qualified Ledger.AddressMap                    as AM
 import           Ledger.Slot                          (Slot)
 import           Ledger.Tx                            (Address, Tx)
 
+data EndpointSchema = Schema
+    deriving stock (Eq, Show, Generic)
+    deriving anyclass (Aeson.FromJSON, Aeson.ToJSON)
+
 data Step =
     Step
         { stepTransactions :: [UnbalancedTx]
         , stepAddresses    :: Set.Set Address
         , stepNextSlot     :: Maybe Slot
-        , stepEndpoints    :: Set.Set String -- TODO: better type - Map String EndpointSchema?
+        , stepEndpoints    :: Map.Map String EndpointSchema
         }
     deriving stock (Eq, Show, Generic)
     deriving anyclass (Aeson.FromJSON, Aeson.ToJSON)
@@ -65,7 +69,7 @@ slot :: Slot -> Step
 slot s = mempty { stepNextSlot = Just s }
 
 endpointName :: String -> Step
-endpointName e = mempty { stepEndpoints = Set.singleton e }
+endpointName e = mempty { stepEndpoints = Map.singleton e Schema }
 
 data Event =
     LedgerUpdate Address Tx
