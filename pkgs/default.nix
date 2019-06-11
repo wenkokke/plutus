@@ -47451,6 +47451,47 @@ description = "Containers with monoidal accumulation";
 license = stdenv.lib.licenses.bsd3;
 
 }) {};
+"morpheus-graphql" = callPackage
+({
+  mkDerivation
+, aeson
+, attoparsec
+, base
+, bytestring
+, containers
+, mtl
+, scientific
+, stdenv
+, text
+, transformers
+, unordered-containers
+, vector
+}:
+mkDerivation {
+
+pname = "morpheus-graphql";
+version = "0.0.1";
+sha256 = "f507c6d0113e9d069f93140d1a58fbfc520a2fbcac7cf1ef52a02024f59d3ca9";
+libraryHaskellDepends = [
+aeson
+attoparsec
+base
+bytestring
+containers
+mtl
+scientific
+text
+transformers
+unordered-containers
+vector
+];
+doHaddock = false;
+doCheck = false;
+homepage = "https://github.com/nalchevanidze/morpheus-graphql#readme";
+description = "Morpheus GraphQL";
+license = stdenv.lib.licenses.bsd3;
+
+}) {};
 "mountpoints" = callPackage
 ({
   mkDerivation
@@ -53395,6 +53436,7 @@ license = stdenv.lib.licenses.mit;
 , containers
 , hedgehog
 , lens
+, morpheus-graphql
 , mtl
 , plutus-emulator
 , plutus-use-cases
@@ -53421,6 +53463,7 @@ base
 bytestring
 containers
 lens
+morpheus-graphql
 mtl
 plutus-emulator
 plutus-use-cases
