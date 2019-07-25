@@ -34,7 +34,6 @@ import           Ledger.Value              (CurrencySymbol, TokenName, Value)
 import qualified Ledger.Value              as Value
 import           LedgerBytes               (LedgerBytes)
 import           Playground.Contract
-import           Schema.IOTS               (ExportIOTS, IOTSField, iotsField, exportIOTS)
 import qualified Schema.IOTS               as IOTS
 import           Wallet                    (EventHandler (EventHandler), EventTrigger, MonadWallet, andT,
                                             collectFromScript, collectFromScriptTxn, fundsAtAddressGeqT, logMsg,
@@ -266,30 +265,32 @@ myCurrency :: KnownCurrency
 myCurrency = KnownCurrency "b0b0" "MyCurrency" ( "USDToken" :| ["EURToken"])
 $(mkKnownCurrencies ['myCurrency])
 
-deriving instance ExportIOTS CampaignAction
-deriving instance ExportIOTS Campaign
-deriving instance ExportIOTS Slot
-deriving instance ExportIOTS Value
-deriving instance ExportIOTS CurrencySymbol
-deriving instance ExportIOTS TokenName
-deriving instance ExportIOTS PubKey
-deriving instance IOTSField Slot
-deriving instance IOTSField Value
-deriving instance IOTSField CurrencySymbol
-deriving instance IOTSField TokenName
-instance IOTSField ByteString where
-  iotsField _ = "t.string"
-instance IOTSField LedgerBytes where
-  iotsField _ = "t.string"
-deriving instance IOTSField PubKey
+-- deriving instance ExportIOTS CampaignAction
+-- deriving instance ExportIOTS Campaign
+-- deriving instance ExportIOTS Slot
+-- deriving instance ExportIOTS Value
+-- deriving instance ExportIOTS CurrencySymbol
+-- deriving instance ExportIOTS TokenName
+-- deriving instance ExportIOTS PubKey
+-- deriving instance IOTSField Slot
+-- deriving instance IOTSField Value
+-- deriving instance IOTSField CurrencySymbol
+-- deriving instance IOTSField TokenName
+-- instance IOTSField ByteString where
+--   iotsField _ = "t.string"
+-- instance IOTSField LedgerBytes where
+--   iotsField _ = "t.string"
+-- deriving instance IOTSField PubKey
+
+--   IOTS.export [ exportIOTS (Proxy :: Proxy CurrencySymbol)
+--               , exportIOTS (Proxy :: Proxy Slot)
+--               , exportIOTS (Proxy :: Proxy PubKey)
+--               , exportIOTS (Proxy :: Proxy TokenName)
+--               , exportIOTS (Proxy :: Proxy Value)
+--               , exportIOTS (Proxy :: Proxy Campaign)
+--               , exportIOTS (Proxy :: Proxy CampaignAction)
+--               ]
 
 iotsDefinitions :: Text
 iotsDefinitions =
-  IOTS.export [ exportIOTS (Proxy :: Proxy CurrencySymbol)
-              , exportIOTS (Proxy :: Proxy Slot)
-              , exportIOTS (Proxy :: Proxy PubKey)
-              , exportIOTS (Proxy :: Proxy TokenName)
-              , exportIOTS (Proxy :: Proxy Value)
-              , exportIOTS (Proxy :: Proxy Campaign)
-              , exportIOTS (Proxy :: Proxy CampaignAction)
-              ]
+  IOTS.render $ IOTS.export scheduleCollection
