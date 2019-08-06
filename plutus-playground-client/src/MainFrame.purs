@@ -22,6 +22,7 @@ import Control.Monad.State (class MonadState, evalState)
 import Control.Monad.Trans.Class (lift)
 import Cursor (_current)
 import Cursor as Cursor
+import DOM.HTML.Indexed (Interactive)
 import Data.Array (catMaybes, (..))
 import Data.Array (concat, deleteAt, fromFoldable, snoc) as Array
 import Data.Array.Extra (move) as Array
@@ -36,11 +37,12 @@ import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.MediaType.Common (textPlain)
 import Data.Newtype (unwrap)
-import Data.RawJson (JsonEither(..))
+import Data.RawJson (JsonEither(..), JsonTuple(..))
 import Data.String as String
 import Data.Traversable (foldl)
 import Data.Tuple (Tuple(Tuple))
 import Data.Tuple.Nested ((/\))
+import Debug.Trace (spy)
 import Editor (demoScriptsPane, editorPane)
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
@@ -52,13 +54,21 @@ import Gists as Gists
 import Halogen (Component, action)
 import Halogen as H
 import Halogen.Component (ParentHTML)
-import Halogen.HTML (ClassName(ClassName), HTML, a, div, div_, h1, strong_, text)
+import Halogen.HTML (class IsProp, ClassName(ClassName), ElemName(..), HTML, IProp, Node, PropName(..), a, code_, div, div_, element, h1, prop, strong_, text)
 import Halogen.HTML.Events (onClick)
 import Halogen.HTML.Properties (class_, classes, href, id_)
 import Halogen.Query (HalogenM)
+import Halogen.VDom.DOM.Prop (propFromString)
 import Icons (Icon(..), icon)
 import Language.Haskell.Interpreter (CompilationError(CompilationError, RawError), InterpreterError(CompilationErrors, TimeoutError), _InterpreterResult)
+import Language.PlutusTx.AssocMap (Map(..))
 import Language.PlutusTx.AssocMap as AssocMap
+import Ledger.Ada (Ada(..))
+import Ledger.Crypto (PubKey(..))
+import Ledger.Interval (Interval(..))
+import Ledger.Slot (Slot(..))
+import Ledger.Tx (AddressOf(..), Tx(..), TxOutOf(..), TxOutType(..))
+import Ledger.TxId (TxIdOf(..))
 import Ledger.Value (CurrencySymbol(CurrencySymbol), TokenName(TokenName), Value(Value))
 import MonadApp (class MonadApp, editorGetContents, editorGotoLine, editorSetAnnotations, editorSetContents, getGistByGistId, getOauthStatus, patchGistByGistId, postContract, postEvaluation, postGist, preventDefault, readFileFromDragEvent, runHalogenApp, saveBuffer, setDataTransferData, setDropEffect)
 import Network.RemoteData (RemoteData(NotAsked, Loading, Failure, Success), _Success, isSuccess)
@@ -71,6 +81,54 @@ import Servant.PureScript.Settings (SPSettings_)
 import StaticData as StaticData
 import Wallet.Emulator.Types (Wallet(Wallet))
 import Web.HTML.Event.DataTransfer as DataTransfer
+
+aChain :: Blockchain
+aChain = [ [ aSlot ] ]
+
+aSlot :: JsonTuple (TxIdOf String) Tx
+aSlot =
+  JsonTuple
+    ( Tuple (TxIdOf { getTxId: "9f189b187d18630918a90018c4185818ec18330018bd18df1826189d0b183218ed18a00c1846187d187d18e2183f14187718e30b185918e51825ff" })
+        ( Tx
+            { txFee: (Ada { getAda: 0 })
+            , txForge: (Value { getValue: (Map [ (JsonTuple (Tuple (CurrencySymbol { unCurrencySymbol: "" }) (Map [ (JsonTuple (Tuple (TokenName { unTokenName: "" }) 20)) ]))), (JsonTuple (Tuple (CurrencySymbol { unCurrencySymbol: "b0b0" }) (Map [ (JsonTuple (Tuple (TokenName { unTokenName: "EURToken" }) 20)), (JsonTuple (Tuple (TokenName { unTokenName: "USDToken" }) 20)) ]))) ]) })
+            , txInputs: []
+            , txOutputs:
+              [ ( TxOutOf
+                    { txOutAddress: (AddressOf { getAddress: "9f1827182118f6185718e918ed189118d218fc182a1828182f187f18f518ed188118ae184818f4188b185106181a0a18a218fa18a418b2185b185f031822ff" })
+                    , txOutType: (PayToPubKey (PubKey { getPubKey: "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c" }))
+                    , txOutValue:
+                      ( Value
+                          { getValue:
+                            ( Map
+                                [ (JsonTuple (Tuple (CurrencySymbol { unCurrencySymbol: "" }) (Map [ (JsonTuple (Tuple (TokenName { unTokenName: "" }) 10)) ])))
+                                , ( JsonTuple
+                                      ( Tuple (CurrencySymbol { unCurrencySymbol: "b0b0" })
+                                          ( Map
+                                              [ (JsonTuple (Tuple (TokenName { unTokenName: "EURToken" }) 10))
+                                              , (JsonTuple (Tuple (TokenName { unTokenName: "USDToken" }) 10))
+                                              ]
+                                          )
+                                      )
+                                  )
+                                ]
+                            )
+                          }
+                      )
+                    }
+                )
+              , ( TxOutOf
+                    { txOutAddress: (AddressOf { getAddress: "9f0318d20018a8181e18e018fe18ac18e818fb1884185e185e18c9185018a618f918ad18d81837091824184f187b1881131846185413189f184118a4ff" })
+                    , txOutType: (PayToPubKey (PubKey { getPubKey: "fc51cd8e6218a1a38da47ed00230f0580816ed13ba3303ac5deb911548908025" }))
+                    , txOutValue: (Value { getValue: (Map [ (JsonTuple (Tuple (CurrencySymbol { unCurrencySymbol: "" }) (Map [ (JsonTuple (Tuple (TokenName { unTokenName: "" }) 10)) ]))), (JsonTuple (Tuple (CurrencySymbol { unCurrencySymbol: "b0b0" }) (Map [ (JsonTuple (Tuple (TokenName { unTokenName: "EURToken" }) 10)), (JsonTuple (Tuple (TokenName { unTokenName: "USDToken" }) 10)) ]))) ]) })
+                    }
+                )
+              ]
+            , txSignatures: (Map [])
+            , txValidRange: (Interval { ivFrom: (Just (Slot { getSlot: 0 })), ivTo: Nothing })
+            }
+        )
+    )
 
 mkSimulatorWallet :: Array KnownCurrency -> Int -> SimulatorWallet
 mkSimulatorWallet currencies walletId =
@@ -517,10 +575,7 @@ evalForm initialValue = rec
 
   rec (SetSubField _ subEvent) arg@(FormValue _) = arg
 
-  rec (AddSubField _) (FormArray schema fields) =
-    -- As the code stands, this is the only guarantee we get that every
-    -- value in the array will conform to the schema: the fact that we
-    -- create the 'empty' version from the same schema template.
+  rec (AddSubField _) (FormArray schema fields) =  -- As the code stands, this is the only guarantee we get that every -- value in the array will conform to the schema: the fact that we -- create the 'empty' version from the same schema template.
     --
     -- Is more type safety than that possible? Probably.
     -- Is it worth the research effort? Perhaps. :thinking_face:
@@ -583,6 +638,8 @@ render state@(State { currentView }) =
             ]
         , viewContainer currentView Editor
             $ [ demoScriptsPane
+              , div_ [ code_ [ text $ show aChain ] ]
+              , slotVisualisation aSlot
               , editorPane defaultContents (map unwrap (view _compilationResult state))
               , case view _compilationResult state of
                   Failure error -> ajaxErrorPane error
@@ -690,3 +747,48 @@ mainTabBar activeView = navTabs_ (mkTab <$> tabs)
         [ active ]
       else
         []
+
+slotVisualisation :: forall p i. JsonTuple (TxIdOf String) Tx -> HTML p i
+slotVisualisation slot =
+  svg
+    -- [ viewBox $ Rect { x: 0, y: 0, height: 400, width: 800 }
+    -- , xmlns "http://www.w3.org/2000/svg"
+    -- ]
+    [ xmlns "http://www.w3.org/2000/svg"
+    ]
+    []
+
+data Rect
+  = Rect
+    { x :: Int
+    , y :: Int
+    , width :: Int
+    , height :: Int
+    }
+
+instance isPropRect :: IsProp Rect where
+  toPropValue (Rect rect) =
+    spy "PROP"
+      $ propFromString
+      $ show rect.x
+      <> " "
+      <> show rect.y
+      <> " "
+      <> show rect.height
+      <> " "
+      <> show rect.width
+
+type SVGNode
+  = Interactive
+      ( viewBox :: Rect
+      , xmlns :: String
+      )
+
+svg :: forall p i. Node SVGNode p i
+svg = element (ElemName "svg")
+
+viewBox :: forall r i. Rect -> IProp ( viewBox :: Rect | r ) i
+viewBox = prop (PropName "viewBox")
+
+xmlns :: forall r i. String -> IProp ( xmlns :: String | r ) i
+xmlns = prop (PropName "xmlns")

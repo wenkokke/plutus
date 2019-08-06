@@ -103,6 +103,7 @@ test-suite plutus-use-cases-test
         tasty-golden -any,
         text -any,
         lens -any,
+        wl-pprint-text -any,
         mtl -any
 
 benchmark plutus-use-cases-bench

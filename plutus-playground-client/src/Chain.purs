@@ -24,11 +24,12 @@ import Data.Set as Set
 import Data.Traversable (foldMap)
 import Data.Tuple (Tuple(Tuple))
 import Data.Tuple.Nested ((/\))
+import Debug.Trace (spy)
 import Effect.Aff.Class (class MonadAff)
 import Halogen (HTML)
 import Halogen.Chartist (chartist)
 import Halogen.Component (ParentHTML)
-import Halogen.HTML (ClassName(ClassName), br_, div, div_, h2_, slot', text)
+import Halogen.HTML (ClassName(ClassName), br_, code_, div, div_, h2_, slot', text)
 import Halogen.HTML.Events (input)
 import Halogen.HTML.Properties (class_)
 import Language.PlutusTx.AssocMap as AssocMap
@@ -45,7 +46,7 @@ evaluationPane ::
   MonadAff m =>
   EvaluationResult ->
   ParentHTML Query ChildQuery ChildSlot m
-evaluationPane e@(EvaluationResult { emulatorLog, resultBlockchain, fundsDistribution, walletKeys }) =
+evaluationPane (EvaluationResult { emulatorLog, resultBlockchain, fundsDistribution, walletKeys }) =
   div_
     [ blockchainExploration
         (foldMap (\(JsonTuple (Tuple key wallet)) -> Map.singleton (view _pubKey key) wallet) walletKeys)

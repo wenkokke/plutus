@@ -1,27 +1,40 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 module Spec.Future(tests) where
 
+import           Control.Lens                                    (traversed,to, (^..), view)
+import           Text.PrettyPrint.Leijen.Text                    (indent, integer, comma, hsep, renderPretty, displayTStrict, Doc, angles, braces, dquotes, linebreak, parens, punctuate, space, squotes, textStrict, vsep, (<+>))
 import           Control.Monad                                   (void)
 import           Data.Either                                     (isRight)
 import           Data.Foldable                                   (traverse_)
+import qualified Data.Set                                        as Set
+import Data.List (intersperse)
+import           Data.Set                                        (Set)
 import qualified Data.Map                                        as Map
-import           Hedgehog                                        (Property, forAll, property)
-import qualified Hedgehog
-import           Test.Tasty
+import qualified Language.PlutusTx.AssocMap                      as AssocMap
+import           Hedgehog                                        (assert, footnote, footnoteShow, Property, forAll, property)
+import qualified Hedgehog                                        ()
+import           Test.Tasty                                      (testGroup, TestTree)
 import           Test.Tasty.Hedgehog                             (testProperty)
 import qualified Test.Tasty.HUnit                                as HUnit
 
 import qualified Spec.Lib                                        as Lib
 
 import qualified Ledger
+import qualified Data.Text                                       as Text
+import           Ledger
 import           Ledger.Ada                                      (Ada)
 import qualified Ledger.Ada                                      as Ada
 import           Ledger.Validation                               (OracleValue (..))
 import qualified Ledger.Value                                    as Value
+import           Ledger.Value                                    (Value(Value))
 import           Prelude                                         hiding (init)
+import qualified Wallet.Graph                                    as V
 import           Wallet.API                                      (PubKey (..))
 import           Wallet.Emulator
 import qualified Wallet.Emulator.Generators                      as Gen
@@ -43,8 +56,8 @@ wallet2 = Wallet 2
 tests :: TestTree
 tests = testGroup "futures" [
     testProperty "commit initial margin" initialiseFuture,
-    testProperty "close the position" settle,
-    testProperty "close early if margin payment was missed" settleEarly,
+    -- testProperty "close the position" settle,
+    -- testProperty "close early if margin payment was missed" settleEarly,
     testProperty "increase the margin" increaseMargin,
     Lib.goldenPir "test/Spec/future.pir" $$(PlutusTx.compile [|| F.mkValidator ||]),
     HUnit.testCase "script size is reasonable" (Lib.reasonable (F.validatorScript contract) 50000)
@@ -214,11 +227,133 @@ checkTrace t = property $ do
     let
         ib = Map.fromList [(walletPubKey wallet1, startingBalance), (walletPubKey wallet2, startingBalance)]
         model = Gen.generatorModel { Gen.gmInitialBalance = ib }
-    (result, st) <- forAll $ Gen.runTraceOn model t
+    (result, evaluation) <- forAll $ Gen.runTraceOn model t
+
+    -- let blockchain = view chainNewestFirst evaluation
+    -- let pubKeys :: [PubKey]
+    --     pubKeys = evaluation ^.. (walletStates . traversed . ownPrivateKey . to Ledger.toPublicKey)
+    -- let flowgraph = V.graph $ V.txnFlows pubKeys blockchain
+
+    -- Hedgehog.footnoteShow flowgraph
+    -- Hedgehog.footnote "FLOW"
+
+    -- traverse_ Hedgehog.footnoteShow (view walletStates evaluation)
+    -- Hedgehog.footnote "WALLETS"
+
+    -- Hedgehog.footnoteShow (view index evaluation)
+    -- Hedgehog.footnote "INDEX"
+
+    -- traverse_ Hedgehog.footnoteShow (view emulatorLog evaluation)
+    -- Hedgehog.footnote "LOG"
+
+    Hedgehog.footnote . showChain $ view chainNewestFirst evaluation
+    Hedgehog.footnote "CHAIN"
+
     Hedgehog.assert (isRight result)
-    Hedgehog.assert ([] == _txPool st)
+    Hedgehog.assert ([] == _txPool evaluation)
 
 -- | Validate all pending transactions and notify all wallets
 updateAll :: Trace MockWallet ()
 updateAll =
     processPending >>= void . walletsNotifyBlock [wallet1, wallet2]
+
+showChain :: [[Tx]] -> String
+showChain = Text.unpack . displayTStrict . renderPretty 0.8 200 . render
+
+class Render a where
+    render :: a -> Doc
+
+instance Render [[Tx]] where
+  render [] = "NO SLOTs"
+  render slots = vsep (intersperse linebreak (render <$> slots))
+
+instance Render [Tx] where
+  render [] = "NO TXs"
+  render txs = vsep (render <$> txs)
+
+instance Render (Set TxIn) where
+  render (Set.null -> True) = "No INPUTs"
+  render txIns = vsep (render <$> (Set.toList txIns))
+
+instance Render [TxOut] where
+  render [] = "No OUTPUTs"
+  render txOuts = vsep (render <$> txOuts)
+
+instance Render TxIn where
+    render t@(TxInOf {txInRef, txInType}) =
+        inset $
+        vsep $
+        punctuate
+            comma
+            ["txInType" <+> showDoc txInType, "txInRef" <+> showDoc txInRef]
+
+instance Render Address where
+  render (AddressOf address) = textStrict . Text.pack . take 7 . show $ address
+
+instance Render TxOut where
+    render (TxOutOf {txOutAddress, txOutValue, txOutType}) =
+        render txOutAddress <> ":" <+>
+        inset
+            (vsep
+                 ([ "txOutType" <+> showDoc txOutType
+                  ,  render txOutValue
+                  ]))
+
+instance Render Tx where
+    render (Tx {txInputs, txOutputs, txForge, txFee, txValidRange, txSignatures}) =
+        vsep
+            [ "txForge" <+> render txForge
+            , "txFee" <+> render txFee
+            , "txInputs" <+> inset (render txInputs)
+            , "txOutputs" <+> inset (render txOutputs)
+            ]
+
+instance Render Ada where
+  render = render . Ada.toValue
+
+instance Render Value where
+  render (Value.isZero -> True) = "-NoValue-"
+  render (Value val) = render val
+
+instance (Render k, Render v) => Render (AssocMap.Map k v) where
+    render m =
+        vsep ((\(k, v) -> render k <+> parens (render v)) <$> AssocMap.toList m)
+
+instance Render CurrencySymbol where
+  render (Value.unCurrencySymbol -> "") = "ADA"
+  render symbol = showDoc symbol
+
+instance Render Value.TokenName where
+  render (Value.unTokenName -> "") = "T"
+  render symbol = showDoc symbol
+
+instance Render Integer where
+  render = integer
+
+showDoc :: Show a => a -> Doc
+showDoc = textStrict . Text.pack . show
+
+            -- Tx {txInputs = [
+            --        TxInOf {txInRef = TxOutRefOf {txOutRefId = TxIdOf {getTxId = 1b42dc18b99978b77a58ceb9623aed84a0d6e449a14873b0b5b08df1215e8f74}, txOutRefIdx = 0},
+            --                txInType = ConsumePublicKeyAddress (PubKey {getPubKey = 3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c})}
+            --     ],
+            --     txOutputs = [
+            --        TxOutOf {txOutAddress = AddressOf {getAddress = b566c4e4997c7473c95c01140b57c746b55e6c1ceb44993d8d784bfca590c4be},
+            --                 txOutValue = Value {getValue = Map {unMap = [(, Map {unMap = [(, 11500)]})]}},
+            --                 txOutType = PayToScript DataScript { <script> }
+            --                },
+            --        TxOutOf {txOutAddress = AddressOf {getAddress = 2721f657e9ed91d2fc2a282f7ff5ed81ae48f48b51061a0aa2faa4b25b5f0322},
+            --                 txOutValue = Value {getValue = Map {unMap = [(, Map {unMap = [(, 988500)]})]}},
+            --                 txOutType = PayToPubKey (PubKey {getPubKey = 3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c})}
+            --     ],
+            --     txForge = Value {getValue = Map {unMap = []}},
+            --     txFee = Ada {getAda = 0},
+            --     txValidRange = Interval {ivFrom = Nothing, ivTo = Nothing},
+            --     txSignatures = fromList [(PubKey {getPubKey = 3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c}
+            --                             , Signature {getSignature = "\242\140T\169-\178*\138\&3\145f\173\233\146x=\EM\248@\173\ACKH\195\238G\b\180(I\207\247\175\168\190\133\226\155N\236^\134b\204j\145\172H\211\176\&9x\234\180\193F\152\241d\141\t3\130\207\ACK"})
+            --                             ]
+            --    }
+
+
+inset :: Doc -> Doc
+inset doc = linebreak <> indent 4 doc
