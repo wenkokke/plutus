@@ -64,6 +64,18 @@ newtype Ada = Lovelace { getLovelace :: Integer }
     deriving anyclass (ToSchema, ToJSON, FromJSON)
     deriving newtype (Eq, Ord, Num, Integral, Real, Serialise)
 
+instance Haskell.Semigroup Ada where
+    Lovelace a1 <> Lovelace a2 = Lovelace (a1 `P.plus` a2)
+
+instance Semigroup Ada where
+    Lovelace a1 <> Lovelace a2 = Lovelace (a1 `P.plus` a2)
+
+instance Haskell.Monoid Ada where
+    mempty = Lovelace 0
+
+instance Monoid Ada where
+    mempty = Lovelace 0
+
 makeLift ''Ada
 
 {-# INLINABLE getAda #-}

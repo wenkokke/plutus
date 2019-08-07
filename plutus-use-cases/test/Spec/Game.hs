@@ -5,6 +5,7 @@ module Spec.Game(tests) where
 import qualified Language.Plutus.Contract.Prompt.Event         as Event
 import           Language.Plutus.Contract.Test
 import qualified Language.PlutusTx                             as PlutusTx
+import           Language.PlutusTx.Lattice
 import           Language.PlutusTx.Coordination.Contracts.Game (LockParams (..), game, gameAddress,
                                                                 gameValidator, guessTrace, guessWrongTrace, lockTrace,
                                                                 validateGuess)
@@ -22,7 +23,7 @@ tests :: TestTree
 tests = testGroup "game"
     [ checkPredicate "Expose 'lock' endpoint and watch game address"
         game
-        (endpointAvailable w1 "lock" <> interestingAddress w1 gameAddress)
+        (endpointAvailable w1 "lock" /\ interestingAddress w1 gameAddress)
         $ pure ()
 
     , checkPredicate "'lock' endpoint submits a transaction"
@@ -38,13 +39,13 @@ tests = testGroup "game"
     , checkPredicate "guess right (unlock funds)"
         game
         (walletFundsChange w2 (Ada.lovelaceValueOf 10)
-            <> walletFundsChange w1 (Ada.lovelaceValueOf (-10)))
+            /\ walletFundsChange w1 (Ada.lovelaceValueOf (-10)))
         guessTrace
 
     , checkPredicate "guess wrong"
         game
         (walletFundsChange w2 Value.zero
-            <> walletFundsChange w1 (Ada.lovelaceValueOf (-10)))
+            /\ walletFundsChange w1 (Ada.lovelaceValueOf (-10)))
         guessWrongTrace
     , Lib.goldenPir "test/Spec/game.pir" $$(PlutusTx.compile [|| validateGuess ||])
     , HUnit.testCase "script size is reasonable" (Lib.reasonable gameValidator 25000)
