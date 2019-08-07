@@ -22,7 +22,7 @@ import           Data.Aeson   (FromJSON, ToJSON)
 import           Data.Monoid  ((<>))
 import           Data.Proxy   (Proxy)
 import           Data.Text    (Text)
-import           GHC.Generics ((:*:) ((:*:)), (:+:), C1, Constructor, D1, Generic, M1 (M1), Rec0, Rep, S1, Selector, U1,
+import           GHC.Generics ((:*:) ((:*:)), (:+:), C1, Constructor, D1, Generic, M1 (M1), Rec0, Rep, S1, Selector,
                                conIsRecord, conName, from, selName)
 
 {-# ANN module ("HLint: ignore Avoid restricted function" :: Text)
@@ -104,7 +104,7 @@ instance ToSchema a => ToSchema (Maybe a) where
 class GenericToConstructorName f where
     genericToConstructorName :: f a -> [String]
 
-instance (Constructor c) => GenericToConstructorName (C1 c U1) where
+instance (Constructor c) => GenericToConstructorName (C1 c f) where
     genericToConstructorName c = [conName c]
 
 instance (GenericToConstructorName c1, GenericToConstructorName c2) =>
