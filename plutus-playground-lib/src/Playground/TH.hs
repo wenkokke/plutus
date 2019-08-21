@@ -111,13 +111,36 @@ toSchemas fn ts = do
 
 {-# ANN args ("HLint: ignore" :: String) #-}
 
+-- Some examples of function types in TH
+
+-- a good function
+-- [KindedTV m_6989586621679226019 (AppT (AppT ArrowT StarT) StarT)]
+-- [AppT (ConT GHC.Base.Monad) (VarT m_6989586621679226019),AppT (ConT Wallet.API.WalletAPI) (VarT m_6989586621679226019)]
+-- (AppT (AppT ArrowT (ConT Ledger.Value.Value))
+--       (AppT (AppT ArrowT (ConT Wallet.Emulator.Types.Wallet)) 
+--             (AppT (VarT m_6989586621679226019) (TupleT 0))))
+
+-- f :: Maybe Int
+-- AppT (ConT GHC.Maybe.Maybe) (ConT GHC.Types.Int)
+
+-- f :: Int
+-- ConT GHC.Types.Int
+
+-- f :: [Int]
+-- AppT ListT (ConT GHC.Types.Int)
+
+-- FIXME: I think this is the place where we need to check more things about the type of functions
+--        we are trying to make schemas for:
+-- * They should return (Monad m, WalletAPI m) => m ()
+-- * They can only take arguments that have a ToSchema instance (already checked I guess)
+-- * I don't think we should ignore things that don't fit, we should error instead
 args :: Type -> [Type]
-args (AppT (AppT ArrowT t1) as) = t1 : args as
-args (AppT (ConT _) _)          = []
-args (ForallT _ _ as)           = args as
-args (ConT _)                   = []
-args (TupleT _)                 = []
-args (AppT (VarT _) t)          = args t
+args (AppT (AppT ArrowT t1) as) = t1 : args as -- we take the type an arrow points to without checking what type of type it is
+args (AppT (ConT _) _)          = [] -- we ignore type constructors but this doesn't affect us because of the above rule
+args (ForallT _ _ as)           = args as -- we expect but ignore constraints but we don't dismiss what they constrain
+args (ConT _)                   = [] -- We ignore constant values, I think this allows f :: m () because it ignores and schema is empty
+args (TupleT _)                 = [] -- Tuples are ignored, this is how we manage to ignore the return type since it is usually `m ()`
+args (AppT (VarT _) t)          = args t -- we ignore type variables but we don't ignore their argument if they have one: m Int becomes Int but then Int is ignored anyway
 args a                          = error $ "incorrect type in template haskell function: " ++ show a
 
 -- TODO: add a type declaration to registeredKnownCurrencies
