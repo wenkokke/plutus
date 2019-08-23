@@ -1,6 +1,7 @@
 module Marlowe.SemanticsNew where
 
 import Prelude
+
 import Data.BigInteger (BigInteger)
 import Data.Foldable (class Foldable, any)
 import Data.Generic.Rep (class Generic)
@@ -18,6 +19,8 @@ import Data.Num (class Num)
 import Data.Real (class Real)
 import Data.Symbol (SProxy(..))
 import Data.Tuple (Tuple(..))
+import Marlowe.Pretty (class Pretty, genericPretty)
+import Text.PrettyPrint.Leijen (text)
 
 type PubKey
   = String
@@ -47,6 +50,8 @@ derive instance ordSlot :: Ord Slot
 
 instance showSlot :: Show Slot where
   show = genericShow
+
+derive newtype instance prettySlot :: Pretty Slot
 
 derive newtype instance semiRingSlot :: Semiring Slot
 
@@ -107,6 +112,9 @@ derive instance ordAccountId :: Ord AccountId
 instance showAccountId :: Show AccountId where
   show (AccountId { accountNumber, accountOwner }) = "(AccountId " <> show accountNumber <> " " <> show accountOwner <> ")"
 
+instance prettyAccountId :: Pretty AccountId where
+  prettyFragment a = text (show a)
+
 newtype ChoiceId
   = ChoiceId
   { choiceNumber :: BigInteger
@@ -124,6 +132,9 @@ derive instance ordChoiceId :: Ord ChoiceId
 instance showChoiceId :: Show ChoiceId where
   show (ChoiceId { choiceNumber, choiceOwner }) = "(ChoiceId " <> show choiceNumber <> " " <> show choiceOwner <> ")"
 
+instance prettyChoiceId :: Pretty ChoiceId where
+  prettyFragment a = text (show a)
+
 newtype ValueId
   = ValueId BigInteger
 
@@ -137,6 +148,8 @@ derive instance ordValueId :: Ord ValueId
 
 instance showValueId :: Show ValueId where
   show = genericShow
+
+derive newtype instance prettyValueId :: Pretty ValueId
 
 data Value
   = AvailableMoney AccountId
@@ -157,6 +170,9 @@ derive instance ordValue :: Ord Value
 
 instance showValue :: Show Value where
   show v = genericShow v
+
+instance prettyValue :: Pretty Value where
+  prettyFragment a = genericPretty a
 
 data Observation
   = AndObs Observation Observation
@@ -180,6 +196,9 @@ derive instance ordObservation :: Ord Observation
 instance showObservation :: Show Observation where
   show o = genericShow o
 
+instance prettyObservation :: Pretty Observation where
+  prettyFragment a = genericPretty a
+
 -- |Interval of [from, to], both bounds are included
 newtype Interval a
   = Interval { from :: a, to :: a }
@@ -191,9 +210,6 @@ derive instance newtypeInterval :: Newtype (Interval a) _
 derive instance eqInterval :: Eq a => Eq (Interval a)
 
 derive instance ordInterval :: Ord a => Ord (Interval a)
-
-instance showInterval :: (Show a, Generic a rep) => Show (Interval a) where
-  show v = genericShow v
 
 _from :: forall a. Lens' (Interval a) a
 _from = _Newtype <<< prop (SProxy :: SProxy "from")
@@ -213,8 +229,14 @@ anyWithin v = any (\(Interval interval) -> v >= interval.from && v <= interval.t
 type SlotInterval
   = Interval Slot
 
+instance showSlotInterval :: Show (Interval Slot) where
+  show (Interval { from, to }) = "(Slot " <> show from <> " " <> show to <> ")"
+
 type Bound
   = Interval BigInteger
+
+instance showBound :: Show (Interval BigInteger) where
+  show (Interval { from, to }) = "(Bound " <> show from <> " " <> show to <> ")"
 
 data Action
   = Deposit AccountId Party Value
@@ -243,6 +265,9 @@ derive instance ordPayee :: Ord Payee
 instance showPayee :: Show Payee where
   show v = genericShow v
 
+instance prettyPayee :: Pretty Payee where
+  prettyFragment a = genericPretty a
+
 newtype Case
   = Case
   { action :: Action
@@ -260,6 +285,9 @@ derive instance ordCase :: Ord Case
 instance showCase :: Show Case where
   show (Case { action, contract }) = "(Case " <> show action <> " " <> show contract <> ")"
 
+instance prettyCase :: Pretty Case where
+  prettyFragment a = text (show a)
+
 data Contract
   = Refund
   | Pay AccountId Payee Value Contract
@@ -275,6 +303,9 @@ derive instance ordContract :: Ord Contract
 
 instance showContract :: Show Contract where
   show v = genericShow v
+
+instance prettyContract :: Pretty Contract where
+  prettyFragment a = genericPretty a
 
 newtype State
   = State

@@ -8,8 +8,10 @@ import Control.Monad.Rec.Class (class MonadRec)
 import Data.Either (Either(..))
 import Marlowe.Gen (genContract, genObservation, genValue)
 import Marlowe.Parser (contract, observation, value)
+import Marlowe.ParserNew as SP
 import Marlowe.Pretty (pretty)
 import Marlowe.Types (Contract, Observation, Value)
+import Marlowe.SemanticsNew as S
 import Test.QuickCheck (class Testable, Result, (===))
 import Test.QuickCheck.Gen (Gen)
 import Test.Unit (TestSuite, Test, suite, test)
@@ -35,6 +37,11 @@ valueParser :: forall m. MonadGen m => MonadRec m => Lazy (m Value) => m Result
 valueParser = do
   v <- genValue
   pure (runParser (show v) (parens value <|> value) === Right v)
+
+-- valueNewParser :: forall m. MonadGen m => MonadRec m => Lazy (m S.Value) => m Result
+-- valueNewParser = do
+  -- v <- genValue
+  -- pure (runParser (show v) (parens SP.value <|> SP.value) === Right v)
 
 prettyValueParser :: forall m. MonadGen m => MonadRec m => Lazy (m Value) => m Result
 prettyValueParser = do
