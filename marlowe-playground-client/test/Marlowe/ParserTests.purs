@@ -1,16 +1,16 @@
 module Marlowe.ParserTests where
 
 import Prelude
+
 import Control.Alternative ((<|>))
 import Control.Lazy (class Lazy)
 import Control.Monad.Gen (class MonadGen)
 import Control.Monad.Rec.Class (class MonadRec)
 import Data.Either (Either(..))
-import Marlowe.Gen (genContract, genObservation, genValue)
-import Marlowe.Parser (contract, observation, value)
-import Marlowe.ParserNew as SP
+import Marlowe.GenNew (genAction, genContract, genObservation, genValue)
+import Marlowe.ParserNew (action, contract, observation, value)
 import Marlowe.Pretty (pretty)
-import Marlowe.Types (Contract, Observation, Value)
+import Marlowe.SemanticsNew (Contract, Observation, Value)
 import Marlowe.SemanticsNew as S
 import Test.QuickCheck (class Testable, Result, (===))
 import Test.QuickCheck.Gen (Gen)
@@ -27,6 +27,8 @@ all =
     test "Pretty Value Parser" $ quickCheckGen prettyValueParser
     test "Observation Parser" $ quickCheckGen observationParser
     test "Pretty Observation Parser" $ quickCheckGen prettyObservationParser
+    test "Action Parser" $ quickCheckGen actionParser
+    test "Pretty Action Parser" $ quickCheckGen prettyActionParser
     test "Contract Parser" $ quickCheckGen contractParser
     test "Pretty Contract Parser" $ quickCheckGen prettyContractParser
 
@@ -37,11 +39,6 @@ valueParser :: forall m. MonadGen m => MonadRec m => Lazy (m Value) => m Result
 valueParser = do
   v <- genValue
   pure (runParser (show v) (parens value <|> value) === Right v)
-
--- valueNewParser :: forall m. MonadGen m => MonadRec m => Lazy (m S.Value) => m Result
--- valueNewParser = do
-  -- v <- genValue
-  -- pure (runParser (show v) (parens SP.value <|> SP.value) === Right v)
 
 prettyValueParser :: forall m. MonadGen m => MonadRec m => Lazy (m Value) => m Result
 prettyValueParser = do
@@ -57,6 +54,16 @@ prettyObservationParser :: forall m. MonadGen m => MonadRec m => Lazy (m Value) 
 prettyObservationParser = do
   v <- genObservation
   pure (runParser (show $ flatten $ pretty v) (parens observation <|> observation) === Right v)
+
+actionParser :: forall m. MonadGen m => MonadRec m => Lazy (m S.Value) => Lazy (m S.Observation) => m Result
+actionParser = do
+  v <- genAction 5
+  pure (runParser (show v) (parens action <|> action) === Right v)
+
+prettyActionParser :: forall m. MonadGen m => MonadRec m => Lazy (m S.Value) => Lazy (m S.Observation) => m Result
+prettyActionParser = do
+  v <- genAction 5
+  pure (runParser (show $ flatten $ pretty v) (parens action <|> action) === Right v)
 
 contractParser :: forall m. MonadGen m => MonadRec m => Lazy (m Value) => Lazy (m Observation) => Lazy (m Contract) => m Result
 contractParser = do

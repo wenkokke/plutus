@@ -1,26 +1,26 @@
 module Marlowe.ParserNew where
 
 
-import Prelude ((*>), (<*), (<*>), bind, pure, (<$>), void, ($), (<<<), discard)
-
 import Control.Alternative ((<|>))
 import Control.Lazy (fix)
-import Data.Array (fromFoldable)
+import Data.Array (fromFoldable, many)
+import Data.Array as Array
 import Data.BigInteger (BigInteger)
 import Data.BigInteger as BigInteger
-import Data.List (List, many, some)
+import Data.List (List, some)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (wrap)
 import Data.String.CodeUnits (fromCharArray)
 import Marlowe.SemanticsNew (AccountId, Action(..), Bound, Case, ChoiceId, Contract(..), Observation(..), Party, Payee(..), PubKey, Slot(..), Timeout, Value(..), ValueId(..))
+import Prelude ((*>), (<*), (<*>), bind, pure, (<$>), void, ($), (<<<), discard)
 import Text.Parsing.Parser (Parser, fail)
 import Text.Parsing.Parser.Basic (integral, parens)
-import Text.Parsing.Parser.Combinators (between, choice)
+import Text.Parsing.Parser.Combinators (between, choice, sepBy)
 import Text.Parsing.Parser.String (char, string)
 import Text.Parsing.Parser.Token (alphaNum, space)
 
 -- All arguments are space separated so we add **> to reduce boilerplate
-maybeSpaces :: Parser String (List Char)
+maybeSpaces :: Parser String (Array Char)
 maybeSpaces = many space
 
 spaces :: Parser String (List Char)
@@ -38,6 +38,14 @@ infixl 4 appSpaces as <**>
 
 text :: Parser String String
 text = between (char '"') (char '"') $ fromCharArray <<< fromFoldable <$> many (choice [alphaNum, space])
+
+haskellList :: forall a. Parser String a -> Parser String (List a)
+haskellList p = squareParens $ p `sepBy` (maybeSpaces *> string "," *> maybeSpaces) 
+  where
+    squareParens = between (string "[") (string "]")
+
+array :: forall a. Parser String a -> Parser String (Array a)
+array p = Array.fromFoldable <$> haskellList p
 
 ----------------------------------------------------------------------
 bigInteger :: Parser String BigInteger
@@ -150,9 +158,12 @@ bound =
 
 action :: Parser String Action
 action =
-    (Deposit <$> (string "Deposit" **> accountId) <**> party <**> value)
-    <|> (Choice <$> (string "Choice" **> choiceId) <**> many bound)
-    <|> (Notify <$> (string "Notify" **> observation))
+    (Deposit <$> (string "Deposit" **> accountId) <**> party <**> value')
+    <|> (Choice <$> (string "Choice" **> choiceId) <**> array bound)
+    <|> (Notify <$> (string "Notify" **> observation'))
+    where
+      observation' = atomObservation <|> fix \p -> parens recObservation
+      value' = atomValue <|> fix (\p -> parens recValue)
 
 case' :: Parser String Case
 case' = 
@@ -160,7 +171,7 @@ case' =
     void maybeSpaces
     void $ string "Case"
     void spaces
-    first <- action
+    first <- parens action
     void spaces
     second <- contract
     void maybeSpaces
@@ -172,13 +183,13 @@ atomContract = pure Refund <* string "Refund"
 recContract :: Parser String Contract
 recContract =
     ( Pay <$> (string "Pay" **> accountId)
-          <**> payee
+          <**> parens payee
           <**> value'
           <**> contract'
       )
     <|> (If <$> (string "If" **> observation') <**> contract' <**> contract')
-    <|> (When <$> (string "When" **> (many case')) <**> timeout <**> contract')
-    <|> (Let <$> (string "Let" **> valueId) <**> value <**> contract')
+    <|> (When <$> (string "When" **> (array case')) <**> timeout <**> contract')
+    <|> (Let <$> (string "Let" **> valueId) <**> value' <**> contract')
     <|> (fail "not a valid Contract")
   where
   contract' = atomContract <|> fix \p -> parens recContract

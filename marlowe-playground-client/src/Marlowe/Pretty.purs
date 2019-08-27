@@ -16,9 +16,12 @@ class Pretty a where
   prettyFragment :: a -> Doc
 
 instance prettyString :: Pretty String where
-  prettyFragment = text
+  prettyFragment = text <<< show
 
 instance prettyList :: Pretty a => Pretty (List a) where
+  prettyFragment = text <<< show <<< map prettyFragment
+
+instance prettyArray :: Pretty a => Pretty (Array a) where
   prettyFragment = text <<< show <<< map prettyFragment
 
 genericPretty :: forall a rep. Generic a rep => Pretty1 rep => a -> Doc

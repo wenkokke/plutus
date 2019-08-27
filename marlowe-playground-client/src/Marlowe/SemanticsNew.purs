@@ -10,7 +10,7 @@ import Data.Integral (class Integral)
 import Data.Lens (Lens', over, set, view)
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
-import Data.List (List(..), reverse, (:))
+import Data.List (List(..), reverse, (:), fromFoldable)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -48,8 +48,7 @@ derive instance eqSlot :: Eq Slot
 
 derive instance ordSlot :: Ord Slot
 
-instance showSlot :: Show Slot where
-  show = genericShow
+derive newtype instance showSlot :: Show Slot
 
 derive newtype instance prettySlot :: Pretty Slot
 
@@ -146,8 +145,7 @@ derive instance eqValueId :: Eq ValueId
 
 derive instance ordValueId :: Ord ValueId
 
-instance showValueId :: Show ValueId where
-  show = genericShow
+derive newtype instance showValueId :: Show ValueId
 
 derive newtype instance prettyValueId :: Pretty ValueId
 
@@ -238,9 +236,12 @@ type Bound
 instance showBound :: Show (Interval BigInteger) where
   show (Interval { from, to }) = "(Bound " <> show from <> " " <> show to <> ")"
 
+instance prettyBound :: Pretty (Interval BigInteger) where
+  prettyFragment a = text $ show a
+
 data Action
   = Deposit AccountId Party Value
-  | Choice ChoiceId (List Bound)
+  | Choice ChoiceId (Array Bound)
   | Notify Observation
 
 derive instance genericAction :: Generic Action _
@@ -250,6 +251,7 @@ derive instance eqAction :: Eq Action
 derive instance ordAction :: Ord Action
 
 instance showAction :: Show Action where
+  show (Choice cid bounds) = "(Choice " <> show cid <> " " <> show bounds <> ")"
   show v = genericShow v
 
 data Payee
@@ -292,7 +294,7 @@ data Contract
   = Refund
   | Pay AccountId Payee Value Contract
   | If Observation Contract Contract
-  | When (List Case) Timeout Contract
+  | When (Array Case) Timeout Contract
   | Let ValueId Value Contract
 
 derive instance genericContract :: Generic Contract _
@@ -693,7 +695,7 @@ applyCases env state input cases = case input, cases of
   _, Nil -> ApplyNoMatchError
 
 applyInput :: Environment -> State -> Input -> Contract -> ApplyResult
-applyInput env state input (When cases _ _) = applyCases env state input cases
+applyInput env state input (When cases _ _) = applyCases env state input (fromFoldable cases)
 
 applyInput _ _ _ _ = ApplyNoMatchError
 
