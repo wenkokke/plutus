@@ -1,10 +1,15 @@
+{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE ConstraintKinds   #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE DeriveAnyClass    #-} 
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE TypeOperators     #-}
 {-# OPTIONS_GHC -fno-warn-unused-matches #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
 -- | A futures contract in Plutus. This example illustrates three concepts.
@@ -14,35 +19,42 @@
 module Language.PlutusTx.Coordination.Contracts.Future(
     -- * Data types
     Future(..),
+    FutureSchema,
     FutureData(..),
     FutureRedeemer(..),
+    Role(..),
     -- * Actions
-    initialise,
-    settle,
-    settleEarly,
-    adjustMargin,
+    runContract,
     -- * Script
     validatorScript,
     mkValidator
     ) where
 
-import           Control.Monad                (void)
-import           Control.Monad.Error.Class    (MonadError (..))
-import           Data.Maybe                   (maybeToList)
-import qualified Data.Set                     as Set
+import           Control.Applicative          (Alternative(..))
+import           Control.Lens
+import           Control.Monad.Base
+import           Control.Monad.Reader
+import           Control.Monad.State
+import           Data.Aeson                   (FromJSON, ToJSON) 
 import           GHC.Generics                 (Generic)
 import           Language.PlutusTx.Prelude
 import qualified Language.PlutusTx            as PlutusTx
-import           Ledger                       (DataScript (..), Slot(..), PubKey, TxOutRef, RedeemerScript (..), ValidatorScript (..), scriptTxIn, scriptTxOut)
+import           Ledger                       (Address, DataScript (..), Slot(..), PubKey, RedeemerScript (..), ValidatorScript (..), TxIn, TxOut, Value)
 import qualified Ledger                       as Ledger
+import           Ledger.AddressMap            (AddressMap)
+import qualified Ledger.AddressMap            as AM
 import qualified Ledger.Interval              as Interval
 import           Ledger.Scripts               (HashedDataScript)
+import qualified Ledger.Tx                    as LTx 
 import           Ledger.Validation            (OracleValue (..), PendingTx (..), PendingTxOut (..))
 import qualified Ledger.Validation            as Validation
 import qualified Ledger.Ada                   as Ada
 import           Ledger.Ada                   (Ada)
-import qualified Wallet                       as W
-import           Wallet                       (WalletAPI (..), WalletAPIError, throwOtherError, createTxAndSubmit, defaultSlotRange)
+import qualified Prelude
+
+import           Language.Plutus.Contract
+import           Language.Plutus.Contract.Tx        (UnbalancedTx)
+import qualified Language.Plutus.Contract.Tx        as Tx
 
 {- note [Futures in Plutus]
 
@@ -74,92 +86,254 @@ The current value of the underlying asset is determined by an oracle. See note
 
 -}
 
--- | Initialise the futures contract by paying the initial margin.
---
-initialise :: (
-    MonadError WalletAPIError m,
-    WalletAPI m)
-    => PubKey
-    -- ^ Identity of the holder of the long position
+-- | Run the futures contract. Note that this does not make the initial 
+--   transaction (see 'writeInitialTx')
+runContract
+    :: Future
     -> PubKey
-    -- ^ Identity of the holder of the short position
-    -> Future
-    -> m ()
-initialise long short f = do
-    let
-        im = futureInitialMargin f
-        o  = scriptTxOut (Ada.toValue im) (validatorScript f) ds
-        ds = DataScript $ Ledger.lifted $ FutureData long short im im
+    -> PubKey
+    -> Contract FutureSchema ()
+runContract f long short =
+    flip runReaderT f $ do
+        fd <- initialData long short
+        addr <- contractAddress
+        let initMp  = AM.addAddress addr Prelude.mempty
+            st = FutureState { knownOutputs = initMp, futureData = fd }
+        flip evalStateT st $ 
+            (liftBase (endpoint @"start") >>= futureContract)
+            <|>
+            (liftBase (endpoint @"initialise") >> writeInitialTx)
 
-    (payment, change) <- createPaymentWithChange (Ada.toValue im)
-    void $ createTxAndSubmit defaultSlotRange payment (o : maybeToList change)
+{- Note [Initialising the futures contract]
+The margin accounts of both parties (long & short) are kept in the same 
+transaction output. To initialise the contract we need a transaction that
+locks the initial margins of both parties with the contract script, as is done 
+in 'writeInitialTx', which is called from the "initialise" endpoint of the 
+contract. In the test suite we simply call "initialise" from one of the 
+emulator's wallets. To make this more realistic we could use an escrow contract 
+that takes the initial margins and then locks them using the script.
+TODO: Implement escrow contract that pays to a script address, and use it here.
+-}
 
--- | Close the position by extracting the payment
-settle :: (
-    MonadError WalletAPIError m,
-    WalletAPI m)
-    => [TxOutRef]
-    -> Future
-    -> FutureData
-    -> OracleValue Ada
+data Role = Long | Short
+    deriving (Generic, Show, FromJSON, ToJSON)
+
+type FutureSchema =
+    BlockchainActions
+        .\/ Endpoint "initialise" ()
+        .\/ Endpoint "start" Role
+        .\/ Endpoint "adjust margin" Ada
+        .\/ Endpoint "settle early" (OracleValue Ada)
+        .\/ Endpoint "settle" (OracleValue Ada)
+
+type MonadFuture m =
+    ( MonadState FutureState m 
+    , MonadReader Future m
+    , MonadBase (Contract FutureSchema) m
+    )
+
+data FutureState =
+    FutureState
+        { knownOutputs :: AddressMap
+        , futureData   :: FutureData
+        }
+
+-- | Spend all known outputs at the contract address using the
+--   'FutureRedeemer'. Use 'redeemAllWith0' instead if the transaction
+--    does not have a pay-to-script output.
+redeemAllWith
+    :: MonadFuture m
+    => FutureRedeemer
+    -> m [TxIn]
+redeemAllWith redeemer = do
+    valScript <- asks validatorScript
+    let redScript = redeemerScript redeemer
+    gets (AM.spendScriptOutputs valScript redScript . knownOutputs)
+
+-- | Spend all known outputs at the contract address using the 'FutureRedeemer'.
+redeemAllWith0
+    :: MonadFuture m
+    => FutureRedeemer
+    -> m [TxIn]
+redeemAllWith0 redeemer = do
+    valScript <- asks validatorScript
+    let redScript = redeemerScript0 redeemer
+    gets (AM.spendScriptOutputs valScript redScript . knownOutputs)
+
+-- | Lock some Ada in the contract using the 'FutureData' as data script.
+payIntoContract
+    :: MonadReader Future m
+    => FutureData
+    -> Ada
+    -> m TxOut
+payIntoContract fd vl = do
+    address <- contractAddress
+    let datScript = DataScript $ Ledger.lifted fd
+    pure $ LTx.scriptTxOut' (Ada.toValue vl) address datScript 
+
+-- | Initialise the futures contract by paying the initial margin.
+writeInitialTx
+    :: ( MonadFuture m )
+    => m ()
+writeInitialTx = do
+    dt <- gets futureData
+    initialMargin <- asks futureInitialMargin
+    -- the initial margin has to be paid by each of the two participants,
+    -- so the value locked by the contract at the start is
+    -- 2 * initialMargin.
+    out <- payIntoContract dt (2 * initialMargin)
+    liftBase $ writeTx $ Tx.unbalancedTx [] [out]
+ 
+-- | The address of this contract instance.
+contractAddress :: MonadReader Future m => m Address
+contractAddress = asks (Ledger.scriptAddress . validatorScript)
+
+totalValueLocked
+    :: ( MonadReader Future m )
+    => AM.AddressMap
+    -> m Value
+totalValueLocked am = do
+    addr <- contractAddress
+    pure $ AM.values am ^. at addr . _Just
+   
+
+data Liveness = Alive | Dead
+    deriving Show
+
+-- | Watch the on-chain state of the contract for changes and expose
+--   three endpoints for adjusting the margin, settling early, and settling
+--   regularly.
+futureContract
+    :: ( MonadFuture m
+       , Alternative m
+       )
+    => Role
     -> m ()
-settle refs ft fd ov = do
+futureContract r =
+    let adjustMarginEP = liftBase (endpoint @"adjust margin") >>= adjustMarginC r
+        settleEarlyEP  = liftBase (endpoint @"settle early") >>= settleEarlyC
+        settleEP       = liftBase (endpoint @"settle") >>= settleC
+        go = do
+                alive <- selectEither updateState (adjustMarginEP <|> settleEarlyEP <|> settleEP)
+                case alive of
+                    Left Dead -> pure ()
+                    _         -> go
+    in go
+
+-- | Increase the margin by adding some Ada
+adjustMarginC
+    :: ( MonadFuture m )
+    => Role
+    -> Ada
+    -> m ()
+adjustMarginC role vl = do
+    fd <- gets futureData
+    let fd' = case role of
+            Long  -> fd { futureDataMarginLong  = vl + futureDataMarginLong fd }
+            Short -> fd { futureDataMarginShort = vl + futureDataMarginShort fd }
+        newValue = futureDataMarginLong fd' + futureDataMarginShort fd'
+    out <- payIntoContract fd' newValue
+    ins <- redeemAllWith AdjustMargin
+    _ <- modify (\s -> s { futureData = fd' })
+    liftBase $ writeTx $ Tx.unbalancedTx ins [out]
+
+-- | Settle the position early if a margin payment has been missed.
+settleEarlyC
+    :: (MonadFuture m )
+    => OracleValue Ada
+    -> m ()
+settleEarlyC ov = do
+    ins <- redeemAllWith0 (Settle ov)
+    liftBase (writeTx $ Tx.unbalancedTx ins [])
+
+
+-- | Settle the contract at the end of its life span.
+settleC
+    :: ( MonadFuture m )
+    => OracleValue Ada
+    -> m ()
+settleC ov = settlement ov >>= liftBase . writeTx
+
+-- | The 'FutureData' for the two parties (long and short) with the
+--   initial margin.
+initialData
+    :: ( MonadReader Future m )
+    => PubKey
+    -> PubKey
+    -> m FutureData
+initialData long short = do
+    f <- ask
+    let initialMargin = futureInitialMargin f
+    pure (FutureData long short initialMargin initialMargin)
+
+-- | Create a transaction that closes the futures contract by paying out
+--   what remains of each party's margin.
+settlement
+    :: ( MonadFuture m )
+    => OracleValue Ada
+    -> m UnbalancedTx
+settlement ov = do
+    fd <- gets futureData
+    ft <- ask
     let
-        delDate = futureDeliveryDate ft
         forwardPrice = futureUnitPrice ft
         OracleValue _ _ spotPrice = ov
         delta = (Ada.lovelaceOf $ futureUnits ft) * (spotPrice - forwardPrice)
-        longOut = Ada.toValue ((futureDataMarginLong fd) + delta)
-        shortOut = Ada.toValue ((futureDataMarginShort fd) - delta)
-        red = redeemerScript0 $ Settle ov
-        outs = [
-            Ledger.pubKeyTxOut longOut (futureDataLong fd),
-            Ledger.pubKeyTxOut shortOut (futureDataShort fd)
+        longOut = Ada.toValue (futureDataMarginLong fd + delta)
+        shortOut = Ada.toValue (futureDataMarginShort fd - delta)
+        outs =
+            [ Ledger.pubKeyTxOut longOut (futureDataLong fd)
+            , Ledger.pubKeyTxOut shortOut (futureDataShort fd)
             ]
-        inp = (\r -> scriptTxIn r (validatorScript ft) red) <$> refs
-        range = W.intervalFrom delDate
-    void $ createTxAndSubmit range (Set.fromList inp) outs
+    ins <- redeemAllWith0 (Settle ov)
+    pure $ Tx.unbalancedTx ins outs
+            & validityRange .~ Interval.from (futureDeliveryDate ft)
 
--- | Settle the position early if a margin payment has been missed.
-settleEarly :: (
-    MonadError WalletAPIError m,
-    WalletAPI m)
-    => [TxOutRef]
-    -> Future
-    -> FutureData
-    -> OracleValue Ada
-    -> m ()
-settleEarly refs ft fd ov = do
-    let totalVal = Ada.toValue ((futureDataMarginLong fd) + (futureDataMarginShort fd))
-        outs = [Ledger.pubKeyTxOut totalVal (futureDataLong fd)]
-        inp = (\r -> scriptTxIn r (validatorScript ft) red) <$> refs
-        red = redeemerScript0 $ Settle ov
-    void $ createTxAndSubmit defaultSlotRange (Set.fromList inp) outs
+-- | Wait for a change to the contract state on-chain, update the
+--   state, then return 'Liveness' value indicating whether the contract
+--   is still going.
+updateState
+    :: ( MonadFuture m )
+    => m Liveness
+updateState = do
+    addr <- contractAddress
+    tx <- liftBase (nextTransactionAt addr)
+    -- We have a transaction 'tx' that modifies the UTXO set at the contract
+    -- address.
+    -- We now need to update the 'futureData' field of the state with the new
+    -- 'FutureData'. We could get the new 'FutureData' by unlifting the data
+    -- script from script output of 'tx', BUT we can't unlift things yet. But
+    -- we can infer what the new state is from the following facts.
+    --
+    -- 1. The only two state-changing actions are 'AdjustMargin' and 'Settle'.
+    -- 2. If the action performed was 'Settle' then 'tx' does not have any
+    --    outputs at the script address because the instance is done.
+    -- 3. If the action was 'AdjustMargin', then either the
+    --    'futureDataMarginShort' or the 'futureDataMarginLong' field has
+    --    changed. The delta is exactly the delta of Ada that was locked by the
+    --    contract previously vs the amount that is locked by 'tx'.
 
-adjustMargin :: (
-    MonadError WalletAPIError m,
-    WalletAPI m)
-    => [TxOutRef]
-    -> Future
-    -> FutureData
-    -> Ada
-    -> m ()
-adjustMargin refs ft fd vl = do
-    pk <- ownPubKey
-    (payment, change) <- createPaymentWithChange (Ada.toValue vl)
-    fd' <- let fd''
-                | pk == futureDataLong fd = pure $ fd { futureDataMarginLong  = vl + futureDataMarginLong fd  }
-                | pk == futureDataShort fd = pure $ fd { futureDataMarginShort = vl + futureDataMarginShort fd }
-                | otherwise = throwOtherError "Private key is not part of futures contrat"
-            in fd''
-    let
-        red = redeemerScript AdjustMargin
-        ds  = DataScript $ Ledger.lifted fd'
-        o = scriptTxOut outVal (validatorScript ft) ds
-        outVal = Ada.toValue (vl + futureDataMarginLong fd + futureDataMarginShort fd)
-        inp = Set.fromList $ (\r -> scriptTxIn r (validatorScript ft) red) <$> refs
-    void $ createTxAndSubmit defaultSlotRange (Set.union payment inp) (o : maybeToList change)
-
+    oldState <- gets futureData
+    lockedPrior <- gets knownOutputs >>= totalValueLocked
+    lockedNow   <- totalValueLocked (AM.fromTxOutputs tx)
+    let delta = Ada.fromValue lockedNow - Ada.fromValue lockedPrior
+        newDS = listToMaybe $ mapMaybe LTx.txOutData $ view LTx.outputs tx
+        fd1   = oldState { futureDataMarginLong = futureDataMarginLong oldState + delta }
+        fd2   = oldState { futureDataMarginShort = futureDataMarginShort oldState + delta }
+    case newDS of
+        Just ds'
+            | ds' == DataScript (Ledger.lifted fd1) -> do
+                modify $ \s -> s { futureData = fd1, knownOutputs = AM.updateAddresses tx (knownOutputs s) }
+                pure Alive
+            | ds' == DataScript (Ledger.lifted fd2) -> do
+                modify $ \s -> s { futureData = fd2, knownOutputs = AM.updateAddresses tx (knownOutputs s) }
+                pure Alive
+            | ds' == DataScript (Ledger.lifted oldState) -> do
+                -- Nothing changed (this happens when the contract is first
+                -- initialised)
+                modify $ \s -> s { knownOutputs = AM.fromTxOutputs tx }
+                pure Alive
+        _ -> pure Dead
 
 -- | Basic data of a futures contract. `Future` contains all values that do not
 --   change during the lifetime of the contract.

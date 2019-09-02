@@ -24,7 +24,7 @@ import qualified Language.Plutus.Contract.Schema    as Events
 -- | @Contract s a@ is a contract with schema 's', producing a value of
 --  type 'a'. See note [Contract Schema].
 --
-type Contract s a = Resumable (Step (Maybe (Event s)) (Handlers s)) a
+type Contract s = Resumable (Step (Maybe (Event s)) (Handlers s))
 
 -- | Constraints on the contract schema, ensuring that the requests produced
 --   by the contracts are 'Monoid's (so that we can produce a record with

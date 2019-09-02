@@ -63,7 +63,8 @@ library
         plutus-emulator -any,
         template-haskell -any,
         lens -any,
-        text -any
+        text -any,
+        transformers-base -any
 
     if flag(defer-plugin-errors)
         ghc-options: -fplugin-opt Language.PlutusTx.Plugin:defer-errors

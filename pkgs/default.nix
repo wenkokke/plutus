@@ -54452,6 +54452,7 @@ license = stdenv.lib.licenses.asl20;
 , tasty-hunit
 , template-haskell
 , text
+, transformers-base
 }:
 mkDerivation {
 
@@ -54473,6 +54474,7 @@ plutus-tx
 plutus-wallet-api
 template-haskell
 text
+transformers-base
 ];
 executableHaskellDepends = [
 base

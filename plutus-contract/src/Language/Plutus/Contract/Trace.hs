@@ -130,7 +130,7 @@ data ContractTraceResult s a =
 makeLenses ''ContractTraceResult
 
 defaultDist :: InitialDistribution
-defaultDist = [(EM.Wallet x, 100) | x <- [1..10]]
+defaultDist = [(EM.Wallet x, Ada.adaOf 100) | x <- [1..10]]
 
 -- | Add an event to every wallet's trace
 addEventAll :: forall s m a. Monad m => Event s -> ContractTrace s m a ()
