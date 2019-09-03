@@ -108,12 +108,10 @@ import           Ledger.Ada                 (Ada)
 import qualified Ledger.Ada                 as Ada
 import           Ledger.Interval            (Interval (..))
 import           Ledger.Scripts             ( HashedDataScript(..)
-                                            , ValidatorHash(..)
                                             , ValidatorScript(..)
                                             , DataScriptHash(..)
                                             )
 import           Ledger.Validation
-import           LedgerBytes                (LedgerBytes (..))
 
 {-# ANN module ("HLint: ignore"::String) #-}
 
@@ -708,7 +706,7 @@ validatePayments :: PendingTx -> [Payment] -> Integer -> Bool
 validatePayments pendingTx txOutPayments scriptOutput = let
 
     collect outputs PendingTxOut{pendingTxOutValue,
-        pendingTxOutData=PubKeyTxOut (PubKey (LedgerBytes pubKey))} = let
+        pendingTxOutData=PubKeyTxOut pubKey} = let
         txOutInAda = Ada.fromValue pendingTxOutValue
         newValue = case Map.lookup pubKey outputs of
             Just value -> value + txOutInAda
@@ -716,19 +714,17 @@ validatePayments pendingTx txOutPayments scriptOutput = let
         in Map.insert pubKey newValue outputs
     collect outputs _ = outputs
 
-    collectPayments payments (Payment (PubKey (LedgerBytes party)) money) = let
+    collectPayments payments (Payment party money) = let
         newValue = case Map.lookup party payments of
             Just value -> value + money
             Nothing -> money
         in Map.insert party newValue payments
 
-    outputs :: Map ByteString Money
     outputs = foldl collect (Map.empty ()) (pendingTxOutputs pendingTx)
 
-    payments :: Map ByteString Money
     payments = foldl collectPayments (Map.empty ()) txOutPayments
 
-    listOfPayments :: [(ByteString, Money)]
+    listOfPayments :: [(Party, Money)]
     listOfPayments = Map.toList payments
 
     checkValidPayment (party, expectedPayment) =
@@ -741,22 +737,13 @@ validatePayments pendingTx txOutPayments scriptOutput = let
 
 {-# INLINABLE validateContinuation #-}
 validateContinuation :: PendingTx -> DataScriptHash -> Maybe Integer
-validateContinuation pendingTx (DataScriptHash dsHash) = let
-    -- TODO FIXME use Validation.getContinuingOutputs
-    getContinuingOutputs :: PendingTx -> [PendingTxOut]
-    getContinuingOutputs PendingTx{pendingTxIn=PendingTxIn{pendingTxInWitness=Just(ValidatorHash inpHsh, _)}, pendingTxOutputs=outs} = filter f outs
-        where
-            f PendingTxOut{pendingTxOutHashes=(Just (ValidatorHash outHsh, _))} = outHsh == inpHsh
-            f _ = False
-    -- Not spending a script output
-    getContinuingOutputs _ = []
-
+validateContinuation pendingTx dsHash =
     -- lookup for a validator script with the same hash (i.e. Marlowe continuation contract)
-    in case getContinuingOutputs pendingTx of
+    case getContinuingOutputs pendingTx of
         {-  It is *not* okay to have multiple outputs with the current validator script,
             that allows "spliting" the Marlowe Contract. -}
-        [PendingTxOut outValue (Just (_, DataScriptHash dsh)) DataTxOut]
-            | Builtins.equalsByteString dsh dsHash -> (Just . Ada.getLovelace . Ada.fromValue) outValue
+        [PendingTxOut outValue (Just (_, dsh)) DataTxOut]
+            | dsh == dsHash -> (Just . Ada.getLovelace . Ada.fromValue) outValue
         _ -> Nothing
 
 
