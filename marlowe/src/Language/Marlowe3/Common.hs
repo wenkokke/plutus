@@ -392,6 +392,14 @@ makeLift ''TransactionOutput
 makeLift ''MarloweData
 
 
+emptyState :: State
+emptyState = State
+    { accounts = Map.empty ()
+    , choices  = Map.empty ()
+    , boundValues = Map.empty ()
+    , minSlot = Slot 0 }
+
+
 {-# INLINABLE accountOwner #-}
 accountOwner :: AccountId -> Party
 accountOwner (AccountId _ party) = party
