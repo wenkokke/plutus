@@ -295,7 +295,7 @@ instance showCase :: Show Case where
   show (Case { action, contract }) = "Case " <> show action <> " " <> show contract
 
 instance prettyCase :: Pretty Case where
-  prettyFragment (Case { action, contract }) = appendWithSoftbreak (text "Case " <> prettyFragment action) (pretty contract)
+  prettyFragment (Case { action, contract }) = appendWithSoftbreak (text "Case " <> prettyFragment action) (prettyFragment contract)
 
 data Contract
   = Refund
