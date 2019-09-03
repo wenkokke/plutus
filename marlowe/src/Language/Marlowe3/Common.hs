@@ -104,7 +104,7 @@ import           Ledger                     ( PubKey(..)
                                             )
 import           Ledger.Ada                 (Ada)
 import qualified Ledger.Ada                 as Ada
-import           Ledger.Interval            (Interval (..))
+import           Ledger.Interval            (Interval (..), Extended(..), LowerBound(..), UpperBound(..))
 import           Ledger.Scripts             ( HashedDataScript(..)
                                             , ValidatorScript(..)
                                             , DataScriptHash(..)
@@ -761,9 +761,10 @@ mkValidator creator MarloweData{..} (inputs, sealedMarloweData) pendingTx@Pendin
         else traceErrorH "Wrong contract creator"
 
     {-  We require Marlowe Tx to have both lower bound and upper bounds in 'SlotRange'.
+        All are inclusive.
     -}
     (minSlot, maxSlot) = case pendingTxValidRange of
-        Interval (Just l)  (Just (Slot h)) -> (l, Slot (h - 1))
+        Interval (LowerBound (Finite l) True) (UpperBound (Finite h) True) -> (l, h)
         _ -> traceErrorH "Tx valid slot must have lower bound and upper bounds"
 
     validSignatures = let
