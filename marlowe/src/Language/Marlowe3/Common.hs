@@ -126,9 +126,6 @@ type ChosenNum = Integer
 type Bound = (Integer, Integer)
 type SlotInterval = (Slot, Slot)
 
-eqPubKey :: Party -> Party -> Bool
-eqPubKey (PubKey (LedgerBytes pk1)) (PubKey (LedgerBytes pk2)) = pk1 == pk2
-
 data AccountId = AccountId Integer Party deriving (Show)
 
 data ChoiceId = ChoiceId Integer Party deriving (Show)
@@ -269,11 +266,11 @@ data MarloweData = MarloweData {
 
 instance Eq AccountId where
     {-# INLINABLE (==) #-}
-    (AccountId n1 p1) == (AccountId n2 p2) = n1 == n2 && p1 `eqPubKey` p2
+    (AccountId n1 p1) == (AccountId n2 p2) = n1 == n2 && p1 == p2
 
 instance Eq ChoiceId where
     {-# INLINABLE (==) #-}
-    (ChoiceId n1 p1) == (ChoiceId n2 p2) = n1 == n2 && p1 `eqPubKey` p2
+    (ChoiceId n1 p1) == (ChoiceId n2 p2) = n1 == n2 && p1 == p2
 
 instance Eq ValueId where
     {-# INLINABLE (==) #-}
@@ -282,12 +279,12 @@ instance Eq ValueId where
 instance Eq Payee where
     {-# INLINABLE (==) #-}
     Account acc1 == Account acc2 = acc1 == acc2
-    Party p1 == Party p2 = p1 `eqPubKey` p2
+    Party p1 == Party p2 = p1 == p2
     _ == _ = False
 
 instance Eq Payment where
     {-# INLINABLE (==) #-}
-    Payment p1 m1 == Payment p2 m2 = p1 `eqPubKey` p2 && m1 == m2
+    Payment p1 m1 == Payment p2 m2 = p1 == p2 && m1 == m2
 
 instance Eq ReduceWarning where
     {-# INLINABLE (==) #-}
@@ -339,7 +336,7 @@ instance Eq Observation where
 instance Eq Action where
     {-# INLINABLE (==) #-}
     Deposit acc1 party1 val1 == Deposit acc2 party2 val2 =
-        acc1 == acc2 && party1 `eqPubKey` party2 && val1 == val2
+        acc1 == acc2 && party1 == party2 && val1 == val2
     Choice cid1 bounds1 == Choice cid2 bounds2 =
         cid1 == cid2 && let
             bounds = zip bounds1 bounds2
@@ -605,7 +602,7 @@ applyCases env state input cases = case (input, cases) of
     (IDeposit accId1 party1 money, (Deposit accId2 party2 val, cont) : rest) -> let
         amount = evalValue env state val
         newState = state { accounts = addMoneyToAccount accId1 money (accounts state) }
-        in if accId1 == accId2 && party1 `eqPubKey` party2 && Ada.getLovelace money == amount
+        in if accId1 == accId2 && party1 == party2 && Ada.getLovelace money == amount
         then Applied newState cont
         else applyCases env state input rest
     (IChoice choId1 choice, (Choice choId2 bounds, cont) : rest) -> let
@@ -775,7 +772,7 @@ mkValidator creator MarloweData{..} (inputs, sealedMarloweData) pendingTx@Pendin
         which makes a particular contract to have a unique script address.
         That makes it easier to watch for contract actions inside a wallet. -}
     checkCreator =
-        if marloweCreator `eqPubKey` creator then True
+        if marloweCreator == creator then True
         else traceErrorH "Wrong contract creator"
 
     {-  We require Marlowe Tx to have both lower bound and upper bounds in 'SlotRange'.
