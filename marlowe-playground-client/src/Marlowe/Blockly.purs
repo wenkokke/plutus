@@ -1,6 +1,7 @@
 module Marlowe.Blockly where
 
 import Prelude
+
 import Blockly (AlignDirection(..), Arg(..), BlockDefinition(..), block, blockType, category, colour, defaultBlockDefinition, getBlockById, initializeWorkspace, name, render, style, x, xml, y)
 import Blockly.Generator (NewBlockFunction, Generator, Input, clearWorkspace, connectToOutput, connectToPrevious, fieldName, fieldRow, getFieldValue, getInputWithName, inputList, inputName, insertGeneratorFunction, mkGenerator, setFieldText, statementToCode)
 import Blockly.Types (Block, BlocklyState, Workspace)
@@ -24,22 +25,17 @@ import Data.Traversable (traverse_)
 import Halogen.HTML (HTML)
 import Halogen.HTML.Properties (id_)
 import Marlowe.Parser as Parser
-import Marlowe.Types (Contract(..), IdChoice(..), Observation(..), Value(..))
+import Marlowe.Semantics (AccountId(..), ChoiceId(..), Contract(..), Observation(..), Value(..))
 import Record (merge)
 import Text.Parsing.Parser (Parser, runParser)
 import Text.Parsing.Parser.Basic (parens)
 
 data ContractType
-  = NullContractType
-  | CommitContractType
+  = RefundContractType
   | PayContractType
-  | BothContractType
-  | ChoiceContractType
+  | IfContractType
   | WhenContractType
-  | WhileContractType
-  | ScaleContractType
   | LetContractType
-  | UseContractType
 
 derive instance genericContractType :: Generic ContractType _
 
@@ -69,17 +65,15 @@ contractTypes :: Array ContractType
 contractTypes = upFromIncluding bottom
 
 data ObservationType
-  = BelowTimeoutObservationType
-  | AndObservationType
+  = AndObservationType
   | OrObservationType
   | NotObservationType
-  | ChoseThisObservationType
-  | ChoseObservationType
+  | ChoseSomethingObservationType
   | ValueGEObservationType
-  | ValueGObservationType
+  | ValueGTObservationType
+  | ValueLTObservationType
   | ValueLEObservationType
-  | ValueLObservationType
-  | ValueEqObservationType
+  | ValueEQObservationType
   | TrueObservationType
   | FalseObservationType
 
@@ -111,17 +105,15 @@ observationTypes :: Array ObservationType
 observationTypes = upFromIncluding bottom
 
 data ValueType
-  = CurrentBlockType
-  | CommittedValueType
-  | ConstValueType
-  | NegValueType
-  | AddValueType
-  | SubValueType
-  | MulValueType
-  | DivValueType
-  | ModValueType
-  | FromChoiceValueType
-  | FromOracleValueType
+  = AvailableMoneyValueType
+  | ConstantValueType
+  | NegValueValueType
+  | AddValueValueType
+  | SubValueValueType
+  | ChoiceValueValueType
+  | SlotIntervalStartValueType
+  | SlotIntervalEndValueType
+  | UseValueValueType
 
 derive instance genericValueType :: Generic ValueType _
 
@@ -202,40 +194,15 @@ toDefinition BaseContractType =
         }
         defaultBlockDefinition
 
-toDefinition (ContractType NullContractType) =
-  BlockDefinition
-    $ merge
-        { type: show NullContractType
-        , message0: "Null"
-        , colour: "0"
-        , previousStatement: Just (show BaseContractType)
-        }
-        defaultBlockDefinition
+-- Contracts
 
-toDefinition (ContractType CommitContractType) =
+toDefinition (ContractType RefundContractType) =
   BlockDefinition
     $ merge
-        { type: show CommitContractType
-        , message0: "Commit %1 with action id %2 %3 and commit id %4 %5 person with id %6 %7 may deposit %8 redeemable on block %9 %10 or after, if money is committed before block %11 %12 continue as %13 otherwise continue as %14"
-        , args0:
-          [ DummyCentre
-          , Number { name: "action_id", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
-          , DummyRight
-          , Number { name: "commit_id", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
-          , DummyRight
-          , Number { name: "person_id", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
-          , DummyRight
-          , Value { name: "ammount", check: "value", align: Right }
-          , Number { name: "end_expiration", value: 0.0, min: Just 0.0, max: Nothing, precision: Nothing }
-          , DummyRight
-          , Number { name: "start_expiration", value: 0.0, min: Just 0.0, max: Nothing, precision: Nothing }
-          , DummyRight
-          , Statement { name: "contract1", check: (show BaseContractType), align: Right }
-          , Statement { name: "contract2", check: (show BaseContractType), align: Right }
-          ]
+        { type: show RefundContractType
+        , message0: "Refund"
         , colour: "0"
         , previousStatement: Just (show BaseContractType)
-        , inputsInline: Just false
         }
         defaultBlockDefinition
 
@@ -243,17 +210,31 @@ toDefinition (ContractType PayContractType) =
   BlockDefinition
     $ merge
         { type: show PayContractType
-        , message0: "Pay %1 with id %2 %3 use money from commit %4 %5 to pay person %6 %7 the amount of %8 if claimed before block %9 continue as %10 else continue as %11"
+        , message0: "Pay %1 person %2 %3 the amount of %4 %5 from the account %6 %7 with owner %8 %9 continue as %10"
         , args0:
           [ DummyCentre
-          , Number { name: "action_id", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
-          , DummyRight
-          , Number { name: "commit_id", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
-          , DummyRight
           , Number { name: "payee_id", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
           , DummyRight
+          , Number { name: "account_number", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
+          , DummyRight
+          , Value { name: "account_owner", check: "value", align: Right }
+          , DummyRight
           , Value { name: "ammount", check: "value", align: Right }
-          , Number { name: "timeout", value: 0.0, min: Just 0.0, max: Nothing, precision: Nothing }
+          , Statement { name: "contract", check: (show BaseContractType), align: Right }
+          ]
+        , colour: "0"
+        , previousStatement: Just (show BaseContractType)
+        , inputsInline: Just false
+        }
+        defaultBlockDefinition
+
+toDefinition (ContractType IfContractType) =
+  BlockDefinition
+    $ merge
+        { type: show IfContractType
+        , message0: "If observation %1 then continue as %2 otherwise continue as %3"
+        , args0:
+          [ Value { name: "observation", check: "observation", align: Right }
           , Statement { name: "contract1", check: (show BaseContractType), align: Right }
           , Statement { name: "contract2", check: (show BaseContractType), align: Right }
           ]
@@ -262,39 +243,8 @@ toDefinition (ContractType PayContractType) =
         , inputsInline: Just false
         }
         defaultBlockDefinition
-
-toDefinition (ContractType BothContractType) =
-  BlockDefinition
-    $ merge
-        { type: show BothContractType
-        , message0: "Both %1 enforce both %2 and %3"
-        , args0:
-          [ DummyCentre
-          , Statement { name: "contract1", check: (show BaseContractType), align: Right }
-          , Statement { name: "contract2", check: (show BaseContractType), align: Right }
-          ]
-        , colour: "0"
-        , previousStatement: Just (show BaseContractType)
-        }
-        defaultBlockDefinition
-
-toDefinition (ContractType ChoiceContractType) =
-  BlockDefinition
-    $ merge
-        { type: show ChoiceContractType
-        , message0: "Choice %1 if observation %2 then continue as %3 otherwise continue as %4"
-        , args0:
-          [ DummyCentre
-          , Value { name: "observation", check: "observation", align: Right }
-          , Statement { name: "contract1", check: (show BaseContractType), align: Right }
-          , Statement { name: "contract2", check: (show BaseContractType), align: Right }
-          ]
-        , colour: "0"
-        , previousStatement: Just (show BaseContractType)
-        , inputsInline: Just false
-        }
-        defaultBlockDefinition
-
+-- TODO: How do I do [Case]?
+-- https://github.com/google/blockly/wiki/Lists
 toDefinition (ContractType WhenContractType) =
   BlockDefinition
     $ merge
@@ -312,32 +262,14 @@ toDefinition (ContractType WhenContractType) =
         }
         defaultBlockDefinition
 
-toDefinition (ContractType WhileContractType) =
+toDefinition (ContractType LetContractType) =
   BlockDefinition
     $ merge
-        { type: show WhileContractType
-        , message0: "While observation %1 enforce %2 when block is %3 or higher continue as %4"
+        { type: show LetContractType
+        , message0: "Let %1 be %2 continue as %3"
         , args0:
-          [ Value { name: "observation", check: "observation", align: Right }
-          , Statement { name: "contract1", check: (show BaseContractType), align: Right }
-          , Number { name: "timeout", value: 0.0, min: Just 0.0, max: Nothing, precision: Nothing }
-          , Statement { name: "contract2", check: (show BaseContractType), align: Right }
-          ]
-        , colour: "0"
-        , previousStatement: Just (show BaseContractType)
-        , inputsInline: Just false
-        }
-        defaultBlockDefinition
-
-toDefinition (ContractType ScaleContractType) =
-  BlockDefinition
-    $ merge
-        { type: show ScaleContractType
-        , message0: "Scale %1 %2 %3 with %4"
-        , args0:
-          [ Value { name: "scale1", check: "value", align: Right }
-          , Value { name: "scale2", check: "value", align: Right }
-          , Value { name: "scale3", check: "value", align: Right }
+          [ Number { name: "value_id", value: 0.0, min: Just 0.0, max: Nothing, precision: Nothing }
+          , Value { name: "value", check: "value", align: Right }
           , Statement { name: "contract", check: (show BaseContractType), align: Right }
           ]
         , colour: "0"
@@ -345,47 +277,7 @@ toDefinition (ContractType ScaleContractType) =
         }
         defaultBlockDefinition
 
-toDefinition (ContractType LetContractType) =
-  BlockDefinition
-    $ merge
-        { type: show LetContractType
-        , message0: "Let %1 be %2 continue as %3"
-        , args0:
-          [ Number { name: "let_label", value: 0.0, min: Just 0.0, max: Nothing, precision: Nothing }
-          , Statement { name: "contract1", check: (show BaseContractType), align: Right }
-          , Statement { name: "contract2", check: (show BaseContractType), align: Right }
-          ]
-        , colour: "0"
-        , previousStatement: Just (show BaseContractType)
-        }
-        defaultBlockDefinition
-
-toDefinition (ContractType UseContractType) =
-  BlockDefinition
-    $ merge
-        { type: show UseContractType
-        , message0: "Use %1"
-        , args0:
-          [ Number { name: "let_label", value: 0.0, min: Just 0.0, max: Nothing, precision: Nothing }
-          ]
-        , colour: "0"
-        , previousStatement: Just (show BaseContractType)
-        }
-        defaultBlockDefinition
-
-toDefinition (ObservationType BelowTimeoutObservationType) =
-  BlockDefinition
-    $ merge
-        { type: show BelowTimeoutObservationType
-        , message0: "Below Timeout %1"
-        , args0:
-          [ Number { name: "timeout", value: 0.0, min: Just 0.0, max: Nothing, precision: Nothing }
-          ]
-        , colour: "230"
-        , output: Just "observation"
-        , inputsInline: Just true
-        }
-        defaultBlockDefinition
+-- Observations
 
 toDefinition (ObservationType AndObservationType) =
   BlockDefinition
@@ -431,30 +323,14 @@ toDefinition (ObservationType NotObservationType) =
         }
         defaultBlockDefinition
 
-toDefinition (ObservationType ChoseThisObservationType) =
+toDefinition (ObservationType ChoseSomethingObservationType) =
   BlockDefinition
     $ merge
-        { type: show ChoseThisObservationType
-        , message0: "chose id %1 for person %2 choice %3"
-        , args0:
-          [ Number { name: "choice_id", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
-          , Number { name: "person_id", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
-          , Number { name: "choice", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
-          ]
-        , colour: "230"
-        , output: Just "observation"
-        , inputsInline: Just true
-        }
-        defaultBlockDefinition
-
-toDefinition (ObservationType ChoseObservationType) =
-  BlockDefinition
-    $ merge
-        { type: show ChoseObservationType
+        { type: show ChoseSomethingObservationType
         , message0: "chose id %1 for person %2"
         , args0:
-          [ Number { name: "choice_id", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
-          , Number { name: "person_id", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
+          [ Number { name: "choice_number", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
+          , Value { name: "choice_owner", check: "value", align: Right }
           ]
         , colour: "230"
         , output: Just "observation"
@@ -477,10 +353,10 @@ toDefinition (ObservationType ValueGEObservationType) =
         }
         defaultBlockDefinition
 
-toDefinition (ObservationType ValueGObservationType) =
+toDefinition (ObservationType ValueGTObservationType) =
   BlockDefinition
     $ merge
-        { type: show ValueGObservationType
+        { type: show ValueGTObservationType
         , message0: "value %1 is greater than %2"
         , args0:
           [ Value { name: "value1", check: "value", align: Right }
@@ -507,10 +383,10 @@ toDefinition (ObservationType ValueLEObservationType) =
         }
         defaultBlockDefinition
 
-toDefinition (ObservationType ValueLObservationType) =
+toDefinition (ObservationType ValueLTObservationType) =
   BlockDefinition
     $ merge
-        { type: show ValueLObservationType
+        { type: show ValueLTObservationType
         , message0: "value %1 is less than %2"
         , args0:
           [ Value { name: "value1", check: "value", align: Right }
@@ -522,10 +398,10 @@ toDefinition (ObservationType ValueLObservationType) =
         }
         defaultBlockDefinition
 
-toDefinition (ObservationType ValueEqObservationType) =
+toDefinition (ObservationType ValueEQObservationType) =
   BlockDefinition
     $ merge
-        { type: show ValueEqObservationType
+        { type: show ValueEQObservationType
         , message0: "value %1 is equal to %2"
         , args0:
           [ Value { name: "value1", check: "value", align: Right }
@@ -561,25 +437,19 @@ toDefinition (ObservationType FalseObservationType) =
         }
         defaultBlockDefinition
 
-toDefinition (ValueType CurrentBlockType) =
-  BlockDefinition
-    $ merge
-        { type: show CurrentBlockType
-        , message0: "Current Block"
-        , lastDummyAlign0: Centre
-        , colour: "135"
-        , output: Just "value"
-        , inputsInline: Just true
-        }
-        defaultBlockDefinition
+-- Values
 
-toDefinition (ValueType CommittedValueType) =
+toDefinition (ValueType AvailableMoneyValueType) =
   BlockDefinition
     $ merge
-        { type: show CommittedValueType
-        , message0: "Committed Value %1"
+        { type: show AvailableMoneyValueType
+        , message0: "Available Money %1 from account number %2 %3 with owner %4 %5"
         , args0:
-          [ Number { name: "commit_id", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
+          [ DummyRight
+          , Number { name: "account_number", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
+          , DummyRight
+          , Value { name: "account_owner", check: "value", align: Right }
+          , DummyRight
           ]
         , colour: "135"
         , output: Just "value"
@@ -587,10 +457,10 @@ toDefinition (ValueType CommittedValueType) =
         }
         defaultBlockDefinition
 
-toDefinition (ValueType ConstValueType) =
+toDefinition (ValueType ConstantValueType) =
   BlockDefinition
     $ merge
-        { type: show ConstValueType
+        { type: show ConstantValueType
         , message0: "Constant Value %1 ADA"
         , args0:
           [ Number { name: "constant", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
@@ -601,10 +471,10 @@ toDefinition (ValueType ConstValueType) =
         }
         defaultBlockDefinition
 
-toDefinition (ValueType NegValueType) =
+toDefinition (ValueType NegValueValueType) =
   BlockDefinition
     $ merge
-        { type: show NegValueType
+        { type: show NegValueValueType
         , message0: "Negate Value %1"
         , args0:
           [ Value { name: "value", check: "value", align: Right }
@@ -615,10 +485,10 @@ toDefinition (ValueType NegValueType) =
         }
         defaultBlockDefinition
 
-toDefinition (ValueType AddValueType) =
+toDefinition (ValueType AddValueValueType) =
   BlockDefinition
     $ merge
-        { type: show AddValueType
+        { type: show AddValueValueType
         , message0: "%1 + %2"
         , args0:
           [ Value { name: "value1", check: "value", align: Right }
@@ -630,10 +500,10 @@ toDefinition (ValueType AddValueType) =
         }
         defaultBlockDefinition
 
-toDefinition (ValueType SubValueType) =
+toDefinition (ValueType SubValueValueType) =
   BlockDefinition
     $ merge
-        { type: show SubValueType
+        { type: show SubValueValueType
         , message0: "%1 - %2"
         , args0:
           [ Value { name: "value1", check: "value", align: Right }
@@ -645,61 +515,14 @@ toDefinition (ValueType SubValueType) =
         }
         defaultBlockDefinition
 
-toDefinition (ValueType MulValueType) =
+toDefinition (ValueType ChoiceValueValueType) =
   BlockDefinition
     $ merge
-        { type: show MulValueType
-        , message0: "%1 * %2"
-        , args0:
-          [ Value { name: "value1", check: "value", align: Right }
-          , Value { name: "value2", check: "value", align: Right }
-          ]
-        , colour: "135"
-        , output: Just "value"
-        , inputsInline: Just true
-        }
-        defaultBlockDefinition
-
-toDefinition (ValueType DivValueType) =
-  BlockDefinition
-    $ merge
-        { type: show DivValueType
-        , message0: "%1 / %2 with default %3"
-        , args0:
-          [ Value { name: "value1", check: "value", align: Right }
-          , Value { name: "value2", check: "value", align: Right }
-          , Value { name: "value3", check: "value", align: Right }
-          ]
-        , colour: "135"
-        , output: Just "value"
-        , inputsInline: Just true
-        }
-        defaultBlockDefinition
-
-toDefinition (ValueType ModValueType) =
-  BlockDefinition
-    $ merge
-        { type: show ModValueType
-        , message0: "%1 % %2 with default %3"
-        , args0:
-          [ Value { name: "value1", check: "value", align: Right }
-          , Value { name: "value2", check: "value", align: Right }
-          , Value { name: "value3", check: "value", align: Right }
-          ]
-        , colour: "135"
-        , output: Just "value"
-        , inputsInline: Just true
-        }
-        defaultBlockDefinition
-
-toDefinition (ValueType FromChoiceValueType) =
-  BlockDefinition
-    $ merge
-        { type: show FromChoiceValueType
+        { type: show ChoiceValueValueType
         , message0: "use value of choice with id: %1 chosen by participant with id: %2 if no choice was made use: %3"
         , args0:
-          [ Number { name: "choice_id", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
-          , Number { name: "person_id", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
+          [ Number { name: "choice_number", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
+          , Number { name: "choice_owner", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
           , Value { name: "value", check: "value", align: Right }
           ]
         , colour: "135"
@@ -708,20 +531,44 @@ toDefinition (ValueType FromChoiceValueType) =
         }
         defaultBlockDefinition
 
-toDefinition (ValueType FromOracleValueType) =
+toDefinition (ValueType SlotIntervalStartValueType) =
   BlockDefinition
     $ merge
-        { type: show FromOracleValueType
-        , message0: "use value of oracle with id: %1 if no oracle exists use: %2"
+        { type: show SlotIntervalStartValueType
+        , message0: "Slot Interval Start"
+        , lastDummyAlign0: Centre
+        , colour: "135"
+        , output: Just "value"
+        , inputsInline: Just true
+        }
+        defaultBlockDefinition
+
+toDefinition (ValueType SlotIntervalEndValueType) =
+  BlockDefinition
+    $ merge
+        { type: show SlotIntervalEndValueType
+        , message0: "Slot Interval End"
+        , lastDummyAlign0: Centre
+        , colour: "135"
+        , output: Just "value"
+        , inputsInline: Just true
+        }
+        defaultBlockDefinition
+
+toDefinition (ValueType UseValueValueType) =
+  BlockDefinition
+    $ merge
+        { type: show UseValueValueType
+        , message0: "Use Value with ID %1"
         , args0:
-          [ Number { name: "oracle_id", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
-          , Value { name: "value", check: "value", align: Right }
+          [ Number { name: "value_id", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
           ]
         , colour: "135"
         , output: Just "value"
         , inputsInline: Just true
         }
         defaultBlockDefinition
+
 
 toolbox :: forall a b. HTML a b
 toolbox =
@@ -766,66 +613,33 @@ baseContractDefinition :: Generator -> Block -> Either String Contract
 baseContractDefinition g block = parse Parser.contract =<< statementToCode g block (show BaseContractType)
 
 instance hasBlockDefinitionContract :: HasBlockDefinition ContractType Contract where
-  blockDefinition NullContractType _ _ = pure Null
-  blockDefinition CommitContractType g block = do
-    actionId <- parse Parser.idAction =<< getFieldValue block "action_id"
-    commitId <- parse Parser.idCommit =<< getFieldValue block "commit_id"
-    personId <- parse Parser.person =<< getFieldValue block "person_id"
-    ammount <- parse Parser.value =<< statementToCode g block "ammount"
-    endExpiration <- parse Parser.timeout =<< getFieldValue block "end_expiration"
-    startExpiration <- parse Parser.timeout =<< getFieldValue block "start_expiration"
-    contract1 <- parse Parser.contract =<< statementToCode g block "contract1"
-    contract2 <- parse Parser.contract =<< statementToCode g block "contract2"
-    pure (Commit actionId commitId personId ammount endExpiration startExpiration contract1 contract2)
+  blockDefinition RefundContractType _ _ = pure Refund
   blockDefinition PayContractType g block = do
-    actionId <- parse Parser.idAction =<< getFieldValue block "action_id"
-    commitId <- parse Parser.idCommit =<< getFieldValue block "commit_id"
-    payee <- parse Parser.person =<< getFieldValue block "payee_id"
-    ammount <- parse Parser.value =<< statementToCode g block "ammount"
-    timeout <- parse Parser.timeout =<< getFieldValue block "timeout"
-    contract1 <- parse Parser.contract =<< statementToCode g block "contract1"
-    contract2 <- parse Parser.contract =<< statementToCode g block "contract2"
-    pure (Pay actionId commitId payee ammount timeout contract1 contract2)
-  blockDefinition BothContractType g block = do
-    contract1 <- parse Parser.contract =<< statementToCode g block "contract1"
-    contract2 <- parse Parser.contract =<< statementToCode g block "contract2"
-    pure (Both contract1 contract2)
-  blockDefinition ChoiceContractType g block = do
-    observation <- parse Parser.observation =<< statementToCode g block "observation"
-    contract1 <- parse Parser.contract =<< statementToCode g block "contract1"
-    contract2 <- parse Parser.contract =<< statementToCode g block "contract2"
-    pure (Choice observation contract1 contract2)
-  blockDefinition WhenContractType g block = do
-    observation <- parse Parser.observation =<< statementToCode g block "observation"
-    timeout <- parse Parser.timeout =<< getFieldValue block "timeout"
-    contract1 <- parse Parser.contract =<< statementToCode g block "contract1"
-    contract2 <- parse Parser.contract =<< statementToCode g block "contract2"
-    pure (When observation timeout contract1 contract2)
-  blockDefinition WhileContractType g block = do
-    observation <- parse Parser.observation =<< statementToCode g block "observation"
-    timeout <- parse Parser.timeout =<< getFieldValue block "timeout"
-    contract1 <- parse Parser.contract =<< statementToCode g block "contract1"
-    contract2 <- parse Parser.contract =<< statementToCode g block "contract2"
-    pure (While observation timeout contract1 contract2)
-  blockDefinition ScaleContractType g block = do
-    scale1 <- parse Parser.value =<< statementToCode g block "scale1"
-    scale2 <- parse Parser.value =<< statementToCode g block "scale2"
-    scale3 <- parse Parser.value =<< statementToCode g block "scale3"
+    accountNumber <- parse Parser.bigInteger =<< getFieldValue block "account_number"
+    accountOwner <- parse Parser.pubkey =<< getFieldValue block "account_owner"
+    let
+      accountId = AccountId { accountNumber, accountOwner }
+    payee <- parse Parser.payee =<< getFieldValue block "payee_id"
+    value <- parse Parser.value =<< statementToCode g block "value"
     contract <- parse Parser.contract =<< statementToCode g block "contract"
-    pure (Scale scale1 scale2 scale3 contract)
-  blockDefinition LetContractType g block = do
-    letLabel <- parse Parser.bigInteger =<< getFieldValue block "let_label"
+    pure (Pay accountId payee value contract)
+  blockDefinition IfContractType g block = do
+    observation <- parse Parser.observation =<< statementToCode g block "observation"
     contract1 <- parse Parser.contract =<< statementToCode g block "contract1"
     contract2 <- parse Parser.contract =<< statementToCode g block "contract2"
-    pure (Let letLabel contract1 contract2)
-  blockDefinition UseContractType g block = do
-    letLabel <- parse Parser.bigInteger =<< getFieldValue block "let_label"
-    pure (Use letLabel)
+    pure (If observation contract1 contract2)
+  blockDefinition WhenContractType g block = do
+    cases <- parse Parser.cases =<< statementToCode g block "observation"
+    timeout <- parse Parser.timeout =<< getFieldValue block "timeout"
+    contract <- parse Parser.contract =<< statementToCode g block "contract"
+    pure (When cases timeout contract)
+  blockDefinition LetContractType g block = do
+    valueId <- parse Parser.valueId =<< getFieldValue block "value_id"
+    value <- parse Parser.value =<< statementToCode g block "value"
+    contract <- parse Parser.contract =<< statementToCode g block "contract"
+    pure (Let valueId value contract)
 
 instance hasBlockDefinitionObservation :: HasBlockDefinition ObservationType Observation where
-  blockDefinition BelowTimeoutObservationType g block = do
-    timeout <- parse Parser.timeout =<< getFieldValue block "timeout"
-    pure (BelowTimeout timeout)
   blockDefinition AndObservationType g block = do
     observation1 <- parse Parser.observation =<< statementToCode g block "observation1"
     observation2 <- parse Parser.observation =<< statementToCode g block "observation2"
@@ -837,24 +651,17 @@ instance hasBlockDefinitionObservation :: HasBlockDefinition ObservationType Obs
   blockDefinition NotObservationType g block = do
     observation <- parse Parser.observation =<< statementToCode g block "observation"
     pure (NotObs observation)
-  blockDefinition ChoseThisObservationType g block = do
-    choiceId <- parse Parser.bigInteger =<< getFieldValue block "choice_id"
-    personId <- parse Parser.person =<< getFieldValue block "person_id"
-    choice <- parse Parser.choice =<< getFieldValue block "choice"
+  blockDefinition ChoseSomethingObservationType g block = do
+    choiceNumber <- parse Parser.bigInteger =<< getFieldValue block "choice_number"
+    choiceOwner <- parse Parser.pubkey =<< getFieldValue block "choice_owner"
     let
-      idChoice = IdChoice { choice: choiceId, person: personId }
-    pure (ChoseThis idChoice choice)
-  blockDefinition ChoseObservationType g block = do
-    choiceId <- parse Parser.bigInteger =<< getFieldValue block "choice_id"
-    personId <- parse Parser.person =<< getFieldValue block "person_id"
-    let
-      idChoice = IdChoice { choice: choiceId, person: personId }
-    pure (ChoseSomething idChoice)
+      choiceId = ChoiceId { choiceNumber, choiceOwner }
+    pure (ChoseSomething choiceId)
   blockDefinition ValueGEObservationType g block = do
     value1 <- parse Parser.value =<< statementToCode g block "value1"
     value2 <- parse Parser.value =<< statementToCode g block "value2"
     pure (ValueGE value1 value2)
-  blockDefinition ValueGObservationType g block = do
+  blockDefinition ValueGTObservationType g block = do
     value1 <- parse Parser.value =<< statementToCode g block "value1"
     value2 <- parse Parser.value =<< statementToCode g block "value2"
     pure (ValueGT value1 value2)
@@ -862,11 +669,11 @@ instance hasBlockDefinitionObservation :: HasBlockDefinition ObservationType Obs
     value1 <- parse Parser.value =<< statementToCode g block "value1"
     value2 <- parse Parser.value =<< statementToCode g block "value2"
     pure (ValueLE value1 value2)
-  blockDefinition ValueLObservationType g block = do
+  blockDefinition ValueLTObservationType g block = do
     value1 <- parse Parser.value =<< statementToCode g block "value1"
     value2 <- parse Parser.value =<< statementToCode g block "value2"
     pure (ValueLT value1 value2)
-  blockDefinition ValueEqObservationType g block = do
+  blockDefinition ValueEQObservationType g block = do
     value1 <- parse Parser.value =<< statementToCode g block "value1"
     value2 <- parse Parser.value =<< statementToCode g block "value2"
     pure (ValueEQ value1 value2)
@@ -874,49 +681,38 @@ instance hasBlockDefinitionObservation :: HasBlockDefinition ObservationType Obs
   blockDefinition FalseObservationType g block = pure FalseObs
 
 instance hasBlockDefinitionValue :: HasBlockDefinition ValueType Value where
-  blockDefinition CurrentBlockType g block = pure CurrentBlock
-  blockDefinition CommittedValueType g block = do
-    commitId <- parse Parser.idCommit =<< getFieldValue block "commit_id"
-    pure (Committed commitId)
-  blockDefinition ConstValueType g block = do
+  blockDefinition AvailableMoneyValueType g block = do
+    accountNumber <- parse Parser.bigInteger =<< getFieldValue block "account_number"
+    accountOwner <- parse Parser.pubkey =<< getFieldValue block "account_owner"
+    let
+      accountId = AccountId { accountNumber, accountOwner }
+    pure (AvailableMoney accountId)
+  blockDefinition ConstantValueType g block = do
     constant <- parse Parser.bigInteger =<< getFieldValue block "constant"
     pure (Constant constant)
-  blockDefinition NegValueType g block = do
+  blockDefinition NegValueValueType g block = do
     value <- parse Parser.value =<< statementToCode g block "value"
     pure (NegValue value)
-  blockDefinition AddValueType g block = do
+  blockDefinition AddValueValueType g block = do
     value1 <- parse Parser.value =<< statementToCode g block "value1"
     value2 <- parse Parser.value =<< statementToCode g block "value2"
     pure (AddValue value1 value2)
-  blockDefinition SubValueType g block = do
+  blockDefinition SubValueValueType g block = do
     value1 <- parse Parser.value =<< statementToCode g block "value1"
     value2 <- parse Parser.value =<< statementToCode g block "value2"
     pure (SubValue value1 value2)
-  blockDefinition MulValueType g block = do
-    value1 <- parse Parser.value =<< statementToCode g block "value1"
-    value2 <- parse Parser.value =<< statementToCode g block "value2"
-    pure (MulValue value1 value2)
-  blockDefinition DivValueType g block = do
-    value1 <- parse Parser.value =<< statementToCode g block "value1"
-    value2 <- parse Parser.value =<< statementToCode g block "value2"
-    value3 <- parse Parser.value =<< statementToCode g block "value3"
-    pure (DivValue value1 value2 value3)
-  blockDefinition ModValueType g block = do
-    value1 <- parse Parser.value =<< statementToCode g block "value1"
-    value2 <- parse Parser.value =<< statementToCode g block "value2"
-    value3 <- parse Parser.value =<< statementToCode g block "value3"
-    pure (ModValue value1 value2 value3)
-  blockDefinition FromChoiceValueType g block = do
-    choiceId <- parse Parser.bigInteger =<< getFieldValue block "choice_id"
-    personId <- parse Parser.person =<< getFieldValue block "person_id"
-    value <- parse Parser.value =<< statementToCode g block "value"
+  blockDefinition ChoiceValueValueType g block = do
+    choiceNumber <- parse Parser.bigInteger =<< getFieldValue block "choice_number"
+    choiceOwner <- parse Parser.pubkey =<< getFieldValue block "choice_owner"
     let
-      idChoice = IdChoice { choice: choiceId, person: personId }
-    pure (ValueFromChoice idChoice value)
-  blockDefinition FromOracleValueType g block = do
-    oracleId <- parse Parser.idOracle =<< getFieldValue block "oracle_id"
+      choiceId = ChoiceId { choiceNumber, choiceOwner }
     value <- parse Parser.value =<< statementToCode g block "value"
-    pure (ValueFromOracle oracleId value)
+    pure (ChoiceValue choiceId value)
+  blockDefinition SlotIntervalStartValueType g block = pure SlotIntervalStart
+  blockDefinition SlotIntervalEndValueType g block = pure SlotIntervalEnd
+  blockDefinition UseValueValueType g block = do
+    valueId <- parse Parser.valueId =<< getFieldValue block "value_id"
+    pure (UseValue valueId)
 
 buildBlocks :: forall r. NewBlockFunction r -> BlocklyState -> Contract -> ST r Unit
 buildBlocks newBlock bs contract = do
@@ -962,78 +758,38 @@ class ToBlockly a where
   toBlockly :: forall r. NewBlockFunction r -> STRef r Workspace -> Input -> a -> ST r Unit
 
 instance toBlocklyContract :: ToBlockly Contract where
-  toBlockly newBlock workspace input Null = do
-    block <- newBlock workspace (show NullContractType)
+  toBlockly newBlock workspace input Refund = do
+    block <- newBlock workspace (show RefundContractType)
     connectToPrevious block input
-  toBlockly newBlock workspace input (Commit action commit person ammount endExpiration startExpiration contract1 contract2) = do
-    block <- newBlock workspace (show CommitContractType)
-    connectToPrevious block input
-    setField block "action_id" (show (unwrap action))
-    setField block "commit_id" (show (unwrap commit))
-    setField block "person_id" (show person)
-    inputToBlockly newBlock workspace block "ammount" ammount
-    setField block "end_expiration" (show (unwrap endExpiration))
-    setField block "start_expiration" (show (unwrap startExpiration))
-    inputToBlockly newBlock workspace block "contract1" contract1
-    inputToBlockly newBlock workspace block "contract2" contract2
-  toBlockly newBlock workspace input (Pay action commit payee ammount timeout contract1 contract2) = do
+  toBlockly newBlock workspace input (Pay accountId payee value contract) = do
     block <- newBlock workspace (show PayContractType)
     connectToPrevious block input
-    setField block "action_id" (show (unwrap action))
-    setField block "commit_id" (show (unwrap commit))
+    setField block "account_number" (show (unwrap accountId).accountNumber)
+    setField block "account_owner" (show (unwrap accountId).accountOwner)
     setField block "payee_id" (show payee)
-    inputToBlockly newBlock workspace block "ammount" ammount
-    setField block "timeout" (show timeout)
-    inputToBlockly newBlock workspace block "contract1" contract1
-    inputToBlockly newBlock workspace block "contract2" contract2
-  toBlockly newBlock workspace input (Both contract1 contract2) = do
-    block <- newBlock workspace (show BothContractType)
-    connectToPrevious block input
-    inputToBlockly newBlock workspace block "contract1" contract1
-    inputToBlockly newBlock workspace block "contract2" contract2
-  toBlockly newBlock workspace input (Choice observation contract1 contract2) = do
-    block <- newBlock workspace (show ChoiceContractType)
+    inputToBlockly newBlock workspace block "value" value
+    inputToBlockly newBlock workspace block "contract" contract
+  toBlockly newBlock workspace input (If observation contract1 contract2) = do
+    block <- newBlock workspace (show IfContractType)
     connectToPrevious block input
     inputToBlockly newBlock workspace block "observation" observation
     inputToBlockly newBlock workspace block "contract1" contract1
     inputToBlockly newBlock workspace block "contract2" contract2
-  toBlockly newBlock workspace input (When observation timeout contract1 contract2) = do
+  toBlockly newBlock workspace input (When cases timeout contract) = do
     block <- newBlock workspace (show WhenContractType)
     connectToPrevious block input
-    inputToBlockly newBlock workspace block "observation" observation
+    -- TODO: cases
+    -- inputToBlockly newBlock workspace block "cases" cases
     setField block "timeout" (show timeout)
-    inputToBlockly newBlock workspace block "contract1" contract1
-    inputToBlockly newBlock workspace block "contract2" contract2
-  toBlockly newBlock workspace input (While observation timeout contract1 contract2) = do
-    block <- newBlock workspace (show WhileContractType)
-    connectToPrevious block input
-    inputToBlockly newBlock workspace block "observation" observation
-    setField block "timeout" (show timeout)
-    inputToBlockly newBlock workspace block "contract1" contract1
-    inputToBlockly newBlock workspace block "contract2" contract2
-  toBlockly newBlock workspace input (Scale v1 v2 v3 contract) = do
-    block <- newBlock workspace (show ScaleContractType)
-    connectToPrevious block input
-    inputToBlockly newBlock workspace block "scale1" v1
-    inputToBlockly newBlock workspace block "scale2" v2
-    inputToBlockly newBlock workspace block "scale3" v3
     inputToBlockly newBlock workspace block "contract" contract
-  toBlockly newBlock workspace input (Let label contract1 contract2) = do
+  toBlockly newBlock workspace input (Let valueId value contract) = do
     block <- newBlock workspace (show LetContractType)
     connectToPrevious block input
-    setField block "let_label" (show label)
-    inputToBlockly newBlock workspace block "contract1" contract1
-    inputToBlockly newBlock workspace block "contract2" contract2
-  toBlockly newBlock workspace input (Use label) = do
-    block <- newBlock workspace (show UseContractType)
-    connectToPrevious block input
-    setField block "let_label" (show label)
+    setField block "value_id" (show valueId)
+    inputToBlockly newBlock workspace block "value" value
+    inputToBlockly newBlock workspace block "contract" contract
 
 instance toBlocklyObservation :: ToBlockly Observation where
-  toBlockly newBlock workspace input (BelowTimeout timeout) = do
-    block <- newBlock workspace (show BelowTimeoutObservationType)
-    connectToOutput block input
-    setField block "timeout" (show timeout)
   toBlockly newBlock workspace input (AndObs observation1 observation2) = do
     block <- newBlock workspace (show AndObservationType)
     connectToOutput block input
@@ -1048,29 +804,23 @@ instance toBlocklyObservation :: ToBlockly Observation where
     block <- newBlock workspace (show NotObservationType)
     connectToOutput block input
     inputToBlockly newBlock workspace block "observation" observation
-  toBlockly newBlock workspace input (ChoseThis choiceId choice) = do
-    block <- newBlock workspace (show ChoseThisObservationType)
-    connectToOutput block input
-    setField block "choice_id" (show (unwrap choiceId).choice)
-    setField block "person_id" (show (unwrap choiceId).person)
-    setField block "choice" (show choice)
   toBlockly newBlock workspace input (ChoseSomething choiceId) = do
-    block <- newBlock workspace (show ChoseObservationType)
+    block <- newBlock workspace (show ChoseSomethingObservationType)
     connectToOutput block input
-    setField block "choice_id" (show (unwrap choiceId).choice)
-    setField block "person_id" (show (unwrap choiceId).person)
+    setField block "choice_number" (show (unwrap choiceId).choiceNumber)
+    setField block "choice_owner" (show (unwrap choiceId).choiceOwner)
   toBlockly newBlock workspace input (ValueGE v1 v2) = do
     block <- newBlock workspace (show ValueGEObservationType)
     connectToOutput block input
     inputToBlockly newBlock workspace block "value1" v1
     inputToBlockly newBlock workspace block "value2" v2
   toBlockly newBlock workspace input (ValueGT v1 v2) = do
-    block <- newBlock workspace (show ValueGObservationType)
+    block <- newBlock workspace (show ValueGTObservationType)
     connectToOutput block input
     inputToBlockly newBlock workspace block "value1" v1
     inputToBlockly newBlock workspace block "value2" v2
   toBlockly newBlock workspace input (ValueLT v1 v2) = do
-    block <- newBlock workspace (show ValueLObservationType)
+    block <- newBlock workspace (show ValueLTObservationType)
     connectToOutput block input
     inputToBlockly newBlock workspace block "value1" v1
     inputToBlockly newBlock workspace block "value2" v2
@@ -1080,7 +830,7 @@ instance toBlocklyObservation :: ToBlockly Observation where
     inputToBlockly newBlock workspace block "value1" v1
     inputToBlockly newBlock workspace block "value2" v2
   toBlockly newBlock workspace input (ValueEQ v1 v2) = do
-    block <- newBlock workspace (show ValueEqObservationType)
+    block <- newBlock workspace (show ValueEQObservationType)
     connectToOutput block input
     inputToBlockly newBlock workspace block "value1" v1
     inputToBlockly newBlock workspace block "value2" v2
@@ -1092,56 +842,42 @@ instance toBlocklyObservation :: ToBlockly Observation where
     connectToOutput block input
 
 instance toBlocklyValue :: ToBlockly Value where
-  toBlockly newBlock workspace input CurrentBlock = do
-    block <- newBlock workspace (show CurrentBlockType)
+  toBlockly newBlock workspace input (AvailableMoney accountId) = do
+    block <- newBlock workspace (show AvailableMoneyValueType)
     connectToOutput block input
-  toBlockly newBlock workspace input (Committed v) = do
-    block <- newBlock workspace (show CommittedValueType)
-    connectToOutput block input
-    setField block "commit_id" (show v)
+    setField block "account_number" (show (unwrap accountId).accountNumber)
+    setField block "account_owner" (show (unwrap accountId).accountOwner)
   toBlockly newBlock workspace input (Constant v) = do
-    block <- newBlock workspace (show ConstValueType)
+    block <- newBlock workspace (show ConstantValueType)
     connectToOutput block input
     setField block "constant" (show v)
   toBlockly newBlock workspace input (NegValue v) = do
-    block <- newBlock workspace (show NegValueType)
+    block <- newBlock workspace (show NegValueValueType)
     connectToOutput block input
     inputToBlockly newBlock workspace block "value" v
   toBlockly newBlock workspace input (AddValue v1 v2) = do
-    block <- newBlock workspace (show AddValueType)
+    block <- newBlock workspace (show AddValueValueType)
     connectToOutput block input
     inputToBlockly newBlock workspace block "value1" v1
     inputToBlockly newBlock workspace block "value2" v2
   toBlockly newBlock workspace input (SubValue v1 v2) = do
-    block <- newBlock workspace (show SubValueType)
+    block <- newBlock workspace (show SubValueValueType)
     connectToOutput block input
     inputToBlockly newBlock workspace block "value1" v1
     inputToBlockly newBlock workspace block "value2" v2
-  toBlockly newBlock workspace input (MulValue v1 v2) = do
-    block <- newBlock workspace (show MulValueType)
+  toBlockly newBlock workspace input (ChoiceValue choiceId value) = do
+    block <- newBlock workspace (show ChoiceValueValueType)
     connectToOutput block input
-    inputToBlockly newBlock workspace block "value1" v1
-    inputToBlockly newBlock workspace block "value2" v2
-  toBlockly newBlock workspace input (DivValue v1 v2 v3) = do
-    block <- newBlock workspace (show DivValueType)
+    setField block "choice_number" (show (unwrap choiceId).choiceNumber)
+    setField block "choice_owner" (show (unwrap choiceId).choiceOwner)
+    inputToBlockly newBlock workspace block "value" value
+  toBlockly newBlock workspace input SlotIntervalStart = do
+    block <- newBlock workspace (show SlotIntervalStartValueType)
     connectToOutput block input
-    inputToBlockly newBlock workspace block "value1" v1
-    inputToBlockly newBlock workspace block "value2" v2
-    inputToBlockly newBlock workspace block "value3" v3
-  toBlockly newBlock workspace input (ModValue v1 v2 v3) = do
-    block <- newBlock workspace (show ModValueType)
+  toBlockly newBlock workspace input SlotIntervalEnd = do
+    block <- newBlock workspace (show SlotIntervalEndValueType)
     connectToOutput block input
-    inputToBlockly newBlock workspace block "value1" v1
-    inputToBlockly newBlock workspace block "value2" v2
-    inputToBlockly newBlock workspace block "value3" v3
-  toBlockly newBlock workspace input (ValueFromChoice v1 v2) = do
-    block <- newBlock workspace (show FromChoiceValueType)
+  toBlockly newBlock workspace input (UseValue valueId) = do
+    block <- newBlock workspace (show UseValueValueType)
     connectToOutput block input
-    setField block "choice_id" (show (unwrap v1).choice)
-    setField block "person_id" (show (unwrap v1).person)
-    inputToBlockly newBlock workspace block "value" v2
-  toBlockly newBlock workspace input (ValueFromOracle v1 v2) = do
-    block <- newBlock workspace (show FromOracleValueType)
-    connectToOutput block input
-    setField block "oracle_id" (show (unwrap v1))
-    inputToBlockly newBlock workspace block "value" v2
+    setField block "value_id" (show (unwrap valueId))

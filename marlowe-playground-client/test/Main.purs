@@ -3,8 +3,8 @@ module Test.Main where
 import Prelude
 import BridgeTests as BridgeTests
 import Effect (Effect)
-import Marlowe.BlocklyTests as BlocklyTests
-import Marlowe.ContractTests as ContractTests
+-- import Marlowe.BlocklyTests as BlocklyTests
+-- import Marlowe.ContractTests as ContractTests
 import Marlowe.ParserTests as ParserTests
 import Test.Unit.Main (runTest)
 
@@ -15,5 +15,5 @@ main =
   runTest do
     BridgeTests.all
     ParserTests.all
-    ContractTests.all
-    BlocklyTests.all
+    -- ContractTests.all
+    -- BlocklyTests.all

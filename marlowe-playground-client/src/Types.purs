@@ -10,25 +10,24 @@ import Data.Either.Nested (Either3)
 import Data.Functor.Coproduct.Nested (Coproduct3)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Lens (Lens, Lens', lens)
+import Data.Lens (Lens, Lens', lens, (^.))
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
-import Data.List (List)
 import Data.List.NonEmpty as NEL
 import Data.List.Types (NonEmptyList)
 import Data.Map (Map)
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.RawJson (JsonEither)
 import Data.Symbol (SProxy(..))
+import Data.Tuple.Nested (Tuple3)
 import Gist (Gist)
 import Halogen.Blockly (BlocklyQuery, BlocklyMessage)
 import Halogen.Component.ChildPath (ChildPath, cp1, cp2, cp3)
 import Language.Haskell.Interpreter (InterpreterError, InterpreterResult)
-import Marlowe.Semantics (DetachedPrimitiveWIA, AnyInput, State, ErrorResult, DynamicProblem)
-import Marlowe.Types (BlockNumber, Choice, Contract, IdChoice, IdOracle, Person)
+import Marlowe.Semantics (AccountId, Action(..), Bound, ChoiceId, ChosenNum, Contract, Environment(..), Input, Interval(..), Observation, Party, Slot, State, TransactionError, PubKey, _minSlot, emptyState, evalValue)
 import Network.RemoteData (RemoteData)
-import Prelude (class Eq, class Ord, class Show, Unit, (<<<))
+import Prelude (class Eq, class Ord, class Show, Unit, mempty, zero, (<<<))
 import Servant.PureScript.Ajax (AjaxError)
 import Type.Data.Boolean (kind Boolean)
 import Web.HTML.Event.DragEvent (DragEvent)
@@ -58,14 +57,11 @@ data Query a
   | ScrollTo { row :: Int, column :: Int } a
   | LoadMarloweScript String a
   -- marlowe actions
-  | SetSignature { person :: Person, isChecked :: Boolean } a
   | ApplyTransaction a
-  | NextBlock a
-  | AddAnyInput { person :: Maybe Person, anyInput :: AnyInput } a
-  | RemoveAnyInput AnyInput a
-  | SetChoice { idChoice :: IdChoice, value :: Choice } a
-  | SetOracleVal { idOracle :: IdOracle, value :: BigInteger } a
-  | SetOracleBn { idOracle :: IdOracle, blockNumber :: BlockNumber } a
+  | NextSlot a
+  | AddInput PubKey Int Input a
+  | RemoveInput PubKey Int Input a
+  | SetChoice ChoiceId ChosenNum a
   | ResetSimulator a
   | Undo a
   -- blockly
@@ -167,11 +163,6 @@ _oldContract = _Newtype <<< prop (SProxy :: SProxy "oldContract")
 _blocklyState :: Lens' FrontendState (Maybe BlocklyState)
 _blocklyState = _Newtype <<< prop (SProxy :: SProxy "blocklyState")
 
--- Oracles should not be grouped (only one line per oracle) like:
---    Oracle 3: Provide value [$value] for block [$timestamp]
-type OracleEntry
-  = { blockNumber :: BlockNumber, value :: BigInteger }
-
 -- editable
 _timestamp ::
   forall s a.
@@ -181,78 +172,30 @@ _timestamp = prop (SProxy :: SProxy "timestamp")
 _value :: forall s a. Lens' { value :: a | s } a
 _value = prop (SProxy :: SProxy "value")
 
-type InputData
-  = { inputs :: Map Person (List DetachedPrimitiveWIA)
-    , choiceData :: Map Person (Map BigInteger Choice)
-    , oracleData :: Map IdOracle OracleEntry
-    }
-
-_inputs :: forall s a. Lens' { inputs :: a | s } a
-_inputs = prop (SProxy :: SProxy "inputs")
-
-_choiceData :: forall s a. Lens' { choiceData :: a | s } a
-_choiceData = prop (SProxy :: SProxy "choiceData")
-
-_oracleData ::
-  forall s a.
-  Lens' { oracleData :: a | s } a
-_oracleData = prop (SProxy :: SProxy "oracleData")
-
-data TransactionValidity
-  = EmptyTransaction
-  | ValidTransaction (List DynamicProblem)
-  | InvalidTransaction ErrorResult
-
-derive instance eqTransactionValidity :: Eq TransactionValidity
-
-derive instance ordTransactionValidity :: Ord TransactionValidity
-
-isValidTransaction :: TransactionValidity -> Boolean
-isValidTransaction (ValidTransaction _) = true
-
-isValidTransaction _ = false
-
-isInvalidTransaction :: TransactionValidity -> Boolean
-isInvalidTransaction (InvalidTransaction _) = true
-
-isInvalidTransaction _ = false
-
-type TransactionData
-  = { inputs :: Array AnyInput, signatures :: Map Person Boolean, outcomes :: Map Person BigInteger, validity :: TransactionValidity }
-
--- table under checkboxes
-_signatures ::
-  forall s a.
-  Lens' { signatures :: a | s } a
-_signatures = prop (SProxy :: SProxy "signatures")
-
-_outcomes :: forall s a. Lens' { outcomes :: a | s } a
-_outcomes = prop (SProxy :: SProxy "outcomes")
-
-_validity :: forall s a. Lens' { validity :: a | s } a
-_validity = prop (SProxy :: SProxy "validity")
-
--- "Choice $IdChoice: Choose value [$Choice]"
 type MarloweState
-  = { input :: InputData
-    , transaction :: TransactionData
+  = { possibleActions :: Map PubKey (Array ActionInput)
+    , pendingInputs :: Array (Tuple3 Input PubKey Int)
+    , transactionError :: Maybe TransactionError
     , state :: State
-    , blockNum :: BlockNumber
+    , slot :: Slot
     , moneyInContract :: BigInteger
     , contract :: Maybe Contract
     }
 
-_input :: forall s a. Lens' { input :: a | s } a
-_input = prop (SProxy :: SProxy "input")
+_possibleActions :: forall s a. Lens' { possibleActions :: a | s } a
+_possibleActions = prop (SProxy :: SProxy "possibleActions")
 
-_transaction :: forall s a. Lens' { transaction :: a | s } a
-_transaction = prop (SProxy :: SProxy "transaction")
+_pendingInputs :: forall s a. Lens' { pendingInputs :: a | s } a
+_pendingInputs = prop (SProxy :: SProxy "pendingInputs")
 
 _state :: forall s a. Lens' { state :: a | s } a
 _state = prop (SProxy :: SProxy "state")
 
-_blockNum :: forall s a. Lens' { blockNum :: a | s } a
-_blockNum = prop (SProxy :: SProxy "blockNum")
+_transactionError :: forall s a. Lens' { transactionError :: a | s } a
+_transactionError = prop (SProxy :: SProxy "transactionError")
+
+_slot :: forall s a. Lens' { slot :: a | s } a
+_slot = prop (SProxy :: SProxy "slot")
 
 _moneyInContract :: forall s a. Lens' { moneyInContract :: a | s } a
 _moneyInContract = prop (SProxy :: SProxy "moneyInContract")
@@ -273,11 +216,48 @@ _currentMarloweState = _marloweState <<< _Head
 _currentContract :: Lens' FrontendState (Maybe Contract)
 _currentContract = _currentMarloweState <<< _contract
 
-_currentTransaction :: Lens' FrontendState TransactionData
-_currentTransaction = _currentMarloweState <<< _transaction
-
-_currentInput :: Lens' FrontendState InputData
-_currentInput = _currentMarloweState <<< _input
-
+emptyMarloweState :: MarloweState
+emptyMarloweState =
+  { possibleActions: mempty
+  , pendingInputs: mempty
+  , transactionError: Nothing
+  , state: emptyState
+  , slot: zero
+  , moneyInContract: zero
+  , contract: Nothing
+  }
 type WebData
   = RemoteData AjaxError
+
+-- | On the front end we need Actions however we also need to keep track of the current
+-- | choice that has been set for Choices
+data ActionInput
+  = DepositInput Boolean AccountId Party BigInteger
+  | ChoiceInput Boolean ChoiceId (Array Bound) ChosenNum
+  | NotifyInput Boolean Observation
+
+_display :: Lens' ActionInput Boolean
+_display = lens getter setter
+  where
+    getter (DepositInput display _ _ _) = display
+    getter (ChoiceInput display _ _ _) = display
+    getter (NotifyInput display _) = display
+
+    setter (DepositInput _ a b c) display = DepositInput display a b c
+    setter (ChoiceInput _ a b c) display = ChoiceInput display a b c
+    setter (NotifyInput _ a) display = NotifyInput display a
+
+-- TODO: ActionInputs need to -> Actions when you click +
+-- but they need to go back to ActionInput when you click -
+-- really we want to keep the value that was chosen in Choice also
+-- could add a Boolean "added" which says if we should display it or not
+-- could change back to display based on the choiceId or accountId
+-- not sure how you would do that with notify though, perhaps better if
+-- we do that but also provide an index with the Action so you can flip it back on
+actionToActionInput :: State -> Action -> ActionInput
+actionToActionInput state (Deposit accountId party value) = 
+  let minSlot = state ^. _minSlot 
+      env = Environment { slotInterval: Interval { from: minSlot, to: minSlot } }
+  in DepositInput true accountId party (evalValue env state value)
+actionToActionInput _ (Choice choiceId bounds) = ChoiceInput true choiceId bounds zero
+actionToActionInput _ (Notify observation) = NotifyInput true observation

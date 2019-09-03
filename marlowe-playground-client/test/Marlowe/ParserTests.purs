@@ -7,11 +7,10 @@ import Control.Lazy (class Lazy)
 import Control.Monad.Gen (class MonadGen)
 import Control.Monad.Rec.Class (class MonadRec)
 import Data.Either (Either(..))
-import Marlowe.GenNew (genAction, genContract, genObservation, genValue)
-import Marlowe.ParserNew (action, contract, observation, value)
+import Marlowe.Gen (genAction, genContract, genObservation, genValue)
+import Marlowe.Parser (action, contract, observation, value)
 import Marlowe.Pretty (pretty)
-import Marlowe.SemanticsNew (Contract, Observation, Value)
-import Marlowe.SemanticsNew as S
+import Marlowe.Semantics (Contract, Observation, Value)
 import Test.QuickCheck (class Testable, Result, (===))
 import Test.QuickCheck.Gen (Gen)
 import Test.Unit (TestSuite, Test, suite, test)
@@ -55,12 +54,12 @@ prettyObservationParser = do
   v <- genObservation
   pure (runParser (show $ flatten $ pretty v) (parens observation <|> observation) === Right v)
 
-actionParser :: forall m. MonadGen m => MonadRec m => Lazy (m S.Value) => Lazy (m S.Observation) => m Result
+actionParser :: forall m. MonadGen m => MonadRec m => Lazy (m Value) => Lazy (m Observation) => m Result
 actionParser = do
   v <- genAction 5
   pure (runParser (show v) (parens action <|> action) === Right v)
 
-prettyActionParser :: forall m. MonadGen m => MonadRec m => Lazy (m S.Value) => Lazy (m S.Observation) => m Result
+prettyActionParser :: forall m. MonadGen m => MonadRec m => Lazy (m Value) => Lazy (m Observation) => m Result
 prettyActionParser = do
   v <- genAction 5
   pure (runParser (show $ flatten $ pretty v) (parens action <|> action) === Right v)
