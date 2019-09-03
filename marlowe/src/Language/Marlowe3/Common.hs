@@ -752,7 +752,7 @@ validateContinuation pendingTx dsHash =
 mkValidator
   :: PubKey -> MarloweData -> ([Input], Sealed (HashedDataScript MarloweData)) -> PendingTx -> Bool
 mkValidator creator MarloweData{..} (inputs, sealedMarloweData) pendingTx@PendingTx{..} = let
-    HashedDataScript (MarloweData _ expectedState expectedContract) dsHash = unseal sealedMarloweData
+    HashedDataScript (MarloweData expectedCreator expectedState expectedContract) dsHash = unseal sealedMarloweData
     {-  Embed contract creator public key. This makes validator script unique,
         which makes a particular contract to have a unique script address.
         That makes it easier to watch for contract actions inside a wallet. -}
@@ -766,40 +766,48 @@ mkValidator creator MarloweData{..} (inputs, sealedMarloweData) pendingTx@Pendin
         Interval (Just l)  (Just (Slot h)) -> (l, Slot (h - 1))
         _ -> traceErrorH "Tx valid slot must have lower bound and upper bounds"
 
-
-    slotInterval = (minSlot, maxSlot)
-    txInput = TransactionInput { txInterval = slotInterval, txInputs = inputs }
     validSignatures = let
         requiredSignatures = getSignatures inputs
         in checkSignatures pendingTx requiredSignatures
-    result = computeTransaction txInput marloweState marloweContract
-    in case result of
-        TransactionOutput {txOutPayments, txOutState, txOutContract} -> let
 
-            scriptInAmount = let
-                PendingTxIn _ _ scriptInValue = pendingTxIn
-                scriptInAdaValue = Ada.fromValue scriptInValue
-                in Ada.getLovelace scriptInAdaValue
+    scriptInAmount = let
+        PendingTxIn _ _ scriptInValue = pendingTxIn
+        scriptInAdaValue = Ada.fromValue scriptInValue
+        in Ada.getLovelace scriptInAdaValue
 
-            inputBalance = totalBalance (accounts marloweState)
-            balanceOk = inputBalance <= scriptInAmount
-            deposit = scriptInAmount - inputBalance
+    inputBalance = totalBalance (accounts marloweState)
 
-            in if txOutContract == Refund
-            -- if it's a last transaction, don't expect any continuation, everything is payed out.
-            then checkCreator
-                && validSignatures
-                && balanceOk
-                && validatePayments pendingTx (Payment creator (Ada.lovelaceOf deposit) : txOutPayments)
-            -- otherwise check the continuation
-            else case validateContinuation pendingTx dsHash of
-                Just scriptOutput -> let
-                    validPayments = validatePayments pendingTx txOutPayments
-                    validContract = txOutState == expectedState && txOutContract == expectedContract
-                    outputBalance = totalBalance (accounts txOutState)
-                    outputBalanceOk = scriptOutput == (outputBalance + deposit)
-                    in checkCreator && validSignatures && outputBalanceOk && validPayments && validContract
-                Nothing -> False
+    balancesOk = inputBalance <= scriptInAmount
+
+    deposit = scriptInAmount - inputBalance
+
+    preconditionsOk = checkCreator
+        && validSignatures
+        && balancesOk
+
+    slotInterval = (minSlot, maxSlot)
+    txInput = TransactionInput { txInterval = slotInterval, txInputs = inputs }
+    expectedTxOutputs = computeTransaction txInput marloweState marloweContract
+    in preconditionsOk && case expectedTxOutputs of
+        TransactionOutput {txOutPayments, txOutState, txOutContract} ->
+            case txOutContract of
+                Refund -> let
+                    -- if it's a last transaction, don't expect any continuation,
+                    -- everything is payed out, including initial deposit.
+                    payments = Payment creator (Ada.lovelaceOf deposit) : txOutPayments
+                    in validatePayments pendingTx payments
+                -- otherwise check the continuation
+                _ -> case validateContinuation pendingTx dsHash of
+                    Just scriptOutputValue -> let
+                        validContract = expectedCreator == creator
+                            && txOutState == expectedState
+                            && txOutContract == expectedContract
+                        outputBalance = totalBalance (accounts txOutState)
+                        outputBalanceOk = scriptOutputValue == (outputBalance + deposit)
+                        in  outputBalanceOk
+                            && validContract
+                            && validatePayments pendingTx txOutPayments
+                    Nothing -> False
         Error _ -> traceErrorH "Error"
 
 
