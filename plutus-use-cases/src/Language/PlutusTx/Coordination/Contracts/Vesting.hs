@@ -1,18 +1,22 @@
--- | Vesting scheme as a PLC contract
+-- | Vesting scheme as a Plutus contract
+{-# LANGUAGE ConstraintKinds   #-}
+{-# LANGUAGE TypeOperators     #-}
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE MonoLocalBinds    #-}
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeApplications  #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
 module Language.PlutusTx.Coordination.Contracts.Vesting (
     Vesting(..),
+    VestingSchema,
     VestingTranche(..),
     VestingData(..),
-    vestFunds,
-    retrieveFunds,
+    contract,
     totalAmount,
     validatorScriptHash,
     -- * Script
@@ -20,25 +24,31 @@ module Language.PlutusTx.Coordination.Contracts.Vesting (
     mkValidator
     ) where
 
-import           Control.Monad.Error.Class    (MonadError (..))
-import           Data.Maybe                   (maybeToList)
-import qualified Data.Set                     as Set
+import           Control.Lens
+import           Control.Monad.Base
+import           Control.Monad.Reader
+import           Control.Monad.State
+
 import           GHC.Generics                 (Generic)
+import           Language.Plutus.Contract
+import qualified Language.Plutus.Contract.Tx  as Tx
 import           Language.PlutusTx.Prelude
 import qualified Language.PlutusTx            as PlutusTx
 import qualified Ledger                       as Ledger
-import           Ledger                       (DataScript (..), Slot(..), PubKey (..), TxOutRef, RedeemerScript (..), ValidatorScript (..), scriptTxIn, scriptTxOut)
+import           Ledger                       (Address, DataScript (..), Slot(..), PubKey (..), RedeemerScript (..), ValidatorScript (..), TxOut)
 import qualified Ledger.Ada                   as Ada
+import           Ledger.AddressMap            (AddressMap)
+import qualified Ledger.AddressMap            as AM
 import qualified Ledger.Interval              as Interval
 import qualified Ledger.Slot                  as Slot
 import           Ledger.Scripts               (ValidatorHash, HashedDataScript)
 import qualified Ledger.Scripts               as Scripts
+import qualified Ledger.Tx                    as LTx
 import           Ledger.Value                 (Value)
 import qualified Ledger.Value                 as Value
 import qualified Ledger.Validation            as Validation
 import           Ledger.Validation            (PendingTx (..), PendingTxIn(..), PendingTxOut(..), getContinuingOutputs)
-import qualified Wallet                       as W
-import           Wallet                       (WalletAPI (..), WalletAPIError, throwOtherError, ownPubKeyTxOut, createTxAndSubmit, defaultSlotRange)
+import qualified Prelude
 
 -- | Tranche of a vesting scheme.
 data VestingTranche = VestingTranche {
@@ -61,7 +71,7 @@ PlutusTx.makeLift ''Vesting
 {-# INLINABLE totalAmount #-}
 -- | The total amount vested
 totalAmount :: Vesting -> Value
-totalAmount Vesting{..} =
+totalAmount Vesting{vestingTranche1,vestingTranche2} =
     vestingTrancheAmount vestingTranche1 + vestingTrancheAmount vestingTranche2
 
 {-# INLINABLE availableFrom #-}
@@ -87,55 +97,101 @@ instance Eq VestingData where
 
 PlutusTx.makeLift ''VestingData
 
+type VestingSchema =
+    BlockchainActions
+        .\/ Endpoint "vest funds" ()
+        .\/ Endpoint "retrieve funds" Value
+
+-- | The current state of the vesting contract
+data VestingState =
+    VestingState
+        { knownOutputs :: AddressMap
+        , vestingData  :: VestingData
+        }
+
+initialState :: Vesting -> VestingState
+initialState vd =
+    let hash = validatorScriptHash vd
+        addr = Ledger.scriptAddress $ validatorScript vd
+    in  VestingState
+            { knownOutputs = AM.addAddress addr Prelude.mempty
+            , vestingData  = VestingData hash mempty
+            }
+
+type MonadVesting m =
+    ( MonadState VestingState m 
+    , MonadReader Vesting m
+    , MonadBase (Contract VestingSchema) m
+    )
+
+contractAddress :: MonadReader Vesting m => m Address
+contractAddress = asks (Ledger.scriptAddress . validatorScript)
+    
+-- | Lock some Ada in the contract using the 'VestingData' as data script.
+payIntoContract
+    :: MonadReader Vesting m
+    => VestingData
+    -> Value
+    -> m TxOut
+payIntoContract vd vl = do
+    address <- contractAddress
+    let datScript = DataScript $ Ledger.lifted vd
+    pure $ LTx.scriptTxOut' vl address datScript
+
+
+vestFundsC
+    :: ( MonadVesting m )
+    => m ()
+vestFundsC = do
+    () <- liftBase (endpoint @"vest funds")
+    h <- asks validatorScriptHash
+    total <- asks totalAmount
+    out <- payIntoContract (VestingData h mempty) total
+    liftBase $ writeTx $ Tx.unbalancedTx [] [out]
+
+
+retrieveFundsC
+    :: ( MonadVesting m )
+    => m ()
+retrieveFundsC = do
+    vl <- liftBase (endpoint  @"retrieve funds")
+    currentSlot <- liftBase (awaitSlot 0)
+    total <- asks totalAmount
+    valScript <- asks validatorScript
+    VestingState utxo vst <- get
+    let ins = AM.spendScriptOutputs valScript redeemerScript utxo
+        newState = vst { vestingDataPaidOut = vl + vestingDataPaidOut vst }
+    outs <- payIntoContract newState (total - vestingDataPaidOut newState)
+    liftBase $ writeTx $ Tx.unbalancedTx ins [outs] & Tx.validityRange .~ Interval.from currentSlot
+
+
+updateStateC
+    :: ( MonadVesting m )
+    => m ()
+updateStateC = do
+    fundsVested <- asks totalAmount
+    addr <- contractAddress
+    tx <- liftBase (nextTransactionAt addr)
+    VestingState oldUTXO oldState <- get
+    let newUTXO = AM.updateAddresses tx oldUTXO
+        remaining = AM.values newUTXO ^. at addr . _Just
+        paidOutTotal = fundsVested - remaining
+    put $ VestingState
+            { knownOutputs = newUTXO
+            , vestingData = VestingData (vestingDataHash oldState) paidOutTotal
+            }
+
+contract
+    :: Vesting
+    -> Contract VestingSchema ()
+contract vst = runReaderT (evalStateT con (initialState vst)) vst where
+    con = vestFundsC <|> forever (retrieveFundsC <|> updateStateC)
+        
 transactionFee :: Value
 transactionFee = Ada.lovelaceValueOf 0
 
--- | Lock some funds with the vesting validator script and return a
---   [[VestingData]] representing the current state of the process
-vestFunds :: (
-    MonadError WalletAPIError m,
-    WalletAPI m)
-    => Vesting
-    -> Value
-    -> m VestingData
-vestFunds vst value = do
-    _ <- if value `Value.lt` totalAmount vst then throwOtherError "Value must not be smaller than vested amount" else pure ()
-    (payment, change) <- createPaymentWithChange (value + transactionFee)
-    let vs = validatorScript vst
-        o = scriptTxOut value vs (DataScript $ Ledger.lifted vd)
-        vd =  VestingData (validatorScriptHash vst) zero
-    _ <- createTxAndSubmit defaultSlotRange payment (o : maybeToList change)
-    pure vd
-
 redeemerScript :: RedeemerScript
 redeemerScript = RedeemerScript $ $$(Ledger.compileScript [|| \(_ :: Sealed (HashedDataScript VestingData)) -> () ||])
-
--- | Retrieve some of the vested funds.
-retrieveFunds :: (
-    Monad m,
-    WalletAPI m)
-
-    => Vesting
-    -- ^ Definition of vesting scheme
-    -> VestingData
-    -- ^ Value that has already been taken out
-    -> TxOutRef
-    -- ^ Transaction output locked by the vesting validator script
-    -> Value
-    -- ^ Value we want to take out now
-    -> m VestingData
-retrieveFunds vs vd r vnow = do
-    oo <- ownPubKeyTxOut vnow
-    currentSlot <- slot
-    let val = validatorScript vs
-        o   = scriptTxOut remaining val (DataScript $ Ledger.lifted vd')
-        remaining = totalAmount vs - vnow
-        vd' = vd {vestingDataPaidOut = vnow + vestingDataPaidOut vd }
-        inp = scriptTxIn r val redeemerScript
-        range = W.intervalFrom currentSlot
-    (fee, change) <- createPaymentWithChange transactionFee
-    _ <- createTxAndSubmit range (Set.insert inp fee) ([oo, o] ++ maybeToList change)
-    pure vd'
 
 validatorScriptHash :: Vesting -> ValidatorHash
 validatorScriptHash =
@@ -146,7 +202,7 @@ validatorScriptHash =
 
 {-# INLINABLE mkValidator #-}
 mkValidator :: Vesting -> VestingData -> () -> PendingTx -> Bool
-mkValidator d@Vesting{..} VestingData{..} () ptx@PendingTx{pendingTxValidRange = range} =
+mkValidator d@Vesting{vestingTranche1, vestingTranche2} VestingData{vestingDataPaidOut} () ptx@PendingTx{pendingTxValidRange = range} =
     let
         -- The locked funds which are returned?
         payBack :: Value
