@@ -92,13 +92,11 @@ Or, in case Bob didn't demand payment before timeout2, Alice can require a redee
 
 module Language.Marlowe3.Common where
 
-import qualified Language.PlutusTx.Builtins as Builtins
 import           Language.PlutusTx.Lift     (makeLift)
 import qualified Language.PlutusTx.AssocMap as Map
 import           Language.PlutusTx.AssocMap (Map)
 import           Language.PlutusTx.Prelude
 import           Ledger                     ( PubKey(..)
-                                            , Signature(..)
                                             , Slot(..)
                                             , applyScript
                                             , compileScript
@@ -702,8 +700,8 @@ totalBalance accounts = foldl (+) 0 (fmap (Ada.getLovelace . snd) (Map.toList ac
 
 
 {-# INLINABLE validatePayments #-}
-validatePayments :: PendingTx -> [Payment] -> Integer -> Bool
-validatePayments pendingTx txOutPayments scriptOutput = let
+validatePayments :: PendingTx -> [Payment] -> Bool
+validatePayments pendingTx txOutPayments = let
 
     collect outputs PendingTxOut{pendingTxOutValue,
         pendingTxOutData=PubKeyTxOut pubKey} = let
@@ -789,11 +787,14 @@ mkValidator creator MarloweData{..} (inputs, sealedMarloweData) pendingTx@Pendin
 
             in if txOutContract == Refund
             -- if it's a last transaction, don't expect any continuation, everything is payed out.
-            then checkCreator && validSignatures && balanceOk && validatePayments pendingTx txOutPayments 0
+            then checkCreator
+                && validSignatures
+                && balanceOk
+                && validatePayments pendingTx (Payment creator (Ada.lovelaceOf deposit) : txOutPayments)
             -- otherwise check the continuation
             else case validateContinuation pendingTx dsHash of
                 Just scriptOutput -> let
-                    validPayments = validatePayments pendingTx txOutPayments scriptOutput
+                    validPayments = validatePayments pendingTx txOutPayments
                     validContract = txOutState == expectedState && txOutContract == expectedContract
                     outputBalance = totalBalance (accounts txOutState)
                     outputBalanceOk = scriptOutput == (outputBalance + deposit)
