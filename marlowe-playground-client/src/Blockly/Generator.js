@@ -1,6 +1,15 @@
 /*eslint-env node*/
 'use strict';
 
+exports.nextBlock_ = function (just, nothing, block) {
+    var mBlock = block.getNextBlock();
+    if (mBlock == null) {
+        return nothing;
+    } else {
+        return just(mBlock);
+    }
+}
+
 exports.getFieldValue_ = function (left, right, block, key) {
     var result = block.getFieldValue(key);
     if (result) {
@@ -11,6 +20,7 @@ exports.getFieldValue_ = function (left, right, block, key) {
 }
 
 exports.statementToCode_ = function (left, right, generator, block, key) {
+    console.log(block);
     var result = generator.statementToCode(block, key);
     if (result) {
         // Blockly adds some whitespace for some reason
@@ -46,6 +56,7 @@ exports.workspaceToCode_ = function (left, right, blocklyState, generator) {
     try {
         return right(generator.workspaceToCode(blocklyState.workspace));
     } catch(err) {
+        console.log(err.message);
         return left(err.message);
     }
 }
@@ -103,4 +114,17 @@ exports.fieldName_ = function (field) {
 
 exports.unsafeThrowError_ = function (s) {
     throw new Error(s);
+}
+
+exports.getBlockInputConnectedTo_ = function (left, right, input) {
+    try {
+        var mBlock = input.connection.targetConnection.getSourceBlock();
+        if (mBlock == null) {
+            return left("no block found");
+        } else {
+            return right(mBlock);
+        }
+    } catch (err) {
+        return left(err.message);
+    }
 }

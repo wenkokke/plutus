@@ -1,6 +1,7 @@
 module Blockly.Generator where
 
 import Prelude
+
 import Blockly.Types (Block, BlocklyState, Workspace)
 import Control.Monad.ST (ST)
 import Control.Monad.ST.Ref (STRef)
@@ -8,7 +9,7 @@ import Control.Monad.ST.Ref as STRef
 import Data.Array as Array
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn1, Fn2, Fn3, Fn4, Fn5, Fn6, runFn1, runFn2, runFn3, runFn4, runFn5, runFn6)
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(..))
 import Partial.Unsafe (unsafePartial)
 
 type GeneratorFunction
@@ -36,6 +37,9 @@ foreign import data Input :: Type
 foreign import data Field :: Type
 
 -- Functions that mutate values always work on STRefs rather than regular values
+
+foreign import nextBlock_ :: Fn3 (Block -> Maybe Block) (Maybe Block) Block (Maybe Block)
+
 foreign import getFieldValue_ :: forall a. Fn4 (String -> Either String a) (a -> Either String a) Block String (Either String String)
 
 foreign import statementToCode_ :: forall a. Fn5 (String -> Either String a) (a -> Either String a) Generator Block String (Either String String)
@@ -67,6 +71,11 @@ foreign import setFieldText_ :: forall r. Fn2 (STRef r Field) String (ST r Unit)
 foreign import fieldName_ :: Fn1 Field String
 
 foreign import unsafeThrowError_ :: forall a. Fn1 String a
+
+foreign import getBlockInputConnectedTo_ :: forall a b. Fn3 (a -> Either a b) (b -> Either a b) Input (Either String Block)
+
+nextBlock :: Block -> Maybe Block
+nextBlock = runFn3 nextBlock_ Just Nothing
 
 getFieldValue :: Block -> String -> Either String String
 getFieldValue = runFn4 getFieldValue_ Left Right
@@ -123,3 +132,6 @@ setFieldText = runFn2 setFieldText_
 
 fieldName :: Field -> String
 fieldName = runFn1 fieldName_
+
+getBlockInputConnectedTo :: Input -> Either String Block
+getBlockInputConnectedTo = runFn3 getBlockInputConnectedTo_ Left Right

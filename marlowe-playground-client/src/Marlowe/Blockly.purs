@@ -3,15 +3,16 @@ module Marlowe.Blockly where
 import Prelude
 
 import Blockly (AlignDirection(..), Arg(..), BlockDefinition(..), block, blockType, category, colour, defaultBlockDefinition, getBlockById, initializeWorkspace, name, render, style, x, xml, y)
-import Blockly.Generator (NewBlockFunction, Generator, Input, clearWorkspace, connectToOutput, connectToPrevious, fieldName, fieldRow, getFieldValue, getInputWithName, inputList, inputName, insertGeneratorFunction, mkGenerator, setFieldText, statementToCode)
+import Blockly.Generator (Generator, Input, NewBlockFunction, clearWorkspace, connectToOutput, connectToPrevious, fieldName, fieldRow, getBlockInputConnectedTo, getFieldValue, getInputWithName, inputList, inputName, insertGeneratorFunction, mkGenerator, nextBlock, setFieldText, statementToCode)
 import Blockly.Types (Block, BlocklyState, Workspace)
 import Control.Alternative ((<|>))
 import Control.Monad.ST as ST
 import Control.Monad.ST.Internal (ST, STRef)
 import Control.Monad.ST.Ref as STRef
+import Data.Array ((:))
 import Data.Array as Array
 import Data.Bifunctor (lmap, rmap)
-import Data.Either (Either)
+import Data.Either (Either, note)
 import Data.Enum (class BoundedEnum, class Enum, upFromIncluding)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Bounded (genericBottom, genericTop)
@@ -21,14 +22,77 @@ import Data.Generic.Rep.Ord (genericCompare)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
-import Data.Traversable (traverse_)
+import Data.Traversable (traverse, traverse_)
 import Halogen.HTML (HTML)
 import Halogen.HTML.Properties (id_)
 import Marlowe.Parser as Parser
-import Marlowe.Semantics (AccountId(..), ChoiceId(..), Contract(..), Observation(..), Value(..))
+import Marlowe.Semantics (AccountId(..), Action(..), Case(..), ChoiceId(..), Contract(..), Observation(..), Payee(..), Value(..))
 import Record (merge)
 import Text.Parsing.Parser (Parser, runParser)
 import Text.Parsing.Parser.Basic (parens)
+
+data ActionType
+  = DepositActionType
+  | ChoiceActionType
+  | NotifyActionType
+
+derive instance genericActionType :: Generic ActionType _
+
+instance showActionType :: Show ActionType where
+  show = genericShow
+
+instance eqActionType :: Eq ActionType where
+  eq = genericEq
+
+instance ordActionType :: Ord ActionType where
+  compare = genericCompare
+
+instance enumActionType :: Enum ActionType where
+  succ = genericSucc
+  pred = genericPred
+
+instance boundedActionType :: Bounded ActionType where
+  bottom = genericBottom
+  top = genericTop
+
+instance boundedEnumActionType :: BoundedEnum ActionType where
+  cardinality = genericCardinality
+  toEnum = genericToEnum
+  fromEnum = genericFromEnum
+
+actionTypes :: Array ActionType
+actionTypes = upFromIncluding bottom
+
+data PayeeType
+  = AccountPayeeType
+  | PartyPayeeType
+
+derive instance genericPayeeType :: Generic PayeeType _
+
+instance showPayeeType :: Show PayeeType where
+  show = genericShow
+
+instance eqPayeeType :: Eq PayeeType where
+  eq = genericEq
+
+instance ordPayeeType :: Ord PayeeType where
+  compare = genericCompare
+
+instance enumPayeeType :: Enum PayeeType where
+  succ = genericSucc
+  pred = genericPred
+
+instance boundedPayeeType :: Bounded PayeeType where
+  bottom = genericBottom
+  top = genericTop
+
+instance boundedEnumPayeeType :: BoundedEnum PayeeType where
+  cardinality = genericCardinality
+  toEnum = genericToEnum
+  fromEnum = genericFromEnum
+
+payeeTypes :: Array PayeeType
+payeeTypes = upFromIncluding bottom
 
 data ContractType
   = RefundContractType
@@ -144,9 +208,12 @@ valueTypes = upFromIncluding bottom
 
 data BlockType
   = BaseContractType
+  | CaseType
+  | ActionType ActionType
   | ContractType ContractType
   | ObservationType ObservationType
   | ValueType ValueType
+  | PayeeType PayeeType
 
 derive instance genericBlockType :: Generic BlockType _
 
@@ -171,9 +238,12 @@ instance boundedEnumBlockType :: BoundedEnum BlockType where
 
 instance showBlockType :: Show BlockType where
   show BaseContractType = "BaseContractType"
+  show CaseType = "CaseType"
   show (ContractType c) = show c
   show (ObservationType ot) = show ot
   show (ValueType vt) = show vt
+  show (PayeeType pt) = show pt
+  show (ActionType at) = show at
 
 blockDefinitions :: Array BlockDefinition
 blockDefinitions = map toDefinition (upFromIncluding bottom)
@@ -194,6 +264,110 @@ toDefinition BaseContractType =
         }
         defaultBlockDefinition
 
+toDefinition CaseType =
+  BlockDefinition
+    $ merge
+        { type: show CaseType
+        , message0: "Action %1 %2 and Contract %3"
+        , args0: [ Statement { name: "action", check: "ActionType", align: Right }
+                 , DummyCentre
+                 , Statement { name: "contract", check: (show BaseContractType), align: Right }
+                 ]
+        , colour: "100"
+        , previousStatement: Just (show CaseType)
+        , nextStatement: Just (show CaseType)
+        }
+        defaultBlockDefinition
+
+-- Action
+
+toDefinition (ActionType DepositActionType) =
+  BlockDefinition
+    $ merge
+        { type: show DepositActionType
+        , message0: "Deposit %1 the amount of %2 %3 from the account %4 %5 with owner %6 %7 to %8"
+        , args0:
+          [ DummyCentre
+          , Value { name: "ammount", check: "value", align: Right }
+          , DummyRight
+          , Number { name: "account_number", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
+          , DummyRight
+          , Input { name: "account_owner", text: "Owner", spellcheck: false }
+          , DummyRight
+          , Input { name: "party", text: "Party", spellcheck: false }
+          ]
+        , colour: "0"
+        , previousStatement: Just "ActionType"
+        , inputsInline: Just false
+        }
+        defaultBlockDefinition
+
+
+toDefinition (ActionType ChoiceActionType) =
+  BlockDefinition
+    $ merge
+        { type: show ChoiceActionType
+        , message0: "Choice Number %1 %2 Choice Owner %3 %4 Choice Bounds %5"
+        , args0:
+          [ Number { name: "choice_number", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
+          , DummyRight
+          , Input { name: "choice_owner", text: "Owner", spellcheck: false }
+          , DummyRight
+          -- FIXME: what should this be
+          , Value { name: "bounds", check: "value", align: Right }
+          ]
+        , colour: "0"
+        , previousStatement: Just "ActionType"
+        , inputsInline: Just false
+        }
+        defaultBlockDefinition
+
+
+toDefinition (ActionType NotifyActionType) =
+  BlockDefinition
+    $ merge
+        { type: show NotifyActionType
+        , message0: "Notification of %1"
+        , args0:
+          [ Value { name: "observation", check: "observation", align: Right }
+          ]
+        , colour: "0"
+        , previousStatement: Just "ActionType"
+        , inputsInline: Just false
+        }
+        defaultBlockDefinition
+
+
+-- Payee
+
+toDefinition (PayeeType AccountPayeeType) =
+  BlockDefinition
+    $ merge
+      { type: show AccountPayeeType
+      , message0: "Account %1 with Owner %2"
+      , args0:
+          [ Number { name: "account_number", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
+          , Input { name: "account_owner", text: "Owner", spellcheck: false }
+          ]
+      , colour: "150"
+      , output: Just "payee"
+      , inputsInline: Just true
+      }
+      defaultBlockDefinition
+toDefinition (PayeeType PartyPayeeType) =
+  BlockDefinition
+    $ merge
+      { type: show PartyPayeeType
+      , message0: "Party %1"
+      , args0:
+          [ Input { name: "party", text: "Party", spellcheck: false }
+          ]
+      , colour: "150"
+      , output: Just "payee"
+      , inputsInline: Just true
+      }
+      defaultBlockDefinition
+
 -- Contracts
 
 toDefinition (ContractType RefundContractType) =
@@ -213,13 +387,14 @@ toDefinition (ContractType PayContractType) =
         , message0: "Pay %1 person %2 %3 the amount of %4 %5 from the account %6 %7 with owner %8 %9 continue as %10"
         , args0:
           [ DummyCentre
-          , Number { name: "payee_id", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
+          , Value { name: "payee", check: "payee", align: Right }
+          , DummyRight
+          , Value { name: "ammount", check: "value", align: Right }
           , DummyRight
           , Number { name: "account_number", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
           , DummyRight
-          , Value { name: "account_owner", check: "value", align: Right }
+          , Input { name: "account_owner", text: "Owner", spellcheck: false }
           , DummyRight
-          , Value { name: "ammount", check: "value", align: Right }
           , Statement { name: "contract", check: (show BaseContractType), align: Right }
           ]
         , colour: "0"
@@ -249,12 +424,11 @@ toDefinition (ContractType WhenContractType) =
   BlockDefinition
     $ merge
         { type: show WhenContractType
-        , message0: "When observation %1 continue as %2 if block is %3 or higher continue as %4"
+        , message0: "When %1 occurs before %2 continue as %3"
         , args0:
-          [ Value { name: "observation", check: "observation", align: Right }
-          , Statement { name: "contract1", check: (show BaseContractType), align: Right }
+          [ Statement { name: "case", check: (show CaseType), align: Right }
           , Number { name: "timeout", value: 0.0, min: Just 0.0, max: Nothing, precision: Nothing }
-          , Statement { name: "contract2", check: (show BaseContractType), align: Right }
+          , Statement { name: "contract", check: (show BaseContractType), align: Right }
           ]
         , colour: "0"
         , previousStatement: Just (show BaseContractType)
@@ -576,6 +750,9 @@ toolbox =
     [ category [ name "Contracts", colour "0" ] (map mkBlock contractTypes)
     , category [ name "Observations", colour "230" ] (map mkBlock observationTypes)
     , category [ name "Values", colour "135" ] (map mkBlock valueTypes)
+    , category [ name "Payee", colour "150" ] (map mkBlock payeeTypes)
+    , category [ name "Case", colour "150" ] (map mkBlock [CaseType])
+    , category [ name "Actions", colour "150" ] (map mkBlock actionTypes)
     ]
   where
   mkBlock :: forall t. Show t => t -> _
@@ -598,8 +775,11 @@ buildGenerator blocklyState =
         g <- STRef.read gRef
         traverse_ (\t -> mkGenFun gRef t (baseContractDefinition g)) [ BaseContractType ]
         traverse_ (\t -> mkGenFun gRef t (blockDefinition t g)) contractTypes
+        traverse_ (\t -> mkGenFun gRef t (blockDefinition t g)) payeeTypes
         traverse_ (\t -> mkGenFun gRef t (blockDefinition t g)) observationTypes
         traverse_ (\t -> mkGenFun gRef t (blockDefinition t g)) valueTypes
+        traverse_ (\t -> mkGenFun gRef t (blockDefinition t g)) actionTypes
+        traverse_ (\t -> mkGenFun gRef t (caseDefinition g)) [ CaseType ]
         STRef.read gRef
     )
 
@@ -612,15 +792,62 @@ class HasBlockDefinition a b | a -> b where
 baseContractDefinition :: Generator -> Block -> Either String Contract
 baseContractDefinition g block = parse Parser.contract =<< statementToCode g block (show BaseContractType)
 
+getAllBlocks :: Block -> Array Block
+getAllBlocks currentBlock = currentBlock : (case nextBlock currentBlock of
+  Nothing -> []
+  Just nextBlock' -> getAllBlocks nextBlock')
+
+caseDefinition :: Generator -> Block -> Either String Case
+caseDefinition g block = do
+  action <- parse Parser.action =<< statementToCode g block "action"
+  contract <- parse Parser.contract =<< statementToCode g block "contract"
+  pure (Case { action, contract })
+
+casesDefinition :: Generator -> Block -> Either String (Array Case)
+casesDefinition g block = traverse (caseDefinition g) (getAllBlocks block)
+
+instance hasBlockDefinitionAction :: HasBlockDefinition ActionType Action where
+  blockDefinition DepositActionType g block = do
+    accountNumber <- parse Parser.bigInteger =<< getFieldValue block "account_number"
+    accountOwner <- getFieldValue block "account_owner"
+    let
+      accountId = AccountId { accountNumber, accountOwner }
+    party <- getFieldValue block "party"
+    ammount <- parse Parser.value =<< statementToCode g block "ammount"
+    pure (Deposit accountId party ammount)
+  blockDefinition ChoiceActionType g block = do
+    choiceNumber <- parse Parser.bigInteger =<< getFieldValue block "choice_number"
+    choiceOwner <- getFieldValue block "choice_owner"
+    let
+      choiceId = ChoiceId { choiceNumber, choiceOwner }
+    -- FIXME get bounds
+    pure (Choice choiceId [])
+  blockDefinition NotifyActionType g block = do
+    observation <- parse Parser.observation =<< statementToCode g block "observation"
+    pure (Notify observation)
+
+
+instance hasBlockDefinitionPayee :: HasBlockDefinition PayeeType Payee where
+  blockDefinition AccountPayeeType g block = do
+    accountNumber <- parse Parser.bigInteger =<< getFieldValue block "account_number"
+    accountOwner <- getFieldValue block "account_owner"
+    let
+      accountId = AccountId { accountNumber, accountOwner }
+    pure (Account accountId)
+  blockDefinition PartyPayeeType g block = do
+    party <- getFieldValue block "party"
+    pure (Party party)
+
+
 instance hasBlockDefinitionContract :: HasBlockDefinition ContractType Contract where
   blockDefinition RefundContractType _ _ = pure Refund
   blockDefinition PayContractType g block = do
     accountNumber <- parse Parser.bigInteger =<< getFieldValue block "account_number"
-    accountOwner <- parse Parser.pubkey =<< getFieldValue block "account_owner"
+    accountOwner <- getFieldValue block "account_owner"
     let
       accountId = AccountId { accountNumber, accountOwner }
-    payee <- parse Parser.payee =<< getFieldValue block "payee_id"
-    value <- parse Parser.value =<< statementToCode g block "value"
+    payee <- parse Parser.payee =<< statementToCode g block "payee"
+    value <- parse Parser.value =<< statementToCode g block "ammount"
     contract <- parse Parser.contract =<< statementToCode g block "contract"
     pure (Pay accountId payee value contract)
   blockDefinition IfContractType g block = do
@@ -629,7 +856,10 @@ instance hasBlockDefinitionContract :: HasBlockDefinition ContractType Contract 
     contract2 <- parse Parser.contract =<< statementToCode g block "contract2"
     pure (If observation contract1 contract2)
   blockDefinition WhenContractType g block = do
-    cases <- parse Parser.cases =<< statementToCode g block "observation"
+    let inputs = inputList block
+    casesInput <- note "No Input with name \"case\" found" $ getInputWithName inputs "case"
+    topCaseBlock <- getBlockInputConnectedTo casesInput
+    cases <- casesDefinition g topCaseBlock
     timeout <- parse Parser.timeout =<< getFieldValue block "timeout"
     contract <- parse Parser.contract =<< statementToCode g block "contract"
     pure (When cases timeout contract)
@@ -757,6 +987,17 @@ inputToBlockly newBlock workspaceRef blockRef name value = do
 class ToBlockly a where
   toBlockly :: forall r. NewBlockFunction r -> STRef r Workspace -> Input -> a -> ST r Unit
 
+instance toBlocklyPayee :: ToBlockly Payee where
+  toBlockly newBlock workspace input (Account accountId) = do
+    block <- newBlock workspace (show AccountPayeeType)
+    connectToOutput block input
+    setField block "account_number" (show (unwrap accountId).accountNumber)
+    setField block "account_owner" (unwrap accountId).accountOwner
+  toBlockly newBlock workspace input (Party party) = do
+    block <- newBlock workspace (show PartyPayeeType)
+    connectToOutput block input
+    setField block "party" party
+
 instance toBlocklyContract :: ToBlockly Contract where
   toBlockly newBlock workspace input Refund = do
     block <- newBlock workspace (show RefundContractType)
@@ -765,9 +1006,9 @@ instance toBlocklyContract :: ToBlockly Contract where
     block <- newBlock workspace (show PayContractType)
     connectToPrevious block input
     setField block "account_number" (show (unwrap accountId).accountNumber)
-    setField block "account_owner" (show (unwrap accountId).accountOwner)
-    setField block "payee_id" (show payee)
-    inputToBlockly newBlock workspace block "value" value
+    setField block "account_owner" (unwrap accountId).accountOwner
+    inputToBlockly newBlock workspace block "payee" payee
+    inputToBlockly newBlock workspace block "ammount" value
     inputToBlockly newBlock workspace block "contract" contract
   toBlockly newBlock workspace input (If observation contract1 contract2) = do
     block <- newBlock workspace (show IfContractType)
