@@ -55,20 +55,29 @@ carol = Wallet 3
 
 simpleTest :: Property
 simpleTest = checkMarloweTrace (MarloweScenario {
-    mlInitialBalances = Map.fromList [ (walletPubKey alice, Ada.adaValueOf 1000)  ] }) $ do
+    mlInitialBalances = Map.fromList
+        [ (walletPubKey alice, Ada.adaValueOf 1000), (walletPubKey bob, Ada.adaValueOf 1000) ] }) $ do
     -- Init a contract
     let alicePk = walletPubKey alice
         aliceAcc = AccountId 0 alicePk
-        update = updateAll [alice]
+        bobPk = walletPubKey bob
+        update = updateAll [alice, bob]
     update
 
-    let contract = When [
-                (Deposit aliceAcc alicePk (Constant 500_000_000), Refund)
-            ] (Slot 100) Refund
-    (tx, md) <- alice `performs` createContract contract
-    alice `performs` deposit tx md aliceAcc (Ada.adaOf 500)
+    let zeroCouponBond = When [ (Deposit aliceAcc alicePk (Constant 850_000_000),
+            Pay aliceAcc (Party bobPk) (Constant 850_000_000)
+                (When
+                    [ (Deposit aliceAcc bobPk (Constant 1000_000_000),
+                        Pay aliceAcc (Party alicePk) (Constant 1000_000_000) Refund)
+                    ] (Slot 200) Refund
+                ))] (Slot 100) Refund
 
-    assertOwnFundsEq alice (Ada.adaValueOf 1000)
+    (tx, md) <- alice `performs` createContract zeroCouponBond
+    (tx, md) <- alice `performs` deposit tx md aliceAcc (Ada.adaOf 850)
+    -- bob `performs` deposit tx md aliceAcc (Ada.adaOf 1000)
+
+    assertOwnFundsEq alice (Ada.adaValueOf 1150)
+    assertOwnFundsEq bob (Ada.adaValueOf 850)
 
 
 pubKeyGen :: Gen PubKey
