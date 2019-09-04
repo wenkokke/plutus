@@ -16,8 +16,6 @@ import           Control.Monad              (void)
 import           Data.Either                (isRight)
 import           Data.Map.Strict            (Map)
 import qualified Data.Map.Strict            as Map
-import           Data.Set                   (Set)
-import qualified Data.Set                   as Set
 
 import           Hedgehog                   (Gen, Property, Size (..), forAll, property)
 import qualified Hedgehog
@@ -68,7 +66,7 @@ simpleTest = checkMarloweTrace (MarloweScenario {
                 (Deposit aliceAcc alicePk (Constant 500_000_000), Refund)
             ] (Slot 100) Refund
     (tx, md) <- alice `performs` createContract contract
-    (tx, md) <- alice `performs` createDeposit tx md aliceAcc 500_000_000
+    alice `performs` deposit tx md aliceAcc (Ada.adaOf 500)
 
     assertOwnFundsEq alice (Ada.adaValueOf 1000)
 

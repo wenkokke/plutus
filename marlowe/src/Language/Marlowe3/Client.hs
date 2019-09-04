@@ -85,29 +85,39 @@ createContract contract = do
     return marloweData
 
 
-createDeposit :: (
+deposit :: (
     MonadError WalletAPIError m,
     WalletAPI m)
     => Tx
     -> MarloweData
     -> AccountId
-    -> Integer
+    -> Ada
     -> m MarloweData
-createDeposit tx MarloweData{..} accountId value  = do
-    when (value <= 0) $ throwOtherError "Must deposit a positive value"
-    let depositPayment = Payment marloweCreator (Ada.adaOf 1)
+deposit tx marloweData accountId amount = do
+    pubKey <- ownPubKey
+    applyInputs tx marloweData [IDeposit accountId pubKey amount]
+
+
+applyInputs :: (
+    MonadError WalletAPIError m,
+    WalletAPI m)
+    => Tx
+    -> MarloweData
+    -> [Input]
+    -> m MarloweData
+applyInputs tx MarloweData{..} inputs  = do
+    let depositAmount = Ada.adaOf 1
+    let depositPayment = Payment marloweCreator depositAmount
     let validator = validatorScript marloweCreator
     let address = scriptAddress validator
     slot <- slot
-    pubKey <- ownPubKey
 
     let slotRange = interval slot (slot + Slot 10)
-    let inputs = [IDeposit accountId pubKey (Ada.lovelaceOf value)]
     let txInput = TransactionInput {
             txInterval = (slot, slot + Slot 10),
             txInputs = inputs }
 
-    let [(TxOutOf{txOutValue}, ref)] = filter (isAddress address) (txOutRefs tx)
+    let [(_, ref)] = filter (isAddress address) (txOutRefs tx)
 
     let computedResult = computeTransaction txInput marloweState marloweContract
 
@@ -122,9 +132,11 @@ createDeposit tx MarloweData{..} accountId value  = do
             let deducedTxOutputs = case txOutContract of
                     Refund -> txPaymentOuts (depositPayment : txOutPayments)
                     _ -> let
-                        contractValue = Ada.getLovelace $ Ada.fromValue txOutValue
+                        payoutAmounts = fmap (Ada.getLovelace . Ada.fromValue . txOutValue) (txPaymentOuts txOutPayments)
+                        totalPayouts = sum payoutAmounts
+                        finalBalance = totalIncome - totalPayouts + Ada.getLovelace depositAmount
                         dataScript = DataScript (Ledger.lifted marloweData)
-                        scritOutValue = Ada.lovelaceValueOf (contractValue + value)
+                        scritOutValue = Ada.lovelaceValueOf finalBalance
                         scritOut = scriptTxOut scritOutValue validator dataScript
                         in scritOut : txPaymentOuts txOutPayments
 
@@ -135,7 +147,7 @@ createDeposit tx MarloweData{..} accountId value  = do
         redeemer = Ledger.RedeemerScript (Ledger.lifted inputState)
         scriptIn = scriptTxIn ref validator redeemer
 
-    (payment, change) <- createPaymentWithChange (Ada.lovelaceValueOf value)
+    (payment, change) <- createPaymentWithChange (Ada.lovelaceValueOf totalIncome)
 
     void $ createTxAndSubmit
         slotRange
@@ -144,6 +156,10 @@ createDeposit tx MarloweData{..} accountId value  = do
 
     return marloweData
   where
+    collectDeposits (IDeposit _ _ money) acc = Ada.getLovelace money + acc
+    collectDeposits _ acc = acc
+
+    totalIncome = foldr collectDeposits 0 inputs
 
     isAddress address (TxOutOf{txOutAddress}, _) = txOutAddress == address
 
