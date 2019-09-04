@@ -46,6 +46,7 @@ import           Ledger                         ( DataScript(..)
                                                 , scriptTxOut
                                                 )
 import qualified Ledger                         as Ledger
+import           Ledger.Ada                     (Ada)
 import qualified Ledger.Ada                     as Ada
 import           Ledger.Validation
 import           Language.Marlowe3.Common
@@ -58,19 +59,17 @@ getScriptOutFromTx = head . filter (Ledger.isPayToScriptOut . fst) . Ledger.txOu
 createContract :: (
     MonadError WalletAPIError m,
     WalletAPI m)
-    => ValidatorScript
-    -> Contract
-    -> Integer
+    => Contract
     -> m ()
-createContract validator contract value = do
-    _ <- if value <= 0 then throwOtherError "Must contribute a positive value" else pure ()
+createContract contract = do
     slot <- slot
     creator <- ownPubKey
+    let validator = validatorScript creator
     let ds = DataScript $ Ledger.lifted MarloweData {
             marloweCreator = creator,
             marloweContract = contract,
             marloweState = emptyState }
-    let v' = Ada.lovelaceValueOf value
+    let v' = Ada.adaValueOf 1
     (payment, change) <- createPaymentWithChange v'
     let o = scriptTxOut v' validator ds
 

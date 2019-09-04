@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns
@@ -27,6 +28,7 @@ import           Language.Marlowe3.Common
 import           Language.Marlowe3.Client
 import           Ledger                     hiding (Value)
 import qualified Ledger
+import qualified Ledger.Ada                 as Ada
 import           Ledger.Crypto
 import           Wallet                     (PubKey (..))
 import           Wallet.Emulator
@@ -35,6 +37,7 @@ import qualified Wallet.Generators          as Gen
 import           Test.Tasty
 import           Test.Tasty.Hedgehog       (HedgehogTestLimit (..), testProperty)
 import           Test.Tasty.HUnit
+import Debug.Trace
 
 
 
@@ -42,7 +45,35 @@ newtype MarloweScenario = MarloweScenario { mlInitialBalances :: Map PubKey Ledg
 
 tests :: TestTree
 tests = testGroup "Marlowe"
-    [testCase "Contracts with different creators have different hashes" uniqueContractHash]
+    [ testCase "Contracts with different creators have different hashes" uniqueContractHash
+    , testProperty "Escrow Contract" simpleTest
+    ]
+
+
+alice, bob, carol :: Wallet
+alice = Wallet 1
+bob = Wallet 2
+carol = Wallet 3
+
+simpleTest :: Property
+simpleTest = checkMarloweTrace (MarloweScenario {
+    mlInitialBalances = Map.fromList [ (walletPubKey alice, Ada.adaValueOf 1000)  ] }) $ do
+    -- Init a contract
+    let alicePk = walletPubKey alice
+        aliceAcc = AccountId 0 alicePk
+        update = updateAll [alice]
+    update
+
+    traceShowM alicePk
+    traceShowM (walletPubKey alice)
+
+    let contract = When [(Deposit aliceAcc alicePk (Constant 500_000), Refund)] (Slot 100) Refund
+    tx <- alice `performs` createContract contract
+    update
+    assertIsValidated tx
+
+    assertOwnFundsEq alice (Ada.adaValueOf 999)
+
 
 pubKeyGen :: Gen PubKey
 pubKeyGen = toPublicKey . (knownPrivateKeys !!) <$> integral (Range.linear 0 10)
