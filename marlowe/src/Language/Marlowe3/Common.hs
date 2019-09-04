@@ -758,13 +758,14 @@ validateContinuation pendingTx dsHash =
 -}
 {-# INLINABLE mkValidator #-}
 mkValidator
-  :: PubKey -> MarloweData -> ([Input], Sealed (HashedDataScript MarloweData)) -> PendingTx -> Bool
-mkValidator creator MarloweData{..} (inputs, sealedMarloweData) pendingTx@PendingTx{..} = let
-    HashedDataScript (MarloweData expectedCreator expectedState expectedContract) dsHash = unseal sealedMarloweData
+  :: PubKey -> MarloweData -> ([Input], MarloweData) -> PendingTx -> Bool
+mkValidator creator MarloweData{..} (inputs, sealedMarloweData) pendingTx@PendingTx{..} = True {- let
+    HashedDataScript (MarloweData expectedCreator expectedState expectedContract) dsHash = unseal sealedMarloweData -}
     {-  Embed contract creator public key. This makes validator script unique,
         which makes a particular contract to have a unique script address.
         That makes it easier to watch for contract actions inside a wallet. -}
-    checkCreator =
+    -- in True
+    {- checkCreator =
         if marloweCreator == creator then True
         else traceErrorH "Wrong contract creator"
 
@@ -818,7 +819,7 @@ mkValidator creator MarloweData{..} (inputs, sealedMarloweData) pendingTx@Pendin
                             && validatePayments pendingTx txOutPayments
                     Nothing -> False
         Error _ -> traceErrorH "Error"
-
+ -}
 
 validatorScript :: PubKey -> ValidatorScript
 validatorScript creator = ValidatorScript $

@@ -64,15 +64,13 @@ simpleTest = checkMarloweTrace (MarloweScenario {
         update = updateAll [alice]
     update
 
-    traceShowM alicePk
-    traceShowM (walletPubKey alice)
+    let contract = When [
+                (Deposit aliceAcc alicePk (Constant 500_000_000), Refund)
+            ] (Slot 100) Refund
+    (tx, md) <- alice `performs` createContract contract
+    (tx, md) <- alice `performs` createDeposit tx md aliceAcc 500_000_000
 
-    let contract = When [(Deposit aliceAcc alicePk (Constant 500_000), Refund)] (Slot 100) Refund
-    tx <- alice `performs` createContract contract
-    update
-    assertIsValidated tx
-
-    assertOwnFundsEq alice (Ada.adaValueOf 999)
+    assertOwnFundsEq alice (Ada.adaValueOf 1000)
 
 
 pubKeyGen :: Gen PubKey
@@ -100,9 +98,10 @@ checkMarloweTrace MarloweScenario{mlInitialBalances} t = property $ do
 updateAll :: [Wallet] -> Trace MockWallet ()
 updateAll wallets = processPending >>= void . walletsNotifyBlock wallets
 
-performs :: Wallet -> m () -> Trace m Tx
+performs :: Wallet -> m MarloweData -> Trace m (Tx, MarloweData)
 performs actor action = do
-    tx <- head . snd <$> walletAction actor action
+    (md, txs) <- walletAction actor action
+    let tx = head txs
     processPending >>= void . walletsNotifyBlock [actor]
     assertIsValidated tx
-    return tx
+    return (tx, md)
