@@ -11,7 +11,7 @@ import Data.List (List, some)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (wrap)
 import Data.String.CodeUnits (fromCharArray)
-import Marlowe.Semantics (AccountId, Action(..), Bound, Case, ChoiceId, Contract(..), Observation(..), Party, Payee(..), PubKey, Slot(..), Timeout, Value(..), ValueId(..))
+import Marlowe.Semantics (AccountId, Action(..), Bound, Case(..), ChoiceId, Contract(..), Observation(..), Party, Payee(..), PubKey, Slot(..), Timeout, Value(..), ValueId(..))
 import Prelude ((*>), (<*), (<*>), bind, pure, (<$>), void, ($), (<<<), discard)
 import Text.Parsing.Parser (Parser, fail)
 import Text.Parsing.Parser.Basic (integral, parens)
@@ -178,7 +178,7 @@ case' = do
     void spaces
     second <- contract'
     void maybeSpaces
-    pure $ wrap { action: first, contract: second }
+    pure $ (Case first second)
   where
   contract' = atomContract <|> fix \p -> parens recContract
 

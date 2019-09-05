@@ -24,7 +24,6 @@ import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
 import Data.Traversable (traverse, traverse_)
-import Debug.Trace (trace)
 import Halogen.HTML (HTML)
 import Halogen.HTML.Properties (id_)
 import Marlowe.Parser as Parser
@@ -822,7 +821,7 @@ caseDefinition :: Generator -> Block -> Either String Case
 caseDefinition g block = do
   action <- parse Parser.action =<< statementToCode g block "action"
   contract <- parse Parser.contract =<< statementToCode g block "contract"
-  pure (Case { action, contract })
+  pure (Case action contract)
 
 casesDefinition :: Generator -> Block -> Either String (Array Case)
 casesDefinition g block = traverse (caseDefinition g) (getAllBlocks block)
@@ -1087,7 +1086,7 @@ nextCase :: forall r. NewBlockFunction r -> STRef r Workspace -> Connection -> A
 nextCase newBlock workspace fromConnection cases = do
   case uncons cases of
     Nothing -> pure unit
-    Just { head: (Case { action, contract }), tail } -> do
+    Just { head: (Case action contract), tail } -> do
       block <- newBlock workspace (show CaseType)
       inputToBlockly newBlock workspace block "action" action
       inputToBlockly newBlock workspace block "contract" contract
@@ -1100,7 +1099,7 @@ instance toBlocklyCases :: ToBlockly (Array Case) where
   toBlockly newBlock workspace input cases = do
     case uncons cases of
       Nothing -> pure unit
-      Just { head: (Case { action, contract }), tail } -> do
+      Just { head: (Case action contract), tail } -> do
         block <- newBlock workspace (show CaseType)
         inputToBlockly newBlock workspace block "action" action
         inputToBlockly newBlock workspace block "contract" contract

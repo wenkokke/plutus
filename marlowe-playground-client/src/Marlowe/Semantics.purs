@@ -22,9 +22,8 @@ import Data.Set (Set)
 import Data.Set as Set
 import Data.Symbol (SProxy(..))
 import Data.Tuple (Tuple(..))
-import Debug.Trace (trace)
-import Marlowe.Pretty (class Pretty, genericPretty, pretty, prettyFragment)
-import Text.PrettyPrint.Leijen (appendWithLine, appendWithSoftbreak, text)
+import Marlowe.Pretty (class Pretty, genericPretty, prettyFragment)
+import Text.PrettyPrint.Leijen (appendWithSoftbreak, text)
 
 type PubKey
   = String
@@ -277,25 +276,19 @@ instance showPayee :: Show Payee where
 instance prettyPayee :: Pretty Payee where
   prettyFragment a = genericPretty a
 
-newtype Case
-  = Case
-  { action :: Action
-  , contract :: Contract
-  }
+data Case = Case Action Contract
 
 derive instance genericCase :: Generic Case _
-
-derive instance newtypeCase :: Newtype Case _
 
 derive instance eqCase :: Eq Case
 
 derive instance ordCase :: Ord Case
 
 instance showCase :: Show Case where
-  show (Case { action, contract }) = "Case " <> show action <> " " <> show contract
+  show (Case action contract) = "Case " <> show action <> " " <> show contract
 -- FIXME: pretty printing is a disaster and slooooowwwww
 instance prettyCase :: Pretty Case where
-  prettyFragment (Case { action, contract }) = appendWithSoftbreak (text "Case " <> prettyFragment action <> text " ") (prettyFragment contract)
+  prettyFragment (Case action contract) = appendWithSoftbreak (text "Case " <> prettyFragment action <> text " ") (prettyFragment contract)
 
 data Contract
   = Refund
@@ -682,7 +675,7 @@ instance showApplyResult :: Show ApplyResult where
 
 applyCases :: Environment -> State -> Input -> List Case -> ApplyResult
 applyCases env state input cases = case input, cases of
-  IDeposit accId1 party1 money, (Case { action: Deposit accId2 party2 val, contract: cont } : rest) ->
+  IDeposit accId1 party1 money, ((Case (Deposit accId2 party2 val) cont) : rest) ->
     let
       amount = evalValue env state val
 
@@ -692,7 +685,7 @@ applyCases env state input cases = case input, cases of
         Applied newState cont
       else
         applyCases env state input rest
-  IChoice choId1 choice, (Case { action: Choice choId2 bounds, contract: cont } : rest) ->
+  IChoice choId1 choice, ((Case (Choice choId2 bounds) cont) : rest) ->
     let
       newState = over _choices (Map.insert choId1 choice) state
     in
@@ -700,7 +693,7 @@ applyCases env state input cases = case input, cases of
         Applied newState cont
       else
         applyCases env state input rest
-  INotify, (Case { action: Notify obs, contract: cont } : _)
+  INotify, ((Case (Notify obs) cont) : _)
     | evalObservation env state obs -> Applied state cont
   _, (_ : rest) -> applyCases env state input rest
   _, Nil -> ApplyNoMatchError
@@ -825,7 +818,7 @@ extractRequiredActions :: Contract -> Array Action
 extractRequiredActions contract = case contract of
   Refund -> mempty
   (Pay accId payee val nextContract) -> extractRequiredActions nextContract
-  (When cases _ _) -> map (_.action <<< unwrap) cases
+  (When cases _ _) -> map (\(Case action _) -> action) cases
   (If observation contract1 contract2) -> extractRequiredActions contract1 <> extractRequiredActions contract2
   (Let valId val nextContract) -> extractRequiredActions nextContract
 
@@ -861,7 +854,7 @@ peopleFromCases :: Array Case -> Set PubKey
 peopleFromCases cases = fold (map peopleFromCase cases)
 
 peopleFromCase :: Case -> Set PubKey
-peopleFromCase case' = peopleFromAction (unwrap case').action
+peopleFromCase (Case action _) = peopleFromAction action
 
 peopleFromAction :: Action -> Set PubKey
 peopleFromAction (Deposit accountId party _) = peopleFromAccounts (Set.singleton accountId) <> Set.singleton party

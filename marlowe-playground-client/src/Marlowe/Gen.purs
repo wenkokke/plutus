@@ -12,7 +12,7 @@ import Data.Foldable (class Foldable)
 import Data.Newtype (wrap)
 import Data.NonEmpty (NonEmpty, foldl1, (:|))
 import Data.String.CodeUnits (fromCharArray)
-import Marlowe.Semantics (AccountId, Action(..), Bound, Case, ChoiceId, Contract(..), Interval, Observation(..), Payee(..), PubKey, Slot(..), Timeout, Value(..), ValueId(..))
+import Marlowe.Semantics (AccountId, Action(..), Bound, Case(..), ChoiceId, Contract(..), Interval, Observation(..), Payee(..), PubKey, Slot(..), Timeout, Value(..), ValueId(..))
 
 oneOf ::
   forall m a f.
@@ -78,7 +78,7 @@ genCase size = do
     newSize = size - 1
   action <- genAction newSize
   contract <- genContract' newSize
-  pure $ wrap { action, contract }
+  pure (Case action contract)
 
 genCases :: forall m. MonadGen m => MonadRec m => Lazy (m Value) => Lazy (m Observation) => Lazy (m Contract) => Int -> m (Array Case)
 genCases size = resize (_ - 1) (unfoldable (genCase size))
