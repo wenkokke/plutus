@@ -25,7 +25,7 @@ import Gist (Gist)
 import Halogen.Blockly (BlocklyQuery, BlocklyMessage)
 import Halogen.Component.ChildPath (ChildPath, cp1, cp2, cp3)
 import Language.Haskell.Interpreter (InterpreterError, InterpreterResult)
-import Marlowe.Semantics (AccountId, Action(..), Ada, Bound, ChoiceId, ChosenNum, Contract, Environment(..), Input, Observation, Party, PubKey, Slot, SlotInterval(..), State, TransactionError, _minSlot, emptyState, evalValue)
+import Marlowe.Semantics (AccountId, Action(..), Ada, Bound, ChoiceId, ChosenNum, Contract, Environment(..), Input, Observation, Party, Payment(..), PubKey, Slot, SlotInterval(..), State, TransactionError, _minSlot, emptyState, evalValue)
 import Network.RemoteData (RemoteData)
 import Prelude (class Eq, class Ord, class Show, Unit, mempty, zero, (<<<))
 import Servant.PureScript.Ajax (AjaxError)
@@ -180,6 +180,7 @@ type MarloweState
     , slot :: Slot
     , moneyInContract :: Ada
     , contract :: Maybe Contract
+    , payments :: Array Payment
     }
 
 _possibleActions :: forall s a. Lens' { possibleActions :: a | s } a
@@ -210,6 +211,9 @@ _result = prop (SProxy :: SProxy "result")
 _warnings :: forall s a. Lens' { warnings :: a | s } a
 _warnings = prop (SProxy :: SProxy "warnings")
 
+_payments :: forall s a. Lens' { payments :: a | s } a
+_payments = prop (SProxy :: SProxy "payments")
+
 _currentMarloweState :: Lens' FrontendState MarloweState
 _currentMarloweState = _marloweState <<< _Head
 
@@ -225,6 +229,7 @@ emptyMarloweState =
   , slot: zero
   , moneyInContract: zero
   , contract: Nothing
+  , payments: []
   }
 type WebData
   = RemoteData AjaxError

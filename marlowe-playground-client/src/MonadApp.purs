@@ -10,10 +10,11 @@ import Auth (AuthStatus)
 import Control.Monad.Except (class MonadTrans, ExceptT, runExceptT)
 import Control.Monad.Reader (class MonadAsk)
 import Control.Monad.State (class MonadState)
+import Data.Array (fromFoldable)
 import Data.Array as Array
 import Data.Either (Either(..))
 import Data.Foldable (foldl)
-import Data.Lens (assign, modifying, set, to, (^.))
+import Data.Lens (assign, modifying, over, set, to, (^.))
 import Data.List as List
 import Data.List.NonEmpty as NEL
 import Data.List.Types (NonEmptyList)
@@ -42,7 +43,7 @@ import Servant.PureScript.Ajax (AjaxError)
 import Servant.PureScript.Settings (SPSettings_)
 import StaticData (bufferLocalStorageKey, marloweBufferLocalStorageKey)
 import Text.Parsing.Parser (runParser)
-import Types (ActionInput(..), BlocklySlot(..), ChildQuery, ChildSlot, EditorSlot(EditorSlot), FrontendState, MarloweEditorSlot(MarloweEditorSlot), MarloweState, Query, WebData, _contract, _currentMarloweState, _marloweState, _moneyInContract, _oldContract, _pendingInputs, _possibleActions, _slot, _state, _transactionError, actionToActionInput, cpBlockly, cpEditor, cpMarloweEditor, emptyMarloweState)
+import Types (ActionInput(..), BlocklySlot(..), ChildQuery, ChildSlot, EditorSlot(EditorSlot), FrontendState, MarloweEditorSlot(MarloweEditorSlot), MarloweState, Query, WebData, _contract, _currentMarloweState, _marloweState, _moneyInContract, _oldContract, _payments, _pendingInputs, _possibleActions, _slot, _state, _transactionError, actionToActionInput, cpBlockly, cpEditor, cpMarloweEditor, emptyMarloweState)
 import Web.HTML.Event.DragEvent (DragEvent)
 
 class
@@ -243,6 +244,7 @@ updateStateP oldState = actState
       <<< set _state txOutState
       <<< set _contract (Just txOutContract)
       <<< set _moneyInContract (moneyInContract txOutState)
+      <<< over _payments (append (fromFoldable txOutPayments))
       ) oldState
     (Error txError) -> set _transactionError (Just txError) oldState
 

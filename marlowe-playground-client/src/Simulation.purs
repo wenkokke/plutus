@@ -37,7 +37,7 @@ import Halogen.Query as HQ
 import LocalStorage as LocalStorage
 import Prelude (class Show, Unit, bind, const, discard, flip, identity, pure, show, unit, void, ($), (<$>), (<<<), (<>), (>))
 import StaticData as StaticData
-import Types (ActionInput(..), ChildQuery, ChildSlot, FrontendState, MarloweEditorSlot(MarloweEditorSlot), MarloweError(MarloweError), MarloweState, Query(..), _Head, _contract, _marloweCompileResult, _marloweState, _moneyInContract, _oldContract, _pendingInputs, _possibleActions, _slot, _state, _transactionError, cpMarloweEditor)
+import Types (ActionInput(..), ChildQuery, ChildSlot, FrontendState, MarloweEditorSlot(MarloweEditorSlot), MarloweError(MarloweError), MarloweState, Query(..), _Head, _contract, _marloweCompileResult, _marloweState, _moneyInContract, _oldContract, _payments, _pendingInputs, _possibleActions, _slot, _state, _transactionError, cpMarloweEditor)
 
 paneHeader :: forall p. String -> HTML p Query
 paneHeader s = h2 [class_ $ ClassName "pane-header"] [text s]
@@ -621,12 +621,21 @@ stateTable state =
                     then text "No choices have been recorded"
                     else renderChoices choices
                 ]
+            , h3_
+                [ text "Payments"
+                ]
+            , row_
+                [ if (Array.length payments == 0)
+                    then text "No payments have been recorded"
+                    else renderPayments payments
+                ]
             ]
         ]
     ]
   where
   accounts = state ^. _marloweState <<< _Head <<< _state <<< _accounts
   choices = state ^. _marloweState <<< _Head <<< _state <<< _choices
+  payments = state ^. _marloweState <<< _Head <<< _payments
 
 renderAccounts :: forall p. Map AccountId Ada -> HTML p Query
 renderAccounts accounts =
@@ -647,7 +656,7 @@ renderAccounts accounts =
                 [ text "Participant"
                 ]
             , th_
-                [ text "Chosen value"
+                [ text "Money"
                 ]
             ]
         ]
@@ -714,5 +723,41 @@ renderChoice (Tuple (ChoiceId { choiceNumber, choiceOwner}) value) =
         ]
     , td_
         [ text (show value)
+        ]
+    ]
+
+renderPayments :: forall p. Array Payment -> HTML p Query
+renderPayments payments =
+  table_
+    [ colgroup []
+        [ col []
+        , col []
+        , col []
+        ]
+    , thead_
+        [ tr []
+            [ th
+                [ class_ $ ClassName "middle-column"
+                ]
+                [ text "Party"
+                ]
+            , th_
+                [ text "Money"
+                ]
+            ]
+        ]
+    , tbody_ (map renderPayment payments)
+    ]
+
+renderPayment :: forall p. Payment -> HTML p Query
+renderPayment (Payment party money) =
+  tr []
+    [ td
+        [ class_ $ ClassName "middle-column"
+        ]
+        [ text party
+        ]
+    , td_
+        [ text (show money)
         ]
     ]

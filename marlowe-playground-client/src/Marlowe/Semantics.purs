@@ -468,7 +468,7 @@ refundOne accounts = do
   { key, value } <- Map.findMin accounts
   let
     rest = Map.delete key accounts
-  if value > zero then pure (Tuple (Tuple (unwrap key).accountOwner value) rest) else refundOne rest
+  if value > zero then pure (Tuple (Tuple (unwrap key).accountOwner value) accounts) else refundOne accounts
 
 data Payment
   = Payment Party Money
@@ -501,7 +501,7 @@ moneyInAccount accId accounts = fromMaybe zero (Map.lookup accId accounts)
 
 -- | Sets the amount of money available in an account
 updateMoneyInAccount :: AccountId -> Money -> Map AccountId Money -> Map AccountId Money
-updateMoneyInAccount accId money = if money <= zero then Map.delete accId else Map.insert accId money
+updateMoneyInAccount accId money = if money <= zero then identity else Map.insert accId money
 
 {-| Add the given amount of money to an account (only if it is positive).
     Return the updated Map
