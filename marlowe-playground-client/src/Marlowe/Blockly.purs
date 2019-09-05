@@ -26,7 +26,7 @@ import Data.Traversable (traverse, traverse_)
 import Halogen.HTML (HTML)
 import Halogen.HTML.Properties (id_)
 import Marlowe.Parser as Parser
-import Marlowe.Semantics (AccountId(..), Action(..), Case(..), ChoiceId(..), Contract(..), Observation(..), Payee(..), Value(..))
+import Marlowe.Semantics (AccountId(..), Action(..), Bound, Case(..), ChoiceId(..), Contract(..), Interval(..), Observation(..), Payee(..), Value(..))
 import Record (merge)
 import Text.Parsing.Parser (Parser, runParser)
 import Text.Parsing.Parser.Basic (parens)
@@ -209,6 +209,7 @@ valueTypes = upFromIncluding bottom
 data BlockType
   = BaseContractType
   | CaseType
+  | BoundsType
   | ActionType ActionType
   | ContractType ContractType
   | ObservationType ObservationType
@@ -239,6 +240,7 @@ instance boundedEnumBlockType :: BoundedEnum BlockType where
 instance showBlockType :: Show BlockType where
   show BaseContractType = "BaseContractType"
   show CaseType = "CaseType"
+  show BoundsType = "BoundsType"
   show (ContractType c) = show c
   show (ObservationType ot) = show ot
   show (ValueType vt) = show vt
@@ -279,6 +281,22 @@ toDefinition CaseType =
         }
         defaultBlockDefinition
 
+
+toDefinition BoundsType =
+  BlockDefinition
+    $ merge
+        { type: show BoundsType
+        , message0: "between %1 and %2"
+        , args0:
+          [ Number { name: "from", value: 1.0, min: Just 1.0, max: Nothing, precision: Nothing }
+          , Number { name: "to", value: 2.0, min: Just 1.0, max: Nothing, precision: Nothing }
+          ]
+        , colour: "135"
+        , previousStatement: Just (show BoundsType)
+        , nextStatement: Just (show BoundsType)
+        }
+        defaultBlockDefinition
+
 -- Action
 
 toDefinition (ActionType DepositActionType) =
@@ -313,8 +331,7 @@ toDefinition (ActionType ChoiceActionType) =
           , DummyRight
           , Input { name: "choice_owner", text: "Owner", spellcheck: false }
           , DummyRight
-          -- FIXME: what should this be
-          , Value { name: "bounds", check: "value", align: Right }
+          , Statement { name: "bounds", check: (show BoundsType), align: Right }
           ]
         , colour: "0"
         , previousStatement: Just "ActionType"
@@ -368,6 +385,7 @@ toDefinition (PayeeType PartyPayeeType) =
       }
       defaultBlockDefinition
 
+
 -- Contracts
 
 toDefinition (ContractType RefundContractType) =
@@ -418,8 +436,7 @@ toDefinition (ContractType IfContractType) =
         , inputsInline: Just false
         }
         defaultBlockDefinition
--- TODO: How do I do [Case]?
--- https://github.com/google/blockly/wiki/Lists
+
 toDefinition (ContractType WhenContractType) =
   BlockDefinition
     $ merge
@@ -752,6 +769,7 @@ toolbox =
     , category [ name "Values", colour "135" ] (map mkBlock valueTypes)
     , category [ name "Payee", colour "150" ] (map mkBlock payeeTypes)
     , category [ name "Case", colour "150" ] (map mkBlock [CaseType])
+    , category [ name "Bounds", colour "150" ] (map mkBlock [BoundsType])
     , category [ name "Actions", colour "150" ] (map mkBlock actionTypes)
     ]
   where
@@ -780,6 +798,7 @@ buildGenerator blocklyState =
         traverse_ (\t -> mkGenFun gRef t (blockDefinition t g)) valueTypes
         traverse_ (\t -> mkGenFun gRef t (blockDefinition t g)) actionTypes
         traverse_ (\t -> mkGenFun gRef t (caseDefinition g)) [ CaseType ]
+        traverse_ (\t -> mkGenFun gRef t (boundsDefinition g)) [ BoundsType ]
         STRef.read gRef
     )
 
@@ -806,6 +825,15 @@ caseDefinition g block = do
 casesDefinition :: Generator -> Block -> Either String (Array Case)
 casesDefinition g block = traverse (caseDefinition g) (getAllBlocks block)
 
+boundDefinition :: Generator -> Block -> Either String Bound
+boundDefinition g block = do
+    from <- parse Parser.bigInteger =<< getFieldValue block "from"
+    to <- parse Parser.bigInteger =<< getFieldValue block "to"
+    pure (Interval {from, to})
+
+boundsDefinition :: Generator -> Block -> Either String (Array Bound)
+boundsDefinition g block = traverse (boundDefinition g) (getAllBlocks block)
+
 instance hasBlockDefinitionAction :: HasBlockDefinition ActionType Action where
   blockDefinition DepositActionType g block = do
     accountNumber <- parse Parser.bigInteger =<< getFieldValue block "account_number"
@@ -820,8 +848,11 @@ instance hasBlockDefinitionAction :: HasBlockDefinition ActionType Action where
     choiceOwner <- getFieldValue block "choice_owner"
     let
       choiceId = ChoiceId { choiceNumber, choiceOwner }
-    -- FIXME get bounds
-    pure (Choice choiceId [])
+    let inputs = inputList block
+    boundsInput <- note "No Input with name \"bound\" found" $ getInputWithName inputs "bounds"
+    topboundBlock <- getBlockInputConnectedTo boundsInput
+    bounds <- boundsDefinition g topboundBlock
+    pure (Choice choiceId bounds)
   blockDefinition NotifyActionType g block = do
     observation <- parse Parser.observation =<< statementToCode g block "observation"
     pure (Notify observation)
