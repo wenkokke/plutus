@@ -29,23 +29,16 @@ import qualified Data.Map                       as Map
 import qualified Data.Text                      as Text
 import           Wallet                         ( WalletAPI(..)
                                                 , WalletAPIError
-                                                , intervalFrom
                                                 , throwOtherError
                                                 , createTxAndSubmit
-                                                , ownPubKeyTxOut
                                                 )
 import           Ledger                         ( DataScript(..)
-                                                , PubKey(..)
                                                 , Slot(..)
                                                 , Tx
-                                                , TxOutRef
-                                                , TxIn
                                                 , TxOut
                                                 , TxOutOf(..)
-                                                , ValidatorScript(..)
                                                 , HashedDataScript(..)
                                                 , interval
-                                                , plcValidatorHash
                                                 , pubKeyTxOut
                                                 , scriptTxIn
                                                 , scriptTxOut
@@ -132,21 +125,14 @@ applyInputs tx MarloweData{..} inputs  = do
 
             let (scriptIn, deducedTxOutputs) = case txOutContract of
                     Refund -> let
-                        redcode = $$(Ledger.compileScript [||
-                            \(input :: [Input]) -> (input, Nothing :: Maybe (P.Sealed (HashedDataScript MarloweData))) ||])
-                                `Ledger.applyScript` (Ledger.lifted inputs)
-                        redeemer = Ledger.RedeemerScript redcode
+                        redeemer = mkFinalRedeemer inputs
                         scriptIn = scriptTxIn ref validator redeemer
                         payouts = txPaymentOuts (depositPayment : txOutPayments)
 
                         in (scriptIn, payouts)
 
                     _ -> let
-
-                        redcode = $$(Ledger.compileScript [||
-                            \(input :: [Input]) (sealedDS :: P.Sealed (HashedDataScript MarloweData)) -> (input, Just sealedDS) ||])
-                                `Ledger.applyScript` (Ledger.lifted inputs)
-                        redeemer = Ledger.RedeemerScript redcode
+                        redeemer = mkRedeemer inputs
                         scriptIn = scriptTxIn ref validator redeemer
 
                         payoutAmounts = fmap (Ada.getLovelace . Ada.fromValue . txOutValue) (txPaymentOuts txOutPayments)

@@ -106,6 +106,7 @@ import           Ledger.Ada                 (Ada)
 import qualified Ledger.Ada                 as Ada
 import           Ledger.Interval            (Interval (..), Extended(..), LowerBound(..), UpperBound(..))
 import           Ledger.Scripts             ( HashedDataScript(..)
+                                            , RedeemerScript(..)
                                             , ValidatorScript(..)
                                             , DataScriptHash(..)
                                             )
@@ -759,13 +760,12 @@ validateContinuation pendingTx dsHash =
 {-# INLINABLE mkValidator #-}
 mkValidator
   :: PubKey -> MarloweData -> ([Input], Maybe (Sealed (HashedDataScript MarloweData))) -> PendingTx -> Bool
-mkValidator creator MarloweData{..} (inputs, sealedMarloweData) pendingTx@PendingTx{..} = True {- let
-    HashedDataScript (MarloweData expectedCreator expectedState expectedContract) dsHash = unseal sealedMarloweData -}
+mkValidator creator MarloweData{..} (inputs, maybeSealedMarloweData) pendingTx@PendingTx{..} = let
     {-  Embed contract creator public key. This makes validator script unique,
         which makes a particular contract to have a unique script address.
         That makes it easier to watch for contract actions inside a wallet. -}
-    -- in True
-    {- checkCreator =
+
+    checkCreator =
         if marloweCreator == creator then True
         else traceErrorH "Wrong contract creator"
 
@@ -807,20 +807,41 @@ mkValidator creator MarloweData{..} (inputs, sealedMarloweData) pendingTx@Pendin
                     payments = Payment creator (Ada.lovelaceOf deposit) : txOutPayments
                     in validatePayments pendingTx payments
                 -- otherwise check the continuation
-                _ -> case validateContinuation pendingTx dsHash of
-                    Just scriptOutputValue -> let
-                        validContract = expectedCreator == creator
-                            && txOutState == expectedState
-                            && txOutContract == expectedContract
-                        outputBalance = totalBalance (accounts txOutState)
-                        outputBalanceOk = scriptOutputValue == (outputBalance + deposit)
-                        in  outputBalanceOk
-                            && validContract
-                            && validatePayments pendingTx txOutPayments
-                    Nothing -> False
+                _ -> let
+                    Just sealedMarloweData = maybeSealedMarloweData
+                    HashedDataScript
+                        (MarloweData expectedCreator expectedState expectedContract) dsHash =
+                            unseal sealedMarloweData
+                    in case validateContinuation pendingTx dsHash of
+                        Just scriptOutputValue -> let
+                            validContract = expectedCreator == creator
+                                && txOutState == expectedState
+                                && txOutContract == expectedContract
+                            outputBalance = totalBalance (accounts txOutState)
+                            outputBalanceOk = scriptOutputValue == (outputBalance + deposit)
+                            in  outputBalanceOk
+                                && validContract
+                                && validatePayments pendingTx txOutPayments
+                        Nothing -> False
         Error _ -> traceErrorH "Error"
- -}
+
 
 validatorScript :: PubKey -> ValidatorScript
 validatorScript creator = ValidatorScript $
-    $$(Ledger.compileScript [|| mkValidator ||]) `Ledger.applyScript` Ledger.lifted creator
+    $$(Ledger.compileScript [|| mkValidator ||]) `Ledger.applyScript` (Ledger.lifted creator)
+
+
+mkFinalRedeemer :: [Input] -> RedeemerScript
+mkFinalRedeemer inputs = let
+    redcode = Ledger.lifted $
+        (inputs, Nothing :: Maybe (Sealed (HashedDataScript MarloweData)))
+    in RedeemerScript redcode
+
+
+mkRedeemer :: [Input] -> RedeemerScript
+mkRedeemer inputs = let
+    scriptFun = $$(Ledger.compileScript [||
+        \(input :: [Input]) (sealedDS :: Sealed (HashedDataScript MarloweData)) ->
+            (input, Just sealedDS) ||])
+    redcode = scriptFun `Ledger.applyScript` (Ledger.lifted inputs)
+    in RedeemerScript redcode
