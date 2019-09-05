@@ -23,6 +23,7 @@ import Data.Set (Set)
 import Data.Set as Set
 import Data.Symbol (SProxy(..))
 import Data.Tuple (Tuple(..))
+import Debug.Trace (trace)
 import Marlowe.Pretty (class Pretty, genericPretty, prettyFragment)
 import Text.PrettyPrint.Leijen (appendWithSoftbreak, text)
 
@@ -468,7 +469,7 @@ refundOne accounts = do
   { key, value } <- Map.findMin accounts
   let
     rest = Map.delete key accounts
-  if value > zero then pure (Tuple (Tuple (unwrap key).accountOwner value) accounts) else refundOne accounts
+  if value > zero then pure (Tuple (Tuple (unwrap key).accountOwner value) rest) else refundOne rest
 
 data Payment
   = Payment Party Money
@@ -644,7 +645,7 @@ reduceContractUntilQuiescent startEnv startState startContract =
   let
     reductionLoop ::
       Environment -> State -> Contract -> (List ReduceWarning) -> (List Payment) -> ReduceResult
-    reductionLoop env state contract warnings payments = case reduceContractStep env state contract of
+    reductionLoop env state contract warnings payments = case trace "reductionLoop" \_ -> reduceContractStep env state contract of
       Reduced warning effect newState nextContract ->
         let
           newWarnings = if warning == ReduceNoWarning then warnings else warning : warnings

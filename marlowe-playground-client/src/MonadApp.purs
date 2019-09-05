@@ -238,7 +238,7 @@ updateStateP oldState = actState
   txInput = stateToTxInput oldState
   actState = case computeTransaction txInput (oldState ^. _state) (oldState ^. _contract <<< to (fromMaybe Refund)) of
   -- TODO: deal with errors in state
-    (TransactionOutput {txOutWarnings, txOutPayments, txOutState, txOutContract}) -> 
+    (TransactionOutput {txOutWarnings, txOutPayments, txOutState, txOutContract}) ->
       (set _transactionError Nothing 
       <<< set _pendingInputs mempty 
       <<< set _state txOutState
