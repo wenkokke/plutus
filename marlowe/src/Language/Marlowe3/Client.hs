@@ -56,7 +56,7 @@ import qualified Ledger.Ada                     as Ada
 import           Ledger.Tx
 import qualified Language.PlutusTx.Prelude      as P
 import           Language.Marlowe3.Common       as Marlowe
-import Debug.Trace
+-- import Debug.Trace
 
 
 createContract :: (
@@ -137,8 +137,9 @@ applyInputs tx MarloweData{..} inputs  = do
                                 `Ledger.applyScript` (Ledger.lifted inputs)
                         redeemer = Ledger.RedeemerScript redcode
                         scriptIn = scriptTxIn ref validator redeemer
+                        payouts = txPaymentOuts (depositPayment : txOutPayments)
 
-                        in (scriptIn, txPaymentOuts (depositPayment : txOutPayments))
+                        in (scriptIn, payouts)
 
                     _ -> let
 

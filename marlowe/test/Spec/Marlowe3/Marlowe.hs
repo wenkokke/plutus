@@ -35,16 +35,15 @@ import qualified Wallet.Generators          as Gen
 import           Test.Tasty
 import           Test.Tasty.Hedgehog       (HedgehogTestLimit (..), testProperty)
 import           Test.Tasty.HUnit
-import Debug.Trace
-
 
 
 newtype MarloweScenario = MarloweScenario { mlInitialBalances :: Map PubKey Ledger.Value }
 
+
 tests :: TestTree
-tests = testGroup "Marlowe"
+tests = localOption (HedgehogTestLimit $ Just 3) $ testGroup "Marlowe"
     [ testCase "Contracts with different creators have different hashes" uniqueContractHash
-    , testProperty "Escrow Contract" simpleTest
+    , testProperty "Zero Coupon Bond Contract" zeroCouponBondTest
     ]
 
 
@@ -53,8 +52,9 @@ alice = Wallet 1
 bob = Wallet 2
 carol = Wallet 3
 
-simpleTest :: Property
-simpleTest = checkMarloweTrace (MarloweScenario {
+
+zeroCouponBondTest :: Property
+zeroCouponBondTest = checkMarloweTrace (MarloweScenario {
     mlInitialBalances = Map.fromList
         [ (walletPubKey alice, Ada.adaValueOf 1000), (walletPubKey bob, Ada.adaValueOf 1000) ] }) $ do
     -- Init a contract
@@ -72,6 +72,7 @@ simpleTest = checkMarloweTrace (MarloweScenario {
                     ] (Slot 200) Refund
                 ))] (Slot 100) Refund
 
+    let performs = performNotify [alice, bob]
     (tx, md) <- alice `performs` createContract zeroCouponBond
     (tx, md) <- alice `performs` deposit tx md aliceAcc (Ada.adaOf 850)
     bob `performs` deposit tx md aliceAcc (Ada.adaOf 1000)
@@ -82,6 +83,7 @@ simpleTest = checkMarloweTrace (MarloweScenario {
 
 pubKeyGen :: Gen PubKey
 pubKeyGen = toPublicKey . (knownPrivateKeys !!) <$> integral (Range.linear 0 10)
+
 
 uniqueContractHash :: IO ()
 uniqueContractHash = do
@@ -105,10 +107,11 @@ checkMarloweTrace MarloweScenario{mlInitialBalances} t = property $ do
 updateAll :: [Wallet] -> Trace MockWallet ()
 updateAll wallets = processPending >>= void . walletsNotifyBlock wallets
 
-performs :: Wallet -> m MarloweData -> Trace m (Tx, MarloweData)
-performs actor action = do
+
+performNotify :: [Wallet] -> Wallet -> m MarloweData -> Trace m (Tx, MarloweData)
+performNotify wallets actor action = do
     (md, txs) <- walletAction actor action
     let tx = head txs
-    processPending >>= void . walletsNotifyBlock [actor]
+    processPending >>= void . walletsNotifyBlock wallets
     assertIsValidated tx
     return (tx, md)
