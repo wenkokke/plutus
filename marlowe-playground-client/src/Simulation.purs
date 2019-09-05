@@ -20,7 +20,7 @@ import Data.Lens (to, view, (^.))
 import Data.List.NonEmpty as NEL
 import Data.Map (Map)
 import Data.Map as Map
-import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Newtype (unwrap, wrap)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (Tuple3, (/\))
@@ -232,7 +232,7 @@ renderDeposit (AccountId { accountOwner, accountNumber }) party money =
 
 inputChoice :: forall p. Boolean -> PubKey -> Int -> ChoiceId -> ChosenNum -> Array Bound -> HTML p Query
 inputChoice isEnabled person index choiceId@(ChoiceId { choiceNumber, choiceOwner}) chosenNum bounds =
-  let validBounds = anyWithin chosenNum bounds
+  let validBounds = anyBoundWithin chosenNum bounds
       errorRow = if validBounds then [] else [ text boundsError ]
   in
   flexRow_
@@ -251,7 +251,7 @@ inputChoice isEnabled person index choiceId@(ChoiceId { choiceNumber, choiceOwne
     ] <> errorRow)
     where
     boundsError = "Choice must be between " <> intercalate " or " (map boundError bounds)
-    boundError bound = show (unwrap bound).from <> " and " <> show (unwrap bound).to
+    boundError (Bound from to) = show from <> " and " <> show to
 
 
 inputNotify ::

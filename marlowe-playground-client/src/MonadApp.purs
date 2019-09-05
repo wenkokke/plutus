@@ -36,7 +36,7 @@ import LocalStorage as LocalStorage
 import Marlowe (SPParams_)
 import Marlowe as Server
 import Marlowe.Parser (contract)
-import Marlowe.Semantics (Contract(..), Interval(..), TransactionInput(..), TransactionOutput(..), PubKey, computeTransaction, extractRequiredActions)
+import Marlowe.Semantics (Contract(..), PubKey, SlotInterval(..), TransactionInput(..), TransactionOutput(..), computeTransaction, extractRequiredActions)
 import Network.RemoteData as RemoteData
 import Servant.PureScript.Ajax (AjaxError)
 import Servant.PureScript.Settings (SPSettings_)
@@ -247,7 +247,7 @@ updateStateP oldState = actState
 
 stateToTxInput :: MarloweState -> TransactionInput
 stateToTxInput ms = let slot = ms ^. _slot
-                        interval = Interval { from: slot, to: slot + one }
+                        interval = SlotInterval slot (slot + one)
                         inputs = map fst (ms ^. _pendingInputs)
                     in TransactionInput { interval: interval, inputs: (List.fromFoldable inputs)}
 

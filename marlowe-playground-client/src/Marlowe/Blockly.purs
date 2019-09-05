@@ -27,7 +27,7 @@ import Data.Traversable (traverse, traverse_)
 import Halogen.HTML (HTML)
 import Halogen.HTML.Properties (id_)
 import Marlowe.Parser as Parser
-import Marlowe.Semantics (AccountId(..), Action(..), Bound, Case(..), ChoiceId(..), Contract(..), Interval(..), Observation(..), Payee(..), Value(..))
+import Marlowe.Semantics (AccountId(..), Action(..), Bound(..), Case(..), ChoiceId(..), Contract(..), Observation(..), Payee(..), Value(..))
 import Record (merge)
 import Text.Parsing.Parser (Parser, runParser)
 import Text.Parsing.Parser.Basic (parens)
@@ -830,7 +830,7 @@ boundDefinition :: Generator -> Block -> Either String Bound
 boundDefinition g block = do
     from <- parse Parser.bigInteger =<< getFieldValue block "from"
     to <- parse Parser.bigInteger =<< getFieldValue block "to"
-    pure (Interval {from, to})
+    pure (Bound from to)
 
 boundsDefinition :: Generator -> Block -> Either String (Array Bound)
 boundsDefinition g block = traverse (boundDefinition g) (getAllBlocks block)
@@ -1041,7 +1041,7 @@ nextBound :: forall r. NewBlockFunction r -> STRef r Workspace -> Connection -> 
 nextBound newBlock workspace fromConnection bounds = do
   case uncons bounds of
     Nothing -> pure unit
-    Just { head: (Interval { from, to }), tail } -> do
+    Just { head: (Bound from to), tail } -> do
       block <- newBlock workspace (show BoundsType)
       setField block "from" (show from)
       setField block "to" (show to)
@@ -1050,11 +1050,11 @@ nextBound newBlock workspace fromConnection bounds = do
       nextFromConnection <- nextConnection block
       nextBound newBlock workspace nextFromConnection tail
 
-instance toBlocklyBounds :: ToBlockly (Array (Interval BigInteger)) where
+instance toBlocklyBounds :: ToBlockly (Array Bound) where
   toBlockly newBlock workspace input bounds = do
     case uncons bounds of
       Nothing -> pure unit
-      Just { head: (Interval { from, to }), tail } -> do
+      Just { head: (Bound from to), tail } -> do
         block <- newBlock workspace (show BoundsType)
         setField block "from" (show from)
         setField block "to" (show to)

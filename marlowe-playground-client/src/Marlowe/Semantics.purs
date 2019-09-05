@@ -8,7 +8,7 @@ import Data.Foldable (class Foldable, any, fold)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Integral (class Integral)
-import Data.Lens (Lens', over, set, view)
+import Data.Lens (Lens', over, set, to, view)
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Lens.Record (prop)
 import Data.List (List(..), reverse, (:), fromFoldable)
@@ -200,47 +200,46 @@ instance showObservation :: Show Observation where
 instance prettyObservation :: Pretty Observation where
   prettyFragment a = genericPretty a
 
--- |Interval of [from, to], both bounds are included
-newtype Interval a
-  = Interval { from :: a, to :: a }
+validInterval :: SlotInterval -> Boolean
+validInterval (SlotInterval from to) = from <= to
 
-derive instance genericInterval :: Generic (Interval a) _
+above :: Slot -> SlotInterval -> Boolean
+above v (SlotInterval _ to) = v >= to
 
-derive instance newtypeInterval :: Newtype (Interval a) _
+anyWithin :: forall f. Foldable f => Slot -> f SlotInterval -> Boolean
+anyWithin v = any (\(SlotInterval from to) -> v >= from && v <= to)
 
-derive instance eqInterval :: Eq a => Eq (Interval a)
+data SlotInterval = SlotInterval Slot Slot
 
-derive instance ordInterval :: Ord a => Ord (Interval a)
+derive instance eqSlotInterval :: Eq SlotInterval
 
-_from :: forall a. Lens' (Interval a) a
-_from = _Newtype <<< prop (SProxy :: SProxy "from")
+derive instance ordSlotInterval :: Ord SlotInterval
 
-_to :: forall a. Lens' (Interval a) a
-_to = _Newtype <<< prop (SProxy :: SProxy "to")
+instance showSlotInterval :: Show SlotInterval where
+  show (SlotInterval from to) = "(Slot " <> show from <> " " <> show to <> ")"
 
-validInterval :: forall a. Ord a => Interval a -> Boolean
-validInterval (Interval interval) = interval.from <= interval.to
+slotIntervalFrom :: SlotInterval -> Slot
+slotIntervalFrom (SlotInterval from _) = from
 
-above :: forall a. Ord a => a -> Interval a -> Boolean
-above v (Interval interval) = v >= interval.to
+slotIntervalTo :: SlotInterval -> Slot
+slotIntervalTo (SlotInterval _ to) = to
 
-anyWithin :: forall f a. Foldable f => Ord a => a -> f (Interval a) -> Boolean
-anyWithin v = any (\(Interval interval) -> v >= interval.from && v <= interval.to)
+data Bound = Bound BigInteger BigInteger
 
-type SlotInterval
-  = Interval Slot
+derive instance genericBound :: Generic Bound _
 
-instance showSlotInterval :: Show (Interval Slot) where
-  show (Interval { from, to }) = "(Slot " <> show from <> " " <> show to <> ")"
+derive instance eqBound :: Eq Bound
 
-type Bound
-  = Interval BigInteger
+derive instance orBound :: Ord Bound
 
-instance showBound :: Show (Interval BigInteger) where
-  show (Interval { from, to }) = "(Bound " <> show from <> " " <> show to <> ")"
+instance showBound :: Show Bound where
+  show = genericShow
 
-instance prettyBound :: Pretty (Interval BigInteger) where
+instance prettyBound :: Pretty Bound where
   prettyFragment a = text $ show a
+
+anyBoundWithin :: forall f. Foldable f => BigInteger -> f Bound -> Boolean
+anyBoundWithin v = any (\(Bound from to) -> v >= from && v <= to)
 
 data Action
   = Deposit AccountId Party Value
@@ -402,16 +401,16 @@ instance showIntervalResult :: Show IntervalResult where
 -- Note: We use guards here because currently nested ifs break purty formatting
 --       We need to upgrade purty and purescript to fix
 fixInterval :: SlotInterval -> State -> IntervalResult
-fixInterval interval (State state)
+fixInterval interval@(SlotInterval from to) (State state)
   | (not <<< validInterval) interval = IntervalError (InvalidInterval interval)
   | state.minSlot `above` interval = IntervalError (IntervalInPastError state.minSlot interval)
   | otherwise =
     let
       -- newLow is both new "low" and new "minSlot" (the lower bound for slotNum)
-      newLow = max (unwrap interval).from state.minSlot
+      newLow = max from state.minSlot
 
       -- We know high is greater or equal than newLow (prove)
-      currentInterval = Interval { from: newLow, to: (unwrap interval).to }
+      currentInterval = SlotInterval newLow to
 
       env = Environment { slotInterval: currentInterval }
 
@@ -437,8 +436,8 @@ evalValue env state value =
       AddValue lhs rhs -> eval lhs + eval rhs
       SubValue lhs rhs -> eval lhs + eval rhs
       ChoiceValue choiceId defVal -> fromMaybe (eval defVal) $ Map.lookup choiceId (unwrap state).choices
-      SlotIntervalStart -> view (_slotInterval <<< _from <<< _Newtype) env
-      SlotIntervalEnd -> view (_slotInterval <<< _to <<< _Newtype) env
+      SlotIntervalStart -> view (_slotInterval <<< to slotIntervalFrom <<< to unwrap) env
+      SlotIntervalEnd -> view (_slotInterval <<< to slotIntervalTo <<< to unwrap) env
       UseValue valId -> fromMaybe zero $ Map.lookup valId (unwrap state).boundValues
 
 -- | Evaluate an @Observation@ to Bool
@@ -603,9 +602,9 @@ reduceContractStep env state contract = case contract of
       Reduced ReduceNoWarning ReduceNoPayment state nextContract
   When _ timeout nextContract ->
     let
-      startSlot = view (_slotInterval <<< _from) env
+      startSlot = view (_slotInterval <<< to slotIntervalFrom) env
 
-      endSlot = view (_slotInterval <<< _to) env
+      endSlot = view (_slotInterval <<< to slotIntervalTo) env
     in
       if endSlot < timeout then
         NotReduced
@@ -689,7 +688,7 @@ applyCases env state input cases = case input, cases of
     let
       newState = over _choices (Map.insert choId1 choice) state
     in
-      if choId1 == choId2 && anyWithin choice bounds then
+      if choId1 == choId2 && anyBoundWithin choice bounds then
         Applied newState cont
       else
         applyCases env state input rest

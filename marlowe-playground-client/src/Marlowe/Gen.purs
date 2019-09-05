@@ -12,7 +12,7 @@ import Data.Foldable (class Foldable)
 import Data.Newtype (wrap)
 import Data.NonEmpty (NonEmpty, foldl1, (:|))
 import Data.String.CodeUnits (fromCharArray)
-import Marlowe.Semantics (AccountId, Action(..), Bound, Case(..), ChoiceId, Contract(..), Interval, Observation(..), Payee(..), PubKey, Slot(..), Timeout, Value(..), ValueId(..))
+import Marlowe.Semantics (AccountId, Action(..), Bound(..), Case(..), ChoiceId, Contract(..), SlotInterval(..), Observation(..), Payee(..), PubKey, Slot(..), Timeout, Value(..), ValueId(..))
 
 oneOf ::
   forall m a f.
@@ -40,14 +40,17 @@ genAlphaNum = oneOf $ genAlpha :| [ genDigitChar ]
 genPubKey :: forall m. MonadGen m => MonadRec m => m PubKey
 genPubKey = fromCharArray <$> resize (_ - 1) (unfoldable genAlphaNum)
 
-genInterval :: forall m a. MonadGen m => MonadRec m => Ord a => m a -> m (Interval a)
-genInterval gen = do
+genSlotInterval :: forall m. MonadGen m => MonadRec m => m Slot -> m SlotInterval
+genSlotInterval gen = do
   from <- gen
   to <- suchThat gen (\v -> v > from)
-  pure $ wrap { from, to }
+  pure $ SlotInterval from to
 
 genBound :: forall m. MonadGen m => MonadRec m => m Bound
-genBound = genInterval genBigInteger
+genBound = do
+  from <- genBigInteger
+  to <- suchThat genBigInteger (\v -> v > from)
+  pure $ Bound from to
 
 genAccountId :: forall m. MonadGen m => MonadRec m => m AccountId
 genAccountId = do

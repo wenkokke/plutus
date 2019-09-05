@@ -11,7 +11,7 @@ import Data.List (List, some)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (wrap)
 import Data.String.CodeUnits (fromCharArray)
-import Marlowe.Semantics (AccountId, Action(..), Bound, Case(..), ChoiceId, Contract(..), Observation(..), Party, Payee(..), PubKey, Slot(..), Timeout, Value(..), ValueId(..))
+import Marlowe.Semantics (AccountId, Action(..), Bound(..), Case(..), ChoiceId, Contract(..), Observation(..), Party, Payee(..), PubKey, Slot(..), Timeout, Value(..), ValueId(..))
 import Prelude ((*>), (<*), (<*>), bind, pure, (<$>), void, ($), (<<<), discard)
 import Text.Parsing.Parser (Parser, fail)
 import Text.Parsing.Parser.Basic (integral, parens)
@@ -158,7 +158,7 @@ bound =
     void spaces
     second <- bigInteger
     void maybeSpaces
-    pure $ wrap { from: first, to: second }
+    pure (Bound first second)
 
 action :: Parser String Action
 action =

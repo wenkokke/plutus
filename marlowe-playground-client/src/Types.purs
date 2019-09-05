@@ -25,7 +25,7 @@ import Gist (Gist)
 import Halogen.Blockly (BlocklyQuery, BlocklyMessage)
 import Halogen.Component.ChildPath (ChildPath, cp1, cp2, cp3)
 import Language.Haskell.Interpreter (InterpreterError, InterpreterResult)
-import Marlowe.Semantics (AccountId, Action(..), Bound, ChoiceId, ChosenNum, Contract, Environment(..), Input, Interval(..), Observation, Party, Slot, State, TransactionError, PubKey, _minSlot, emptyState, evalValue)
+import Marlowe.Semantics (AccountId, Action(..), Bound, ChoiceId, ChosenNum, Contract, Environment(..), Input, Observation, Party, PubKey, Slot, SlotInterval(..), State, TransactionError, _minSlot, emptyState, evalValue)
 import Network.RemoteData (RemoteData)
 import Prelude (class Eq, class Ord, class Show, Unit, mempty, zero, (<<<))
 import Servant.PureScript.Ajax (AjaxError)
@@ -257,7 +257,7 @@ _display = lens getter setter
 actionToActionInput :: State -> Action -> ActionInput
 actionToActionInput state (Deposit accountId party value) = 
   let minSlot = state ^. _minSlot 
-      env = Environment { slotInterval: Interval { from: minSlot, to: minSlot } }
+      env = Environment { slotInterval: (SlotInterval minSlot minSlot) }
   in DepositInput true accountId party (evalValue env state value)
 actionToActionInput _ (Choice choiceId bounds) = ChoiceInput true choiceId bounds zero
 actionToActionInput _ (Notify observation) = NotifyInput true observation
