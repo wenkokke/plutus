@@ -20,7 +20,6 @@ exports.getFieldValue_ = function (left, right, block, key) {
 }
 
 exports.statementToCode_ = function (left, right, generator, block, key) {
-    console.log(block);
     var result = generator.statementToCode(block, key);
     if (result) {
         // Blockly adds some whitespace for some reason
@@ -72,6 +71,26 @@ exports.connectToPrevious_ = function (blockRef, input) {
     };
 }
 
+exports.previousConnection_ = function(blockRef) {
+    return function() {
+        var block = blockRef.value;
+        return block.previousConnection;
+    }
+}
+
+exports.nextConnection_ = function(blockRef) {
+    return function() {
+        var block = blockRef.value;
+        return block.nextConnection;
+    }
+}
+
+exports.connect_ = function(from, to) {
+    return function () {
+        from.connect(to);
+    }
+}
+
 exports.connectToOutput_ = function (blockRef, input) {
     return function () {
         var block = blockRef.value;
@@ -88,6 +107,10 @@ exports.newBlock_ = function (mkRef, workspaceRef, name) {
 
 exports.inputName_ = function (input) {
     return input.name;
+}
+
+exports.inputType_ = function (input) {
+    return input.type;
 }
 
 exports.clearWorkspace_ = function (workspaceRef) {

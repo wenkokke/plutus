@@ -3,15 +3,16 @@ module Marlowe.Blockly where
 import Prelude
 
 import Blockly (AlignDirection(..), Arg(..), BlockDefinition(..), block, blockType, category, colour, defaultBlockDefinition, getBlockById, initializeWorkspace, name, render, style, x, xml, y)
-import Blockly.Generator (Generator, Input, NewBlockFunction, clearWorkspace, connectToOutput, connectToPrevious, fieldName, fieldRow, getBlockInputConnectedTo, getFieldValue, getInputWithName, inputList, inputName, insertGeneratorFunction, mkGenerator, nextBlock, setFieldText, statementToCode)
+import Blockly.Generator (Connection, Generator, Input, NewBlockFunction, clearWorkspace, connect, connectToOutput, connectToPrevious, fieldName, fieldRow, getBlockInputConnectedTo, getFieldValue, getInputWithName, inputList, inputName, inputType, insertGeneratorFunction, mkGenerator, nextBlock, nextConnection, previousConnection, setFieldText, statementToCode)
 import Blockly.Types (Block, BlocklyState, Workspace)
 import Control.Alternative ((<|>))
 import Control.Monad.ST as ST
 import Control.Monad.ST.Internal (ST, STRef)
 import Control.Monad.ST.Ref as STRef
-import Data.Array ((:))
+import Data.Array (filter, head, uncons, (:))
 import Data.Array as Array
 import Data.Bifunctor (lmap, rmap)
+import Data.BigInteger (BigInteger)
 import Data.Either (Either, note)
 import Data.Enum (class BoundedEnum, class Enum, upFromIncluding)
 import Data.Generic.Rep (class Generic)
@@ -23,6 +24,7 @@ import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
 import Data.Traversable (traverse, traverse_)
+import Debug.Trace (trace)
 import Halogen.HTML (HTML)
 import Halogen.HTML.Properties (id_)
 import Marlowe.Parser as Parser
@@ -1008,6 +1010,13 @@ setField blockRef name value = do
       field <- STRef.new f
       setFieldText field value
 
+getNextInput :: forall r. STRef r Block -> ST r (Maybe Input)
+getNextInput blockRef = do
+  block <- STRef.read blockRef
+  let inputs = inputList block
+      nextConInputs = filter (\input -> inputType input == 5) inputs
+  pure (head nextConInputs)
+
 inputToBlockly :: forall a r. ToBlockly a => NewBlockFunction r -> (STRef r Workspace) -> STRef r Block -> String -> a -> ST r Unit
 inputToBlockly newBlock workspaceRef blockRef name value = do
   block <- STRef.read blockRef
@@ -1028,6 +1037,76 @@ instance toBlocklyPayee :: ToBlockly Payee where
     block <- newBlock workspace (show PartyPayeeType)
     connectToOutput block input
     setField block "party" party
+
+nextBound :: forall r. NewBlockFunction r -> STRef r Workspace -> Connection -> Array Bound -> ST r Unit
+nextBound newBlock workspace fromConnection bounds = do
+  case uncons bounds of
+    Nothing -> pure unit
+    Just { head: (Interval { from, to }), tail } -> do
+      block <- newBlock workspace (show BoundsType)
+      setField block "from" (show from)
+      setField block "to" (show to)
+      toConnection <- previousConnection block
+      connect fromConnection toConnection
+      nextFromConnection <- nextConnection block
+      nextBound newBlock workspace nextFromConnection tail
+
+instance toBlocklyBounds :: ToBlockly (Array (Interval BigInteger)) where
+  toBlockly newBlock workspace input bounds = do
+    case uncons bounds of
+      Nothing -> pure unit
+      Just { head: (Interval { from, to }), tail } -> do
+        block <- newBlock workspace (show BoundsType)
+        setField block "from" (show from)
+        setField block "to" (show to)
+        connectToPrevious block input
+        fromConnection <- nextConnection block
+        nextBound newBlock workspace fromConnection tail
+
+
+instance toBlocklyAction :: ToBlockly Action where
+  toBlockly newBlock workspace input (Deposit accountId party value) = do
+    block <- newBlock workspace (show DepositActionType)
+    connectToPrevious block input
+    setField block "account_number" (show (unwrap accountId).accountNumber)
+    setField block "account_owner" (unwrap accountId).accountOwner
+    setField block "party" party
+    inputToBlockly newBlock workspace block "ammount" value
+  toBlockly newBlock workspace input (Choice choiceId bounds) = do
+    block <- newBlock workspace (show ChoiceActionType)
+    connectToPrevious block input
+    setField block "choice_number" (show (unwrap choiceId).choiceNumber)
+    setField block "choice_owner" (unwrap choiceId).choiceOwner
+    inputToBlockly newBlock workspace block "bounds" bounds
+  toBlockly newBlock workspace input (Notify observation) = do
+    block <- newBlock workspace (show NotifyActionType)
+    connectToPrevious block input
+    inputToBlockly newBlock workspace block "observation" observation
+
+nextCase :: forall r. NewBlockFunction r -> STRef r Workspace -> Connection -> Array Case -> ST r Unit
+nextCase newBlock workspace fromConnection cases = do
+  case uncons cases of
+    Nothing -> pure unit
+    Just { head: (Case { action, contract }), tail } -> do
+      block <- newBlock workspace (show CaseType)
+      inputToBlockly newBlock workspace block "action" action
+      inputToBlockly newBlock workspace block "contract" contract
+      toConnection <- previousConnection block
+      connect fromConnection toConnection
+      nextFromConnection <- nextConnection block
+      nextCase newBlock workspace nextFromConnection tail
+
+instance toBlocklyCases :: ToBlockly (Array Case) where
+  toBlockly newBlock workspace input cases = do
+    case uncons cases of
+      Nothing -> pure unit
+      Just { head: (Case { action, contract }), tail } -> do
+        block <- newBlock workspace (show CaseType)
+        inputToBlockly newBlock workspace block "action" action
+        inputToBlockly newBlock workspace block "contract" contract
+        connectToPrevious block input
+        fromConnection <- nextConnection block
+        nextCase newBlock workspace fromConnection tail
 
 instance toBlocklyContract :: ToBlockly Contract where
   toBlockly newBlock workspace input Refund = do
@@ -1050,8 +1129,7 @@ instance toBlocklyContract :: ToBlockly Contract where
   toBlockly newBlock workspace input (When cases timeout contract) = do
     block <- newBlock workspace (show WhenContractType)
     connectToPrevious block input
-    -- TODO: cases
-    -- inputToBlockly newBlock workspace block "cases" cases
+    inputToBlockly newBlock workspace block "case" cases
     setField block "timeout" (show timeout)
     inputToBlockly newBlock workspace block "contract" contract
   toBlockly newBlock workspace input (Let valueId value contract) = do
