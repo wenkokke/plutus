@@ -321,7 +321,6 @@ evalF (RemoveInput person index input next) = do
 
 evalF (SetChoice choiceId chosenNum next) = do
   updateMarloweState (over _possibleActions ((map <<< map) (updateChoice choiceId)))
-  updateState
   pure next
   where
     updateChoice :: ChoiceId -> ActionInput -> ActionInput
