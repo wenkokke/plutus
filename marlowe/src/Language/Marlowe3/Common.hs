@@ -758,7 +758,7 @@ validateContinuation pendingTx dsHash =
 -}
 {-# INLINABLE mkValidator #-}
 mkValidator
-  :: PubKey -> MarloweData -> ([Input], MarloweData) -> PendingTx -> Bool
+  :: PubKey -> MarloweData -> ([Input], Maybe (Sealed (HashedDataScript MarloweData))) -> PendingTx -> Bool
 mkValidator creator MarloweData{..} (inputs, sealedMarloweData) pendingTx@PendingTx{..} = True {- let
     HashedDataScript (MarloweData expectedCreator expectedState expectedContract) dsHash = unseal sealedMarloweData -}
     {-  Embed contract creator public key. This makes validator script unique,

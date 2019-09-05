@@ -43,6 +43,7 @@ import           Ledger                         ( DataScript(..)
                                                 , TxOut
                                                 , TxOutOf(..)
                                                 , ValidatorScript(..)
+                                                , HashedDataScript(..)
                                                 , interval
                                                 , plcValidatorHash
                                                 , pubKeyTxOut
@@ -121,7 +122,7 @@ applyInputs tx MarloweData{..} inputs  = do
 
     let computedResult = computeTransaction txInput marloweState marloweContract
 
-    (deducedTxOutputs, marloweData) <- case computedResult of
+    (scriptIn, deducedTxOutputs, marloweData) <- case computedResult of
         TransactionOutput {txOutPayments, txOutState, txOutContract} -> do
 
             let marloweData = MarloweData {
@@ -129,23 +130,36 @@ applyInputs tx MarloweData{..} inputs  = do
                     marloweContract = txOutContract,
                     marloweState = txOutState }
 
-            let deducedTxOutputs = case txOutContract of
-                    Refund -> txPaymentOuts (depositPayment : txOutPayments)
+            let (scriptIn, deducedTxOutputs) = case txOutContract of
+                    Refund -> let
+                        redcode = $$(Ledger.compileScript [||
+                            \(input :: [Input]) -> (input, Nothing :: Maybe (P.Sealed (HashedDataScript MarloweData))) ||])
+                                `Ledger.applyScript` (Ledger.lifted inputs)
+                        redeemer = Ledger.RedeemerScript redcode
+                        scriptIn = scriptTxIn ref validator redeemer
+
+                        in (scriptIn, txPaymentOuts (depositPayment : txOutPayments))
+
                     _ -> let
+
+                        redcode = $$(Ledger.compileScript [||
+                            \(input :: [Input]) (sealedDS :: P.Sealed (HashedDataScript MarloweData)) -> (input, Just sealedDS) ||])
+                                `Ledger.applyScript` (Ledger.lifted inputs)
+                        redeemer = Ledger.RedeemerScript redcode
+                        scriptIn = scriptTxIn ref validator redeemer
+
                         payoutAmounts = fmap (Ada.getLovelace . Ada.fromValue . txOutValue) (txPaymentOuts txOutPayments)
                         totalPayouts = sum payoutAmounts
                         finalBalance = totalIncome - totalPayouts + Ada.getLovelace depositAmount
                         dataScript = DataScript (Ledger.lifted marloweData)
                         scritOutValue = Ada.lovelaceValueOf finalBalance
                         scritOut = scriptTxOut scritOutValue validator dataScript
-                        in scritOut : txPaymentOuts txOutPayments
+                        in (scriptIn, scritOut : txPaymentOuts txOutPayments)
 
-            return (deducedTxOutputs, marloweData)
+            return (scriptIn, deducedTxOutputs, marloweData)
         Error txError -> throwOtherError (Text.pack $ show txError)
 
-    let inputState = (inputs, marloweData)
-        redeemer = Ledger.RedeemerScript (Ledger.lifted inputState)
-        scriptIn = scriptTxIn ref validator redeemer
+
 
     (payment, change) <- createPaymentWithChange (Ada.lovelaceValueOf totalIncome)
 

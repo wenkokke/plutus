@@ -74,7 +74,7 @@ simpleTest = checkMarloweTrace (MarloweScenario {
 
     (tx, md) <- alice `performs` createContract zeroCouponBond
     (tx, md) <- alice `performs` deposit tx md aliceAcc (Ada.adaOf 850)
-    -- bob `performs` deposit tx md aliceAcc (Ada.adaOf 1000)
+    bob `performs` deposit tx md aliceAcc (Ada.adaOf 1000)
 
     assertOwnFundsEq alice (Ada.adaValueOf 1150)
     assertOwnFundsEq bob (Ada.adaValueOf 850)
