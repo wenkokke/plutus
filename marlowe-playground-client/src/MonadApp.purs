@@ -36,13 +36,13 @@ import LocalStorage as LocalStorage
 import Marlowe (SPParams_)
 import Marlowe as Server
 import Marlowe.Parser (contract)
-import Marlowe.Semantics (Contract(..), PubKey, SlotInterval(..), TransactionInput(..), TransactionOutput(..), computeTransaction, extractRequiredActions)
+import Marlowe.Semantics (Contract(..), PubKey, SlotInterval(..), TransactionInput(..), TransactionOutput(..), computeTransaction, extractRequiredActions, moneyInContract)
 import Network.RemoteData as RemoteData
 import Servant.PureScript.Ajax (AjaxError)
 import Servant.PureScript.Settings (SPSettings_)
 import StaticData (bufferLocalStorageKey, marloweBufferLocalStorageKey)
 import Text.Parsing.Parser (runParser)
-import Types (ActionInput(..), BlocklySlot(..), ChildQuery, ChildSlot, EditorSlot(EditorSlot), FrontendState, MarloweEditorSlot(MarloweEditorSlot), MarloweState, Query, WebData, _contract, _currentMarloweState, _marloweState, _oldContract, _pendingInputs, _possibleActions, _slot, _state, _transactionError, actionToActionInput, cpBlockly, cpEditor, cpMarloweEditor, emptyMarloweState)
+import Types (ActionInput(..), BlocklySlot(..), ChildQuery, ChildSlot, EditorSlot(EditorSlot), FrontendState, MarloweEditorSlot(MarloweEditorSlot), MarloweState, Query, WebData, _contract, _currentMarloweState, _marloweState, _moneyInContract, _oldContract, _pendingInputs, _possibleActions, _slot, _state, _transactionError, actionToActionInput, cpBlockly, cpEditor, cpMarloweEditor, emptyMarloweState)
 import Web.HTML.Event.DragEvent (DragEvent)
 
 class
@@ -242,6 +242,7 @@ updateStateP oldState = actState
       <<< set _pendingInputs mempty 
       <<< set _state txOutState
       <<< set _contract (Just txOutContract)
+      <<< set _moneyInContract (moneyInContract txOutState)
       ) oldState
     (Error txError) -> set _transactionError (Just txError) oldState
 

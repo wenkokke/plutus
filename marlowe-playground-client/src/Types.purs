@@ -25,7 +25,7 @@ import Gist (Gist)
 import Halogen.Blockly (BlocklyQuery, BlocklyMessage)
 import Halogen.Component.ChildPath (ChildPath, cp1, cp2, cp3)
 import Language.Haskell.Interpreter (InterpreterError, InterpreterResult)
-import Marlowe.Semantics (AccountId, Action(..), Bound, ChoiceId, ChosenNum, Contract, Environment(..), Input, Observation, Party, PubKey, Slot, SlotInterval(..), State, TransactionError, _minSlot, emptyState, evalValue)
+import Marlowe.Semantics (AccountId, Action(..), Ada, Bound, ChoiceId, ChosenNum, Contract, Environment(..), Input, Observation, Party, PubKey, Slot, SlotInterval(..), State, TransactionError, _minSlot, emptyState, evalValue)
 import Network.RemoteData (RemoteData)
 import Prelude (class Eq, class Ord, class Show, Unit, mempty, zero, (<<<))
 import Servant.PureScript.Ajax (AjaxError)
@@ -178,7 +178,7 @@ type MarloweState
     , transactionError :: Maybe TransactionError
     , state :: State
     , slot :: Slot
-    , moneyInContract :: BigInteger
+    , moneyInContract :: Ada
     , contract :: Maybe Contract
     }
 

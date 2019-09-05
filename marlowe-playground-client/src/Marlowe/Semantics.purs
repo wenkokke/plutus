@@ -2,6 +2,7 @@ module Marlowe.Semantics where
 
 import Prelude
 
+import Data.Array (foldl)
 import Data.Array as Array
 import Data.BigInteger (BigInteger)
 import Data.Foldable (class Foldable, any, fold)
@@ -859,6 +860,9 @@ peopleFromAction :: Action -> Set PubKey
 peopleFromAction (Deposit accountId party _) = peopleFromAccounts (Set.singleton accountId) <> Set.singleton party
 peopleFromAction (Choice choiceId _) = peopleFromChoices (Set.singleton choiceId)
 peopleFromAction (Notify _) = mempty
+
+moneyInContract :: State -> Money
+moneyInContract state = foldl (+) zero $ Map.values (unwrap state).accounts
 
 emptyState :: State
 emptyState = State 
